@@ -95,35 +95,9 @@ data_docs_sites:
       class_name: DefaultSiteIndexBuilder
 
 anonymous_usage_statistics:
-  data_context_id: 0b565257-5608-48e9-8b6d-8bbf5d4945d9
   enabled: false
+  data_context_id: 0b565257-5608-48e9-8b6d-8bbf5d4945d9
 fluent_datasources:
-  github_timeline:
-    type: sql
-    assets:
-      github_timeline:
-        type: table
-        order_by: []
-        batch_metadata: {}
-        table_name: samples.github_timeline
-        schema_name:
-    connection_string: bigquery://bigquery-public-data/samples
-    create_temp_table: false
-  hellow-world:
-    type: sql
-    assets:
-      satellite_timing_offsets:
-        type: query
-        order_by: []
-        batch_metadata: {}
-        splitter:
-          column_name: hour
-          method_name: split_on_date_parts
-          datetime_parts:
-            - year
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_satellite_timing_offsets
-    connection_string: bigquery://world-fishing-827/tech_great_expectations_temp_ttl_7d?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
-    create_temp_table: true
   pipe_ais_v3_alpha_published:
     type: sql
     assets:
