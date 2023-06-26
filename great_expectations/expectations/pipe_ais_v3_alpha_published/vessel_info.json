@@ -1,0 +1,17 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "pipe_ais_v3_alpha_published.vessel_info",
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "vessel_id"
+      },
+      "meta": {}
+    }
+  ],
+  "ge_cloud_id": null,
+  "meta": {
+    "great_expectations_version": "0.17.0"
+  }
+}
