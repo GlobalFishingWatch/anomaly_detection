@@ -141,12 +141,82 @@ fluent_datasources:
         batch_metadata: {}
         splitter:
           column_name: date
-          method_name: split_on_year_and_month_and_day
+          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity_daily
     connection_string: bigquery://world-fishing-827/tech_great_expectations_temp_ttl_7d?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
     create_temp_table: true
+  gfw-google-827:
+    type: sql
+    assets:
+      messages:
+        type: query
+        order_by:
+          - key: timestamp
+            reverse: true
+        batch_metadata: {}
+        splitter:
+          column_name: timestamp
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_messages
+      satellite_timing_offsets:
+        type: query
+        order_by:
+          - key: hour
+            reverse: true
+        batch_metadata: {}
+        splitter:
+          column_name: hour
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_satellite_timing_offsets
+      segs_activity:
+        type: query
+        order_by: []
+        batch_metadata: {}
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity
+      segs_activity_daily:
+        type: query
+        order_by:
+          - key: date
+            reverse: true
+        batch_metadata: {}
+        splitter:
+          column_name: date
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity_daily
+      ssvids_identities:
+        type: query
+        order_by: []
+        batch_metadata: {}
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_ssvids_identities
+      ssvids_identities_daily:
+        type: query
+        order_by:
+          - key: date
+            reverse: true
+        batch_metadata: {}
+        splitter:
+          column_name: date
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_ssvids_identities_daily
+      stats_daily:
+        type: query
+        order_by:
+          - key: date
+            reverse: true
+        batch_metadata: {}
+        splitter:
+          column_name: date
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_stats_daily
+      vessel_info:
+        type: query
+        order_by: []
+        batch_metadata: {}
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_vessel_info
+    connection_string: bigquery://world-fishing-827/tech_great_expectations_temp_ttl_7d?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
+    create_temp_table: true
 include_rendered_content:
-  expectation_validation_result: false
-  globally: false
   expectation_suite: false
+  globally: false
+  expectation_validation_result: false
 notebooks:
