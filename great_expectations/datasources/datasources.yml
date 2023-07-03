@@ -92,7 +92,7 @@ datasources:
   #   latest_version: 3.0.0
   #   versions:
   #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
+  #       dataset: pipe_ais_v3_alpha_internal
   #       table: features_
   #     2.5:
   #       dataset: pipe_production_v20201001
@@ -102,7 +102,7 @@ datasources:
   #   latest_version: 3.0.0
   #   versions:
   #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
+  #       dataset: pipe_ais_v3_alpha_internal
   #       table: fishing_score_
   #     2.5:
   #       dataset: pipe_production_v20201001
@@ -112,24 +112,25 @@ datasources:
   #   latest_version: 3.0.0
   #   versions:
   #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
+  #       dataset: pipe_ais_v3_alpha_internal
   #       table: fragments_
-  # - name: messages_positions
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
-  #       table: messages_positions
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: position_messages_
+  - name: messages_positions
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: messages_positions
+      2.5:
+        dataset: pipe_production_v20201001
+        table: position_messages_
+        is_sharded: true
   # - name: messages_scored_
   #   description: 
   #   latest_version: 3.0.0
   #   versions:
   #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
+  #       dataset: pipe_ais_v3_alpha_internal
   #       table: messages_scored_
   #     2.5:
   #       dataset: pipe_production_v20201001
@@ -139,7 +140,7 @@ datasources:
   #   latest_version: 3.0.0
   #   versions:
   #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
+  #       dataset: pipe_ais_v3_alpha_internal
   #       table: messages_segmented_
   #     2.5:
   #       dataset: pipe_production_v20201001
@@ -149,37 +150,37 @@ datasources:
   #   latest_version: 3.0.0
   #   versions:
   #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
+  #       dataset: pipe_ais_v3_alpha_internal
   #       table: segment_identity_daily_
   #     2.5:
   #       dataset: pipe_production_v20201001
   #       table: segment_identity_daily_
-  # - name: segment_info
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
-  #       table: segment_info
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: segment_info
-  # - name: segment_vessel
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
-  #       table: segment_vessel
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: segment_vessel
+  - name: segment_info
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: segment_info
+      2.5:
+        dataset: pipe_production_v20201001
+        table: segment_info
+  - name: segment_vessel
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: segment_vessel
+      2.5:
+        dataset: pipe_production_v20201001
+        table: segment_vessel
   # - name: segment_vessel_daily_
   #   description: 
   #   latest_version: 3.0.0
   #   versions:
   #     3.0.0:
-  #       dataset: pipe_production_v3_alpha_internal
+  #       dataset: pipe_ais_v3_alpha_internal
   #       table: segment_vessel_daily_
   #     2.5:
   #       dataset: pipe_production_v20201001
@@ -189,7 +190,7 @@ datasources:
     # latest_version: 3.0.0
     # versions:
       # 3.0.0:
-        # dataset: pipe_production_v3_alpha_internal
+        # dataset: pipe_ais_v3_alpha_internal
         # table: 
       # 2.5:
         # dataset: pipe_production_v20201001
