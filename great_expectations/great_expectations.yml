@@ -95,8 +95,8 @@ data_docs_sites:
       class_name: DefaultSiteIndexBuilder
 
 anonymous_usage_statistics:
-  enabled: false
   data_context_id: 0b565257-5608-48e9-8b6d-8bbf5d4945d9
+  enabled: false
 fluent_datasources:
   pipe_ais_v3_alpha_published:
     type: sql
@@ -213,30 +213,10 @@ fluent_datasources:
         order_by: []
         batch_metadata: {}
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_vessel_info
-      messages_positions:
-        type: query
-        order_by:
-          - key: timestamp
-            reverse: true
-        batch_metadata: {}
-        splitter:
-          column_name: timestamp
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_messages_positions
-      segment_info:
-        type: query
-        order_by: []
-        batch_metadata: {}
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_segment_info
-      segment_vessel:
-        type: query
-        order_by: []
-        batch_metadata: {}
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_segment_vessel
     connection_string: bigquery://world-fishing-827/tech_great_expectations_temp_ttl_7d?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
     create_temp_table: true
 include_rendered_content:
   globally: false
-  expectation_suite: false
   expectation_validation_result: false
+  expectation_suite: false
 notebooks:
