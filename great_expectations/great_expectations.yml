@@ -98,53 +98,6 @@ anonymous_usage_statistics:
   data_context_id: 0b565257-5608-48e9-8b6d-8bbf5d4945d9
   enabled: false
 fluent_datasources:
-  pipe_ais_v3_alpha_published:
-    type: sql
-    assets:
-      satellite_timing_offsets:
-        type: query
-        order_by:
-          - key: year
-            reverse: true
-          - key: month
-            reverse: true
-          - key: day
-            reverse: true
-        batch_metadata: {}
-        splitter:
-          column_name: hour
-          method_name: split_on_year_and_month_and_day
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_satellite_timing_offsets
-      vessel_info:
-        type: query
-        order_by:
-          - key: year
-            reverse: true
-          - key: month
-            reverse: true
-          - key: day
-            reverse: true
-        batch_metadata: {}
-        splitter:
-          column_name: first_timestamp
-          method_name: split_on_year_and_month_and_day
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_vessel_info
-      segs_activity_daily:
-        type: query
-        order_by:
-          - key: year
-            reverse: true
-          - key: month
-            reverse: true
-          - key: day
-            reverse: true
-        batch_metadata: {}
-        splitter:
-          column_name: date
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity_daily
-    connection_string: bigquery://world-fishing-827/tech_great_expectations_temp_ttl_7d?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
-    create_temp_table: true
   gfw-google-827:
     type: sql
     assets:
