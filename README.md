@@ -29,6 +29,10 @@ jupyter-lab
  - [ ] Sharded tables are generally supported in GX but require further development in the code that generates data assets
  - [ ] The hack that automatically creates views to circumvent partition filter enforcement has not been tested on tables with non-date partition columns and further adjustment is probably necessary
 
-## Data Doc sample
-<img src="README.png" width="1200"/>
+## Airflow sample
+<img src="README-airflow-dag.png" width="1200"/>
+
+## Data Docs sample
+<img src="README-data-docs.png" width="1200"/>
+
 
