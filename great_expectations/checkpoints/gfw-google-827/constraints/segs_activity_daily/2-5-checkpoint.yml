@@ -18,6 +18,7 @@ action_list:
       class_name: UpdateDataDocsAction
 evaluation_parameters: {}
 runtime_configuration: {}
+validations: []
 profilers: []
 ge_cloud_id:
 expectation_suite_ge_cloud_id:
