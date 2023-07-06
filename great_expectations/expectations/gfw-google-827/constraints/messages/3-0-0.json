@@ -1,0 +1,14 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "gfw-google-827.constraints.messages.3-0-0",
+  "expectations": [],
+  "ge_cloud_id": null,
+  "meta": {
+    "asset_name": "messages-3.0.0",
+    "datasource_name": "messages",
+    "great_expectations_version": "0.17.0+14.g88bd71b23.dirty",
+    "project": "gfw-google-827",
+    "test_type": "constraints",
+    "version_number": "3.0.0"
+  }
+}

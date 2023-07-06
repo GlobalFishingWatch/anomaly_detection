@@ -1,0 +1,14 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "gfw-google-827.alerts.ssvids_identities.2-5",
+  "expectations": [],
+  "ge_cloud_id": null,
+  "meta": {
+    "asset_name": "ssvids_identities-2.5",
+    "datasource_name": "ssvids_identities",
+    "great_expectations_version": "0.17.0+14.g88bd71b23.dirty",
+    "project": "gfw-google-827",
+    "test_type": "alerts",
+    "version_number": 2.5
+  }
+}
