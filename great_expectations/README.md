@@ -10,7 +10,7 @@ For understanding the different concepts in GX please refer to the [getting star
 For getting started with this repository and understanding the workflow, it is crucial to know that everything in GX is defined in YAML config files. GX suggests generating these config files interactively from jupyter notebooks which for now is also the approach we take in [our workflow](#workflow). These config files should never be edited by hand because they might be overwritten. The process of generating these config files is idempotent, so it doesn't matter if we regenerate them multiple times. However, this works in an update-or-insert manner and existing configurations need to be removed manually if no longer needed.
 
 ## Usage
-
+All dependencies can be installed using the requirements file. Expectations and checkpoints can be developed using jupyter-notebooks.
 ```
 python3.9 -m venv venv
 source venv/bin/activate
