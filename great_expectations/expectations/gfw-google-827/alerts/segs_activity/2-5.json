@@ -6,7 +6,7 @@
   "meta": {
     "asset_name": "segs_activity-2.5",
     "datasource_name": "segs_activity",
-    "great_expectations_version": "0.17.0+14.g88bd71b23.dirty",
+    "great_expectations_version": "0.17.2+21.g29a190a06.dirty",
     "project": "gfw-google-827",
     "test_type": "alerts",
     "version_number": 2.5

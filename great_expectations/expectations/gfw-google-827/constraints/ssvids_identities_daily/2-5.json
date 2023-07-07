@@ -6,7 +6,7 @@
   "meta": {
     "asset_name": "ssvids_identities_daily-2.5",
     "datasource_name": "ssvids_identities_daily",
-    "great_expectations_version": "0.17.0+14.g88bd71b23.dirty",
+    "great_expectations_version": "0.17.2+21.g29a190a06.dirty",
     "project": "gfw-google-827",
     "test_type": "constraints",
     "version_number": 2.5

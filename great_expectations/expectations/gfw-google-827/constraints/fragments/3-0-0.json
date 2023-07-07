@@ -1,11 +1,11 @@
 {
   "data_asset_type": null,
-  "expectation_suite_name": "gfw-google-827.constraints.segment_info.3-0-0",
+  "expectation_suite_name": "gfw-google-827.constraints.fragments.3-0-0",
   "expectations": [],
   "ge_cloud_id": null,
   "meta": {
-    "asset_name": "segment_info-3.0.0",
-    "datasource_name": "segment_info",
+    "asset_name": "fragments-3.0.0",
+    "datasource_name": "fragments",
     "great_expectations_version": "0.17.2+21.g29a190a06.dirty",
     "project": "gfw-google-827",
     "test_type": "constraints",
