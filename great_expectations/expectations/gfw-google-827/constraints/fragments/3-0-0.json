@@ -1,7 +1,91 @@
 {
   "data_asset_type": null,
   "expectation_suite_name": "gfw-google-827.constraints.fragments.3-0-0",
-  "expectations": [],
+  "expectations": [
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE \n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(frag_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n != first_msg_timestamp\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "The `frag_id` timestamp should be based on the `first_msg_timestamp` of a fragment.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(frag_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n) != DATE(timestamp)\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "All timestamps in a fragment should have the same date as the `frag_id`'s timestamp.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_unique",
+      "kwargs": {
+        "column": "frag_id"
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_column_min_to_be_between",
+      "kwargs": {
+        "column": "msg_count",
+        "min_value": 0,
+        "strict_min": true
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(frag_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n) != DATE(last_msg_timestamp)\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "The date of the `frag_id`'s timestamp match the date of the `last_msg_timestamp`.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE LEFT(frag_id, STRPOS(frag_id, \"-\")-1) != ssvid\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "The `frag_id` should start with the `ssvid`.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "frag_id"
+      },
+      "meta": {}
+    }
+  ],
   "ge_cloud_id": null,
   "meta": {
     "asset_name": "fragments-3.0.0",
