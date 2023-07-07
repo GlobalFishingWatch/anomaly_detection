@@ -107,13 +107,14 @@ datasources:
   #     2.5:
   #       dataset: pipe_production_v20201001
   #       table: fishing_score_
-  # - name: fragments_
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_ais_v3_alpha_internal
-  #       table: fragments_
+  - name: fragments
+    asset_exists_behaviour: 'update'
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: fragments_
   # - name: messages_positions
   #   description: 
   #   latest_version: 3.0.0
