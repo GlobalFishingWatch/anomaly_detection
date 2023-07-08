@@ -196,3 +196,13 @@ datasources:
       # 2.5:
         # dataset: pipe_production_v20201001
         # table: 
+  - name: encounters
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_published
+        table: encounters
+      2.5:
+        dataset: pipe_production_v20201001
+        table: encounters

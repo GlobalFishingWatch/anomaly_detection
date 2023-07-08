@@ -103,63 +103,39 @@ fluent_datasources:
     assets:
       messages-3.0.0:
         type: query
-        order_by:
-          - key: timestamp
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: messages
           dataset_name: pipe_ais_v3_alpha_published
           table_name: messages
           version_number: 3.0.0
-          splitter_date_type: TIMESTAMP
-        splitter:
-          column_name: timestamp
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_messages
       messages-2.5:
         type: query
-        order_by:
-          - key: PARTITIONTIME
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: messages
           dataset_name: pipe_production_v20201001
           table_name: research_messages
           version_number: 2.5
-          splitter_date_type: TIMESTAMP
-        splitter:
-          column_name: PARTITIONTIME
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_messages
       satellite_timing_offsets-3.0.0:
         type: query
-        order_by:
-          - key: hour
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: satellite_timing_offsets
           dataset_name: pipe_ais_v3_alpha_published
           table_name: satellite_timing_offsets
           version_number: 3.0.0
-          splitter_date_type: TIMESTAMP
-        splitter:
-          column_name: hour
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_satellite_timing_offsets
       satellite_timing_offsets-2.5:
         type: query
-        order_by:
-          - key: PARTITIONTIME
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: satellite_timing_offsets
           dataset_name: pipe_production_v20201001
           table_name: research_satellite_timing
           version_number: 2.5
-          splitter_date_type: TIMESTAMP
-        splitter:
-          column_name: PARTITIONTIME
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_satellite_timing
       segs_activity-3.0.0:
         type: query
@@ -172,48 +148,30 @@ fluent_datasources:
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity
       segs_activity-2.5:
         type: query
-        order_by:
-          - key: PARTITIONTIME
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: segs_activity
           dataset_name: pipe_production_v20201001
           table_name: research_segs
           version_number: 2.5
-          splitter_date_type: TIMESTAMP
-        splitter:
-          column_name: PARTITIONTIME
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_segs
       segs_activity_daily-3.0.0:
         type: query
-        order_by:
-          - key: date
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: segs_activity_daily
           dataset_name: pipe_ais_v3_alpha_published
           table_name: segs_activity_daily
           version_number: 3.0.0
-          splitter_date_type: DATE
-        splitter:
-          column_name: date
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity_daily
       segs_activity_daily-2.5:
         type: query
-        order_by:
-          - key: PARTITIONTIME
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: segs_activity_daily
           dataset_name: pipe_production_v20201001
           table_name: research_segs_daily
           version_number: 2.5
-          splitter_date_type: TIMESTAMP
-        splitter:
-          column_name: PARTITIONTIME
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_segs_daily
       ssvids_identities-3.0.0:
         type: query
@@ -235,63 +193,39 @@ fluent_datasources:
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_ids
       ssvids_identities_daily-3.0.0:
         type: query
-        order_by:
-          - key: date
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: ssvids_identities_daily
           dataset_name: pipe_ais_v3_alpha_published
           table_name: ssvids_identities_daily
           version_number: 3.0.0
-          splitter_date_type: DATE
-        splitter:
-          column_name: date
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_ssvids_identities_daily
       ssvids_identities_daily-2.5:
         type: query
-        order_by:
-          - key: PARTITIONTIME
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: ssvids_identities_daily
           dataset_name: pipe_production_v20201001
           table_name: research_ids_daily
           version_number: 2.5
-          splitter_date_type: TIMESTAMP
-        splitter:
-          column_name: PARTITIONTIME
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_ids_daily
       stats_daily-3.0.0:
         type: query
-        order_by:
-          - key: date
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: stats_daily
           dataset_name: pipe_ais_v3_alpha_published
           table_name: stats_daily
           version_number: 3.0.0
-          splitter_date_type: DATE
-        splitter:
-          column_name: date
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_stats_daily
       stats_daily-2.5:
         type: query
-        order_by:
-          - key: PARTITIONTIME
-            reverse: true
+        order_by: []
         batch_metadata:
           datasource_name: stats_daily
           dataset_name: pipe_production_v20201001
           table_name: research_stats
           version_number: 2.5
-          splitter_date_type: TIMESTAMP
-        splitter:
-          column_name: PARTITIONTIME
-          method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_stats
       vessel_info-3.0.0:
         type: query
@@ -347,6 +281,24 @@ fluent_datasources:
           table_name: segment_vessel
           version_number: 2.5
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_segment_vessel
+      encounters-3.0.0:
+        type: query
+        order_by: []
+        batch_metadata:
+          datasource_name: encounters
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: encounters
+          version_number: 3.0.0
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_encounters
+      encounters-2.5:
+        type: query
+        order_by: []
+        batch_metadata:
+          datasource_name: encounters
+          dataset_name: pipe_production_v20201001
+          table_name: encounters
+          version_number: 2.5
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_encounters
       fragments-3.0.0:
         type: query
         order_by: []
@@ -356,7 +308,7 @@ fluent_datasources:
           table_name: fragments_
           version_number: 3.0.0
         splitter:
-          column_name: TABLE_SUFFIX
+          column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_fragments_
     connection_string: bigquery://world-fishing-827/tech_great_expectations_temp_ttl_7d?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
