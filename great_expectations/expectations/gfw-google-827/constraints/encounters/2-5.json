@@ -1,11 +1,11 @@
 {
   "data_asset_type": null,
-  "expectation_suite_name": "gfw-google-827.constraints.stats_daily.2-5",
+  "expectation_suite_name": "gfw-google-827.constraints.encounters.2-5",
   "expectations": [],
   "ge_cloud_id": null,
   "meta": {
-    "asset_name": "stats_daily-2.5",
-    "datasource_name": "stats_daily",
+    "asset_name": "encounters-2.5",
+    "datasource_name": "encounters",
     "great_expectations_version": "0.17.3+10.g3bd0e20f8.dirty",
     "project": "gfw-google-827",
     "test_type": "constraints",

@@ -16,6 +16,16 @@ action_list:
   - name: update_data_docs
     action:
       class_name: UpdateDataDocsAction
+  - name: store_metrics
+    action:
+      class_name: StoreMetricsAction
+      target_store_name: metric_store
+      requested_metrics:
+        "*":  # wildcard to match any expectation suite
+          - statistics.successful_expectations
+          - statistics.evaluated_expectations
+          - statistics.success_percent
+          - statistics.unsuccessful_expectations
 evaluation_parameters: {}
 runtime_configuration: {}
 validations: []
