@@ -1,0 +1,14 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "gfw-google-827.constraints.messages_segmented_.2-5",
+  "expectations": [],
+  "ge_cloud_id": null,
+  "meta": {
+    "asset_name": "messages_segmented_-2.5",
+    "datasource_name": "messages_segmented_",
+    "great_expectations_version": "0.17.3+10.g3bd0e20f8.dirty",
+    "project": "gfw-google-827",
+    "test_type": "constraints",
+    "version_number": 2.5
+  }
+}

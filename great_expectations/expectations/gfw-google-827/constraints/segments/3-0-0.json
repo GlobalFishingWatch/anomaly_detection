@@ -1,0 +1,159 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "gfw-google-827.constraints.segments.3-0-0",
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_be_unique",
+      "kwargs": {
+        "column": "seg_id"
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(seg_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n) != DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(frag_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n)\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "All timestamps in a segment should have the same date as the `frag_id`'s timestamp.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(seg_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n) >= DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(frag_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n)\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "All timestamps in a segment should have the same date as the `frag_id`'s timestamp.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(frag_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n) >= DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(seg_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n)\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "All timestamps in a segment should have the same date as the `frag_id`'s timestamp.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_column_min_to_be_between",
+      "kwargs": {
+        "column": "daily_msg_count",
+        "min_value": 0,
+        "strict_min": true
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_column_min_to_be_between",
+      "kwargs": {
+        "column": "cumulative_msg_count",
+        "min_value": 0,
+        "strict_min": true
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE LEFT(seg_id, STRPOS(seg_id, \"-\")-1) != ssvid\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "The `frag_id` should start with the `ssvid`.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n    SELECT *\n    FROM {active_batch}\n    WHERE DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(frag_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n) < DATE(\n((\n    SELECT \n    TIMESTAMP(STRING_AGG(arr, '-'))\n    FROM UNNEST(SPLIT(seg_id, '-')) AS arr WITH OFFSET as offset\n    WHERE offset BETWEEN 1 and 3\n))\n)\n"
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "All timestamps in a seg_id should be on or before `frag_id`'s timestamp.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "seg_id"
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "frag_id"
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n        SELECT *\n        FROM {active_batch}\n        WHERE LEFT(seg_id, STRPOS(seg_id, \"-\")-1) != ssvid\n    "
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "The `seg_id` should start with the `ssvid`.",
+          "format": "markdown"
+        }
+      }
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n        SELECT *\n        FROM {active_batch}\n        WHERE DATE(\n    ((\n        SELECT \n        TIMESTAMP(STRING_AGG(arr, '-'))\n        FROM UNNEST(SPLIT(frag_id, '-')) AS arr WITH OFFSET as offset\n        WHERE offset BETWEEN 1 and 3\n    ))) < DATE(\n    ((\n        SELECT \n        TIMESTAMP(STRING_AGG(arr, '-'))\n        FROM UNNEST(SPLIT(seg_id, '-')) AS arr WITH OFFSET as offset\n        WHERE offset BETWEEN 1 and 3\n    )))\n    "
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "All timestamps in a seg_id should be on or before `frag_id`'s timestamp.",
+          "format": "markdown"
+        }
+      }
+    }
+  ],
+  "ge_cloud_id": null,
+  "meta": {
+    "asset_name": "segments-3.0.0",
+    "datasource_name": "segments",
+    "great_expectations_version": "0.17.3+10.g3bd0e20f8.dirty",
+    "project": "gfw-google-827",
+    "test_type": "constraints",
+    "version_number": "3.0.0"
+  }
+}

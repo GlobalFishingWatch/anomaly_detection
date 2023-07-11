@@ -1,0 +1,53 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "gfw-google-827.constraints.segments.2-5",
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_be_unique",
+      "kwargs": {
+        "column": "seg_id"
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "seg_id"
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_column_min_to_be_between",
+      "kwargs": {
+        "column": "message_count",
+        "min_value": 0,
+        "strict_min": true
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_queried_custom_query_to_return_num_rows",
+      "kwargs": {
+        "template_dict": {
+          "user_query": "\n        SELECT *\n        FROM {active_batch}\n        WHERE LEFT(seg_id, STRPOS(seg_id, \"-\")-1) != ssvid\n    "
+        },
+        "value": 0
+      },
+      "meta": {
+        "notes": {
+          "content": "The `seg_id` should start with the `ssvid`.",
+          "format": "markdown"
+        }
+      }
+    }
+  ],
+  "ge_cloud_id": null,
+  "meta": {
+    "asset_name": "segments-2.5",
+    "datasource_name": "segments",
+    "great_expectations_version": "0.17.3+10.g3bd0e20f8.dirty",
+    "project": "gfw-google-827",
+    "test_type": "constraints",
+    "version_number": 2.5
+  }
+}

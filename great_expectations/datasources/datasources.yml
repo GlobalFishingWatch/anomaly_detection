@@ -87,75 +87,75 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: vessel_info
-  # - name: features_
-  #   description: AIS ML features used in the fishing model estimates
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_ais_v3_alpha_internal
-  #       table: features_
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: features_
-  # - name: fishing_score_
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_ais_v3_alpha_internal
-  #       table: fishing_score_
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: fishing_score_
+  - name: features_
+    description: AIS ML features used in the fishing model estimates
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: features_
+      2.5:
+        dataset: pipe_production_v20201001
+        table: features_
+  - name: fishing_score_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: fishing_score_
+      2.5:
+        dataset: pipe_production_v20201001
+        table: fishing_score_
   - name: fragments
-    asset_exists_behaviour: 'update'
+    asset_exists_behaviour: 'skip'
     description: 
     latest_version: 3.0.0
     versions:
       3.0.0:
         dataset: pipe_ais_v3_alpha_internal
         table: fragments_
-  # - name: messages_positions
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_ais_v3_alpha_internal
-  #       table: messages_positions
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: position_messages_
-  #       is_sharded: true
-  # - name: messages_scored_
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_ais_v3_alpha_internal
-  #       table: messages_scored_
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: messages_scored_
-  # - name: messages_segmented_
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_ais_v3_alpha_internal
-  #       table: messages_segmented_
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: messages_segmented_
-  # - name: segment_identity_daily_
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_ais_v3_alpha_internal
-  #       table: segment_identity_daily_
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: segment_identity_daily_
+  - name: messages_positions
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: messages_positions
+      2.5:
+        dataset: pipe_production_v20201001
+        table: position_messages_
+        is_sharded: true
+  - name: messages_scored_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: messages_scored_
+      2.5:
+        dataset: pipe_production_v20201001
+        table: messages_scored_
+  - name: messages_segmented_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: messages_segmented_
+      2.5:
+        dataset: pipe_production_v20201001
+        table: messages_segmented_
+  - name: segment_identity_daily_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: segment_identity_daily_
+      2.5:
+        dataset: pipe_production_v20201001
+        table: segment_identity_daily_
   - name: segment_info
     description: 
     latest_version: 3.0.0
@@ -176,16 +176,26 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: segment_vessel
-  # - name: segment_vessel_daily_
-  #   description: 
-  #   latest_version: 3.0.0
-  #   versions:
-  #     3.0.0:
-  #       dataset: pipe_ais_v3_alpha_internal
-  #       table: segment_vessel_daily_
-  #     2.5:
-  #       dataset: pipe_production_v20201001
-  #       table: segment_vessel_daily_
+  - name: segment_vessel_daily_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: segment_vessel_daily_
+      2.5:
+        dataset: pipe_production_v20201001
+        table: segment_vessel_daily_
+  - name: segments
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_internal
+        table: segments_
+      2.5:
+        dataset: pipe_production_v20201001
+        table: segments_
   # - name: 
     # description: 
     # latest_version: 3.0.0
