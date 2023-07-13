@@ -581,6 +581,32 @@ fluent_datasources:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_segments_
+      loitering-3.0.0:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: loitering
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: loitering
+          version_number: 3.0.0
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_loitering
+      loitering-2.5:
+        type: query
+        order_by: []
+        batch_metadata:
+          datasource_name: loitering
+          dataset_name: pipe_production_v20201001
+          table_name: loitering
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_loitering
       encounters-3.0.0:
         type: query
         order_by:
