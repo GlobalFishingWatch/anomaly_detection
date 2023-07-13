@@ -208,6 +208,7 @@ datasources:
         # table: 
   - name: encounters
     description: 
+    asset_exists_behaviour: 'update'
     latest_version: 3.0.0
     versions:
       3.0.0:
@@ -216,3 +217,14 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: encounters
+        partition_by: start_time
+  - name: loitering
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_published
+        table: loitering
+      2.5:
+        dataset: pipe_production_v20201001
+        table: loitering
