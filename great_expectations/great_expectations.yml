@@ -74,6 +74,17 @@ stores:
       class_name: DatabaseStoreBackend
       credentials: ${metric_store_creds}
 
+  custom_metric_store:
+    class_name: SqlAlchemyQueryStore
+    credentials: ${custom_metrics_store_creds}
+    queries:
+      median_row_count_30_days:
+        query: select cast(percentile_cont(0.5) within group (order by value) as integer)
+          as median_row_count_30_days from ( select (value::json->>'value')::int as
+          value from metric_store.ge_metrics where metric_name = 'expect_table_row_count_to_be_between.result.observed_value'
+          order by run_time desc limit 30 ) as s1
+        return_type: scalar
+
 
   profiler_store:
     class_name: ProfilerStore
@@ -102,8 +113,8 @@ data_docs_sites:
       class_name: DefaultSiteIndexBuilder
 
 anonymous_usage_statistics:
-  data_context_id: 0b565257-5608-48e9-8b6d-8bbf5d4945d9
   enabled: true
+  data_context_id: 0b565257-5608-48e9-8b6d-8bbf5d4945d9
 fluent_datasources:
   gfw-google-827:
     type: sql
@@ -636,7 +647,7 @@ fluent_datasources:
     connection_string: bigquery://world-fishing-827/tech_great_expectations_temp_ttl_7d?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
     create_temp_table: true
 include_rendered_content:
-  expectation_suite: false
   expectation_validation_result: false
+  expectation_suite: false
   globally: false
 notebooks:

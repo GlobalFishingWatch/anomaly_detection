@@ -1,10 +1,10 @@
-name: gfw-google-827.constraints.segs_activity_daily.3-0-0-checkpoint
+name: gfw-google-827.constraints.messages_segmented_.3-0-0-checkpoint
 config_version: 1.0
 template_name:
 module_name: great_expectations.checkpoint
 class_name: Checkpoint
 run_name_template:
-expectation_suite_name: gfw-google-827.constraints.segs_activity_daily.3-0-0
+expectation_suite_name: gfw-google-827.constraints.messages_segmented_.3-0-0
 batch_request: {}
 action_list:
   - name: store_validation_result
