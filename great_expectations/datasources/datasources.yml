@@ -228,3 +228,34 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: loitering
+  - name: port_visits
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_published
+        table: port_visits
+      2.5:
+        dataset: pipe_production_v20201001
+        table: port_visits_
+  - name: voyages_c3
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_published
+        table: voyages_c3
+      2.5:
+        dataset: pipe_production_v20201001
+        table: proto_voyages_c3
+  - name: voyages_c4
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: pipe_ais_v3_alpha_published
+        table: voyages_c4
+      2.5:
+        dataset: pipe_production_v20201001
+        table: proto_voyages_c4
+      
