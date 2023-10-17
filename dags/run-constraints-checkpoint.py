@@ -1,5 +1,9 @@
 from airflow import DAG
+from airflow.utils.task_group import TaskGroup
+from airflow.decorators import task
 
+from airflow.providers.google.cloud.sensors.bigquery import BigQueryTablePartitionExistenceSensor
+from airflow.operators.python import PythonOperator
 import great_expectations as gx
 from great_expectations_provider.operators.great_expectations import GreatExpectationsOperator
 
@@ -8,33 +12,96 @@ from datetime import date,datetime,timedelta
 import os
 
 import json
-from airflow.decorators import task
-import json
 from jinja2 import Template
 
-from airflow.utils.task_group import TaskGroup
+from google.cloud import bigquery
+from google.oauth2 import service_account
 
+import pandas as pd
+
+from time import sleep
+from random import randint
 
 logger = logging.getLogger(__name__)
 
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+
+credentials = service_account.Credentials.from_service_account_file(
+    "/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json",
+    scopes=["https://www.googleapis.com/auth/cloud-platform"],
+)
+client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+
+def safe_gb(bytes):
+    if bytes is None:
+        return 0
+    else:
+        return round(bytes / (1000**3), 2)
+
+@task(task_id="estimate_billing", trigger_rule="all_done")
+def get_jobs_statistics(**kwargs):
+    min_creation_time=kwargs["dag_run"].queued_at
+    jobs_list=list()
+    logger.info(f"Getting jobs ({min_creation_time=}) datetimenow: {datetime.now()}")
+    for job in client.list_jobs(min_creation_time=min_creation_time):
+        jobs_list.append({
+            'job_id': job.job_id,
+            'total_bytes_billed': job.total_bytes_billed,
+            'total_bytes_processed': job.total_bytes_processed,
+            'estimated_bytes_processed': job.estimated_bytes_processed,
+            'created': job.created,
+            'started': job.started,
+            'ended': job.ended,
+            'query': job.query,
+            'state': job.state 
+        })
+
+    if len(jobs_list) == 0:
+        logger.info(f"Couldn't find any jobs since {min_creation_time}!")
+        return()
+        
+    df_jobs=pd.DataFrame(jobs_list) \
+        .assign(total_gb_billed=lambda x: safe_gb(x["total_bytes_billed"])) \
+        .sort_values("total_bytes_billed", ascending=True, na_position="first")
+
+    logger.info(df_jobs.to_json(orient='index', indent=2))
+    logger.info(
+        f"""
+
+===================================
+
+BQ Statistics for current test run:
+number of jobs: {df_jobs.shape[0]}
+total_bytes_billed (GB): {safe_gb(df_jobs['total_bytes_billed'].sum())}
+total_bytes_processed (GB): {safe_gb(df_jobs['total_bytes_processed'].sum())}
+estimated_bytes_processed (GB): {safe_gb(df_jobs['estimated_bytes_processed'].sum())}
+    """)
 
 with DAG(
     "gx_run_constraints_checkpoints", 
     start_date=datetime(2023, 7 , 3), 
-    schedule='@daily', catchup=False,
-    render_template_as_native_obj=True
+    schedule='@daily', catchup=True,
+    render_template_as_native_obj=True,
+    max_active_runs=1
 ) as dag:
 
-    gx_context_root_dir=os.getenv('GX_CONTEXT_ROOT_DIR')
-    context = gx.get_context(context_root_dir=gx_context_root_dir)
-    
+    ten_mins_ago = datetime.utcnow() - timedelta(minutes=10)
+    billing_estimate = get_jobs_statistics()
 
-    gx_datasource = context.get_datasource("gfw-google-827")
-    
+    gx_context_root_dir=os.getenv('GX_CONTEXT_ROOT_DIR')
+    gx_context = gx.get_context(context_root_dir=gx_context_root_dir)
+    gx_datasource = gx_context.get_datasource("gfw-google-827")
+
     # TODO CHO20230707 This is only robust as long as we have a 1:1 mapping of expectation suite to checkpoint
-    for current_expectation_suite_name in [es for es in context.list_expectation_suite_names() if 'constraints' in es]:
-        current_expectation_suite = context.get_expectation_suite(current_expectation_suite_name)
-        if current_expectation_suite.expectations:
+    for current_expectation_suite_name in [es for es in gx_context.list_expectation_suite_names() if 'constraints' in es]:
+        current_expectation_suite = gx_context.get_expectation_suite(current_expectation_suite_name)
+        if current_expectation_suite.expectations and "messages_segmented_" not in current_expectation_suite_name:
+            logger.info(current_expectation_suite_name)
+            current_expectation_suite_asset_name=current_expectation_suite.meta.get('asset_name')
+            gx_asset=gx_datasource.get_asset(current_expectation_suite_asset_name)
+            gx_splitter=gx_asset.splitter
+
             @task(retries=5, retry_delay=3)
             def load_templated_json(checkpoint_kwargs_dict: dict, **context):
                 json_template=json.dumps(checkpoint_kwargs_dict)
@@ -42,20 +109,18 @@ with DAG(
                 jinja_template = Template(json_template)
                 rendered_json_str = jinja_template.render(**context)
 
+                # sleep for a random amount of time so we don't run into write conflicts due to GX bug:
+                # https://github.com/great-expectations/great_expectations/issues/8294
+                sleep(randint(0, 10))
+
                 return json.loads(rendered_json_str)
 
-            # TODO CHO20230705 Get date from airflow
-            PARTITION_DATE=str(date.today() - timedelta(days=90))
             task_group_id=current_expectation_suite_name.replace('.', '_')
             with TaskGroup(group_id=task_group_id) as tg:
-                logger.info(current_expectation_suite_name)
-                current_expectation_suite_asset_name=current_expectation_suite.meta.get('asset_name')
-                gx_asset=gx_datasource.get_asset(current_expectation_suite_asset_name)
-                gx_splitter=gx_asset.splitter
                 if gx_splitter is not None:
                     DATE_PARTITION_COLUMN=gx_splitter.column_name
                     # shift current date by dummy value because pipe3 is outdated
-                    br_options={DATE_PARTITION_COLUMN: "{{ macros.ds_add(ds, -80) }}"}
+                    br_options={DATE_PARTITION_COLUMN: "{{ macros.ds_add(ds, -3) }}"}
                 else:
                     br_options={}
                 gx_br = {
@@ -66,14 +131,17 @@ with DAG(
                 }
 
                 gx_validations = {'validations': [{"batch_request": gx_br}]}
-                template_load_task_id=current_expectation_suite_name + '_load_template'
+
                 gx_constraints = GreatExpectationsOperator(
                     task_id=f"gx_{current_expectation_suite_name}-cp",
                     data_context_root_dir=gx_context_root_dir,
                     checkpoint_name=f"{current_expectation_suite_name}-checkpoint",
                     checkpoint_kwargs=f"{{{{ ti.xcom_pull(task_ids='{task_group_id}.load_templated_json')}}}}",
                     return_json_dict=True,
-                    run_name="af-{{ ts_nodash }}-{{ task_instance.try_number }}"
+                    run_name="af-{{ ts_nodash }}-{{ task_instance.try_number }}",
+                    fail_task_on_validation_failure=False,
+                    retries=5,
+                    retry_delay=3
                 )
 
-                load_templated_json(gx_validations) >> gx_constraints
+                load_templated_json(gx_validations) >> gx_constraints >> billing_estimate
