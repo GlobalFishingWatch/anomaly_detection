@@ -1,0 +1,65 @@
+
+version: 2
+
+models:
+
+  - name: partition_row_counts
+    description: "Partition row counts for all tables in all datasets"
+    columns:
+      - name: partition_date 
+        description: ""
+        tests:
+          - not_null
+      - name: table_catalog 
+        description: ""
+        tests:
+          - not_null
+      - name: table_schema 
+        description: ""
+        tests:
+          - not_null
+      - name: table_name 
+        description: ""
+        tests:
+          - not_null
+      - name: partition_id 
+        description: ""
+        tests:
+          - not_null
+      - name: total_rows 
+        description: ""
+        tests:
+          - not_null
+      - name: total_logical_bytes 
+        description: ""
+        tests:
+          - not_null
+      - name: total_billable_bytes 
+        description: ""
+        tests:
+          - not_null
+      - name: last_modified_time 
+        description: ""
+        tests:
+          - not_null
+      - name: storage_tier 
+        description: ""
+        tests:
+          - not_null
+      - name: safe_partition_id 
+        description: ""
+        tests:
+          - not_null
+      - name: partition_month 
+        description: ""
+        tests:
+          - not_null
+      - name: total_rows_safe 
+        description: ""
+        tests:
+          - not_null
+      - name: schema_table_name 
+        description: ""
+        tests:
+          - not_null
+    
