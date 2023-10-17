@@ -132,7 +132,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_messages
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_messages
       messages-2.5:
         type: query
         order_by:
@@ -146,7 +146,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_messages
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_research_messages
       satellite_timing_offsets-3.0.0:
         type: query
         order_by:
@@ -160,7 +160,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_satellite_timing_offsets
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_satellite_timing_offsets
       satellite_timing_offsets-2.5:
         type: query
         order_by:
@@ -174,7 +174,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_satellite_timing
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_research_satellite_timing
       segs_activity-3.0.0:
         type: query
         order_by: []
@@ -183,7 +183,7 @@ fluent_datasources:
           dataset_name: pipe_ais_v3_alpha_published
           table_name: segs_activity
           version_number: 3.0.0
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity
       segs_activity-2.5:
         type: query
         order_by:
@@ -197,7 +197,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_segs
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_research_segs
       segs_activity_daily-3.0.0:
         type: query
         order_by:
@@ -211,7 +211,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity_daily
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_segs_activity_daily
       segs_activity_daily-2.5:
         type: query
         order_by:
@@ -225,7 +225,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_segs_daily
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_research_segs_daily
       ssvids_identities-3.0.0:
         type: query
         order_by: []
@@ -234,7 +234,7 @@ fluent_datasources:
           dataset_name: pipe_ais_v3_alpha_published
           table_name: ssvids_identities
           version_number: 3.0.0
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_ssvids_identities
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_ssvids_identities
       ssvids_identities-2.5:
         type: query
         order_by: []
@@ -243,7 +243,7 @@ fluent_datasources:
           dataset_name: pipe_production_v20201001
           table_name: research_ids
           version_number: 2.5
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_ids
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_research_ids
       ssvids_identities_daily-3.0.0:
         type: query
         order_by:
@@ -257,7 +257,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_ssvids_identities_daily
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_ssvids_identities_daily
       ssvids_identities_daily-2.5:
         type: query
         order_by:
@@ -271,7 +271,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_ids_daily
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_research_ids_daily
       stats_daily-3.0.0:
         type: query
         order_by:
@@ -285,7 +285,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_stats_daily
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_stats_daily
       stats_daily-2.5:
         type: query
         order_by:
@@ -299,7 +299,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_research_stats
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_research_stats
       vessel_info-3.0.0:
         type: query
         order_by: []
@@ -308,7 +308,7 @@ fluent_datasources:
           dataset_name: pipe_ais_v3_alpha_published
           table_name: vessel_info
           version_number: 3.0.0
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_vessel_info
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_vessel_info
       vessel_info-2.5:
         type: query
         order_by: []
@@ -317,7 +317,7 @@ fluent_datasources:
           dataset_name: pipe_production_v20201001
           table_name: vessel_info
           version_number: 2.5
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_vessel_info
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_vessel_info
       features_-3.0.0:
         type: query
         order_by:
@@ -331,7 +331,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_features_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_features_
       features_-2.5:
         type: query
         order_by:
@@ -345,7 +345,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_features_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_features_
       fishing_score_-3.0.0:
         type: query
         order_by:
@@ -359,7 +359,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_fishing_score_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_fishing_score_
       fishing_score_-2.5:
         type: query
         order_by:
@@ -373,21 +373,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_fishing_score_
-      fragments-3.0.0:
-        type: query
-        order_by:
-          - key: SPLITTER_COLUMN
-            reverse: true
-        batch_metadata:
-          datasource_name: fragments
-          dataset_name: pipe_ais_v3_alpha_internal
-          table_name: fragments_
-          version_number: 3.0.0
-        splitter:
-          column_name: SPLITTER_COLUMN
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_fragments_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_fishing_score_
       messages_positions-3.0.0:
         type: query
         order_by:
@@ -401,7 +387,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_messages_positions
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_messages_positions
       messages_positions-2.5:
         type: query
         order_by:
@@ -415,7 +401,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_position_messages_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_position_messages_
       messages_scored_-3.0.0:
         type: query
         order_by:
@@ -429,7 +415,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_messages_scored_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_messages_scored_
       messages_scored_-2.5:
         type: query
         order_by:
@@ -443,7 +429,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_messages_scored_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_messages_scored_
       messages_segmented_-3.0.0:
         type: query
         order_by:
@@ -457,7 +443,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_messages_segmented_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_messages_segmented_
       messages_segmented_-2.5:
         type: query
         order_by:
@@ -471,7 +457,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_messages_segmented_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_messages_segmented_
       segment_identity_daily_-3.0.0:
         type: query
         order_by:
@@ -485,7 +471,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_segment_identity_daily_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_segment_identity_daily_
       segment_identity_daily_-2.5:
         type: query
         order_by:
@@ -499,7 +485,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_segment_identity_daily_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_segment_identity_daily_
       segment_info-3.0.0:
         type: query
         order_by: []
@@ -508,7 +494,7 @@ fluent_datasources:
           dataset_name: pipe_ais_v3_alpha_internal
           table_name: segment_info
           version_number: 3.0.0
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_segment_info
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_segment_info
       segment_info-2.5:
         type: query
         order_by: []
@@ -517,7 +503,7 @@ fluent_datasources:
           dataset_name: pipe_production_v20201001
           table_name: segment_info
           version_number: 2.5
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_segment_info
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_segment_info
       segment_vessel-3.0.0:
         type: query
         order_by: []
@@ -526,7 +512,7 @@ fluent_datasources:
           dataset_name: pipe_ais_v3_alpha_internal
           table_name: segment_vessel
           version_number: 3.0.0
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_segment_vessel
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_segment_vessel
       segment_vessel-2.5:
         type: query
         order_by: []
@@ -535,7 +521,7 @@ fluent_datasources:
           dataset_name: pipe_production_v20201001
           table_name: segment_vessel
           version_number: 2.5
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_segment_vessel
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_segment_vessel
       segment_vessel_daily_-3.0.0:
         type: query
         order_by:
@@ -549,7 +535,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_segment_vessel_daily_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_segment_vessel_daily_
       segment_vessel_daily_-2.5:
         type: query
         order_by:
@@ -563,7 +549,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_segment_vessel_daily_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_segment_vessel_daily_
       segments-3.0.0:
         type: query
         order_by:
@@ -577,7 +563,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_internal_segments_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_segments_
       segments-2.5:
         type: query
         order_by:
@@ -591,7 +577,7 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_segments_
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_segments_
       loitering-3.0.0:
         type: query
         order_by:
@@ -605,10 +591,12 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_loitering
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_loitering
       loitering-2.5:
         type: query
-        order_by: []
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
         batch_metadata:
           datasource_name: loitering
           dataset_name: pipe_production_v20201001
@@ -617,7 +605,132 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_loitering
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_loitering
+      port_visits-3.0.1:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: port_visits
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: port_visits
+          version_number: 3.0.1
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_port_visits
+      port_visits-2.5:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: port_visits
+          dataset_name: pipe_production_v20201001
+          table_name: proto_port_visits
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_port_visits
+      voyages_c3-3.0.0:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: voyages_c3
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: voyages_c3
+          version_number: 3.0.0
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_voyages_c3
+      voyages_c3-2.5:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: voyages_c3
+          dataset_name: pipe_production_v20201001
+          table_name: proto_voyages_c3
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_voyages_c3
+      voyages_c4-3.0.0:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: voyages_c4
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: voyages_c4
+          version_number: 3.0.0
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_voyages_c4
+      voyages_c4-2.5:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: voyages_c4
+          dataset_name: pipe_production_v20201001
+          table_name: proto_voyages_c4
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_voyages_c4
+      all_vessels-2:
+        type: query
+        order_by: []
+        batch_metadata:
+          datasource_name: all_vessels
+          dataset_name: pipe_production_v20201001
+          table_name: all_vessels_byyear_v2
+          version_number: 2
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_all_vessels_byyear_v2
+      all_vessels-1:
+        type: query
+        order_by: []
+        batch_metadata:
+          datasource_name: all_vessels
+          dataset_name: pipe_production_v20201001
+          table_name: all_vessels_byyear
+          version_number: 1
+        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_all_vessels_byyear
+      information_schema_partitions_pipe3_internal-3.0.0:
+        type: query
+        order_by: []
+        batch_metadata:
+          datasource_name: information_schema_partitions_pipe3_internal
+          dataset_name: pipe_ais_v3_alpha_internal
+          table_name: INFORMATION_SCHEMA.PARTITIONS
+          version_number: 3.0.0
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_INFORMATION_SCHEMA_PARTITIONS
+      fragments-3.0.0:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: fragments
+          dataset_name: pipe_ais_v3_alpha_internal
+          table_name: fragments_
+          version_number: 3.0.0
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_fragments_
       encounters-3.0.0:
         type: query
         order_by:
@@ -631,10 +744,12 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_ais_v3_alpha_published_encounters
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_encounters
       encounters-2.5:
         type: query
-        order_by: []
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
         batch_metadata:
           datasource_name: encounters
           dataset_name: pipe_production_v20201001
@@ -643,11 +758,65 @@ fluent_datasources:
         splitter:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations_temp_ttl_7d.v_unfiltered_pipe_production_v20201001_encounters
-    connection_string: bigquery://world-fishing-827/tech_great_expectations_temp_ttl_7d?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_production_v20201001_encounters
+      information_schema_partitions_internal-3.0.0:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: information_schema_partitions_internal
+          dataset_name: pipe_ais_v3_alpha_internal
+          table_name: INFORMATION_SCHEMA.PARTITIONS
+          version_number: 3.0.0
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_INFORMATION_SCHEMA_PARTITIONS
+      information_schema_partitions_internal-2.5:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: information_schema_partitions_internal
+          dataset_name: pipe_production_v20201001
+          table_name: INFORMATION_SCHEMA.PARTITIONS
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_production_v20201001_INFORMATION_SCHEMA_PARTITIONS
+      information_schema_partitions_published-3.0.0:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: information_schema_partitions_published
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: INFORMATION_SCHEMA.PARTITIONS
+          version_number: 3.0.0
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_INFORMATION_SCHEMA_PARTITIONS
+      information_schema_partitions_published-2.5:
+        type: query
+        order_by: []
+        batch_metadata:
+          datasource_name: information_schema_partitions_published
+          dataset_name: pipe_production_v20201001
+          table_name: INFORMATION_SCHEMA.PARTITIONS
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_production_v20201001_INFORMATION_SCHEMA_PARTITIONS
+    connection_string: bigquery://world-fishing-827/tech_great_expectations?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
     create_temp_table: true
 include_rendered_content:
-  expectation_validation_result: false
-  expectation_suite: false
   globally: false
+  expectation_suite: false
+  expectation_validation_result: false
 notebooks:
