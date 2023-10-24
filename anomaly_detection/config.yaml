@@ -60,3 +60,28 @@ anomalies:
             forecast_periods: 1
     target_dataset: "scratch_christian_homberg_ttl120d"
     target_table: "anomaly_detection_forecasts"
+  norway_vms_normalized_20231022:
+    source_dataset: "pipe_norway_production_v20220112"
+    source_table: "norway_vms_normalized_20231022"
+    source_date_column: "date"
+    source_date_column_sql: "date(timestamp)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    SELECT PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) date, row_count y
+    FROM `world-fishing-827.pipe_norway_production_v20220112.__TABLES__` 
+    WHERE table_id LIKE "norway_vms_normalized_%"
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1"))
+    '
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365
+                - 7
+            train_start: "Inf"
+            train_end: "Inf"
+            forecast_periods: 1
+    target_dataset: "scratch_christian_homberg_ttl120d"
+    target_table: "anomaly_detection_forecasts"
