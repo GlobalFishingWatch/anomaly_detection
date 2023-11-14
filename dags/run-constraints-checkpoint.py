@@ -6,6 +6,13 @@ from airflow.providers.google.cloud.sensors.bigquery import BigQueryTablePartiti
 from airflow.operators.python import PythonOperator
 import great_expectations as gx
 from great_expectations_provider.operators.great_expectations import GreatExpectationsOperator
+from airflow_dbt.operators.dbt_operator import (
+    DbtRunOperator,
+    DbtTestOperator
+)
+from great_expectations_experimental.expectations.expect_queried_column_values_to_exist_in_second_table_column  import ExpectQueriedColumnValuesToExistInSecondTableColumn
+from great_expectations_experimental.expectations.expect_queried_custom_query_to_return_num_rows import ExpectQueriedCustomQueryToReturnNumRows
+
 
 import logging
 from datetime import date,datetime,timedelta
@@ -85,8 +92,20 @@ with DAG(
     render_template_as_native_obj=True,
     max_active_runs=1
 ) as dag:
+    
+    with TaskGroup(group_id="partition_statistics_table") as tg:
+        dbt_prepare_partition_statistics_table = DbtRunOperator(
+            task_id='prepare_partition_statistics_table',
+            dir='/mnt/encrypted_data/git/data-testing/monitoring/monitoring',
+            dbt_bin='/mnt/encrypted_data/git/data-testing/venv/bin/dbt'
+        )
 
-    ten_mins_ago = datetime.utcnow() - timedelta(minutes=10)
+        dbt_test_partition_statistics_table = DbtTestOperator(
+            task_id='test_partition_statistics_table',
+            dir='/mnt/encrypted_data/git/data-testing/monitoring/monitoring',
+            dbt_bin='/mnt/encrypted_data/git/data-testing/venv/bin/dbt'
+        )
+
     billing_estimate = get_jobs_statistics()
 
     gx_context_root_dir=os.getenv('GX_CONTEXT_ROOT_DIR')
@@ -144,4 +163,4 @@ with DAG(
                     retry_delay=3
                 )
 
-                load_templated_json(gx_validations) >> gx_constraints >> billing_estimate
+                dbt_prepare_partition_statistics_table >> dbt_test_partition_statistics_table >> load_templated_json(gx_validations) >> gx_constraints >> billing_estimate
