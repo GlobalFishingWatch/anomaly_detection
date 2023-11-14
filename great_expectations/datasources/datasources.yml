@@ -17,6 +17,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: research_messages
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_internal
+        table: research_messages
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_internal
+        table: research_messages
   - name: satellite_timing_offsets
     description: Satellite timing offsets
     latest_version: 3.0.0
@@ -37,6 +43,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: research_segs
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: segs_activity
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: segs_activity
   - name: segs_activity_daily
     description: AIS activity aggregated at the daily segment level with noise indicators
     latest_version: 3.0.0
@@ -47,6 +59,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: research_segs_daily
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: segs_activity_daily
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: segs_activity_daily
   - name: ssvids_identities
     description: Aggregated raw AIS identity information by ssvid
     latest_version: 3.0.0
@@ -57,6 +75,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: research_ids
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: ssvids_identities
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: ssvids_identities
   - name: ssvids_identities_daily
     description: Daily raw AIS identity information by ssvid
     latest_version: 3.0.0
@@ -67,6 +91,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: research_ids_daily
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: ssvids_identities_daily
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: ssvids_identities_daily
   - name: stats_daily
     description: Stats on AIS data daily
     latest_version: 3.0.0
@@ -77,6 +107,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: research_stats
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: stats_daily
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: stats_daily
   - name: vessel_info
     description: Aggregated vessel identity information by vessel id and ssvid
     latest_version: 3.0.0
@@ -86,6 +122,12 @@ datasources:
         table: vessel_info
       2.5:
         dataset: pipe_production_v20201001
+        table: vessel_info
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: vessel_info
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
         table: vessel_info
   - name: features_
     description: AIS ML features used in the fishing model estimates
@@ -219,6 +261,12 @@ datasources:
         dataset: pipe_production_v20201001
         table: encounters
         partition_by: DATE(start_time)
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: encounters
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: encounters
   - name: loitering
     description: 
     latest_version: 3.0.0
@@ -228,6 +276,12 @@ datasources:
         table: loitering
       2.5:
         dataset: pipe_production_v20201001
+        table: loitering
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: loitering
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
         table: loitering
   - name: port_visits
     description: 
@@ -242,6 +296,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: proto_port_visits
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: port_visits
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: port_visits
   - name: voyages_c3
     description: 
     latest_version: 3.0.0
@@ -252,6 +312,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: proto_voyages_c3
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: voyages_c3
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: voyages_c3
   - name: voyages_c4
     description: 
     latest_version: 3.0.0
@@ -262,6 +328,12 @@ datasources:
       2.5:
         dataset: pipe_production_v20201001
         table: proto_voyages_c4
+      orbcomm:
+        dataset: pipe_orbcomm22_staging_published
+        table: voyages_c4
+      marine_traffic:
+        dataset: pipe_marinetraffic_staging_published
+        table: voyages_c4
   - name: all_vessels
     description: 
     latest_version: 2
@@ -315,3 +387,21 @@ datasources:
         dataset: pipe_production_v20201001
         table: INFORMATION_SCHEMA.PARTITIONS
         partition_by: table_name
+  - name: anomaly_detection_deltas
+    description:
+    asset_exists_behaviour: overwrite
+    latest_version: 0.0.1
+    versions:
+      0.0.1:
+        dataset: tech_great_expectations
+        table: v_anomaly_detection_deltas
+  - name: ais_normalized
+    description:
+    latest_version: marine_traffic
+    versions:
+      marine_traffic:
+        dataset: pipe_ais_sources_v20220628
+        table: pipe_nmea_marinetraffic_normalized_
+      orbcomm:
+        dataset: pipe_ais_sources_v20220628
+        table: normalized_orbcomm_
