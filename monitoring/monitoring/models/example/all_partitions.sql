@@ -8,6 +8,8 @@ WITH
     SELECT * FROM `world-fishing-827.pipe_ais_v3_alpha_internal.INFORMATION_SCHEMA.PARTITIONS`
     UNION ALL
     SELECT * FROM `world-fishing-827.pipe_production_v20201001.INFORMATION_SCHEMA.PARTITIONS`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.backup_ttl_60d_pipe_ais_v3_alpha.INFORMATION_SCHEMA.PARTITIONS`
   ),
   unioned_dataset_shards AS (
     SELECT * FROM `world-fishing-827.pipe_ais_v3_alpha_published.__TABLES__`
@@ -15,6 +17,8 @@ WITH
     SELECT * FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__`
     UNION ALL
     SELECT * FROM `world-fishing-827.pipe_production_v20201001.__TABLES__`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.backup_ttl_60d_pipe_ais_v3_alpha.__TABLES__`
   ),
   partitioned_tables AS (
     SELECT *
