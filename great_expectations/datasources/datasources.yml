@@ -285,7 +285,7 @@ datasources:
         table: loitering
   - name: port_visits
     description: 
-    latest_version: 3.0.0
+    latest_version: 3.0.1
     versions:
       3.0.1:
         dataset: pipe_ais_v3_alpha_published
@@ -305,6 +305,7 @@ datasources:
   - name: voyages_c3
     description: 
     latest_version: 3.0.0
+    asset_exists_behaviour: overwrite
     versions:
       3.0.0:
         dataset: pipe_ais_v3_alpha_published
@@ -321,6 +322,7 @@ datasources:
   - name: voyages_c4
     description: 
     latest_version: 3.0.0
+    asset_exists_behaviour: overwrite
     versions:
       3.0.0:
         dataset: pipe_ais_v3_alpha_published
@@ -347,7 +349,7 @@ datasources:
         table: all_vessels_byyear
   - name: port_events
     description: 
-    latest_version: 3.0.0
+    latest_version: 3.0.1
     has_2012_table: False
     versions:
       3.0.1:
