@@ -105,7 +105,7 @@ data_docs_sites:
   # profiles from the uncommitted directory. Read more at https://docs.greatexpectations.io/docs/terms/data_docs
   local_site:
     class_name: SiteBuilder
-    show_how_to_buttons: true
+    show_how_to_buttons: false
     store_backend:
       class_name: TupleFilesystemStoreBackend
       base_directory: uncommitted/data_docs/local_site/
@@ -113,8 +113,8 @@ data_docs_sites:
       class_name: DefaultSiteIndexBuilder
 
 anonymous_usage_statistics:
-  enabled: true
   data_context_id: 0b565257-5608-48e9-8b6d-8bbf5d4945d9
+  enabled: false
 fluent_datasources:
   gfw-google-827:
     type: sql
@@ -606,90 +606,6 @@ fluent_datasources:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
         query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_loitering
-      port_visits-3.0.1:
-        type: query
-        order_by:
-          - key: SPLITTER_COLUMN
-            reverse: true
-        batch_metadata:
-          datasource_name: port_visits
-          dataset_name: pipe_ais_v3_alpha_published
-          table_name: port_visits
-          version_number: 3.0.1
-        splitter:
-          column_name: SPLITTER_COLUMN
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_port_visits
-      port_visits-2.5:
-        type: query
-        order_by:
-          - key: SPLITTER_COLUMN
-            reverse: true
-        batch_metadata:
-          datasource_name: port_visits
-          dataset_name: pipe_production_v20201001
-          table_name: proto_port_visits
-          version_number: 2.5
-        splitter:
-          column_name: SPLITTER_COLUMN
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_port_visits
-      voyages_c3-3.0.0:
-        type: query
-        order_by:
-          - key: SPLITTER_COLUMN
-            reverse: true
-        batch_metadata:
-          datasource_name: voyages_c3
-          dataset_name: pipe_ais_v3_alpha_published
-          table_name: voyages_c3
-          version_number: 3.0.0
-        splitter:
-          column_name: SPLITTER_COLUMN
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_voyages_c3
-      voyages_c3-2.5:
-        type: query
-        order_by:
-          - key: SPLITTER_COLUMN
-            reverse: true
-        batch_metadata:
-          datasource_name: voyages_c3
-          dataset_name: pipe_production_v20201001
-          table_name: proto_voyages_c3
-          version_number: 2.5
-        splitter:
-          column_name: SPLITTER_COLUMN
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_voyages_c3
-      voyages_c4-3.0.0:
-        type: query
-        order_by:
-          - key: SPLITTER_COLUMN
-            reverse: true
-        batch_metadata:
-          datasource_name: voyages_c4
-          dataset_name: pipe_ais_v3_alpha_published
-          table_name: voyages_c4
-          version_number: 3.0.0
-        splitter:
-          column_name: SPLITTER_COLUMN
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_voyages_c4
-      voyages_c4-2.5:
-        type: query
-        order_by:
-          - key: SPLITTER_COLUMN
-            reverse: true
-        batch_metadata:
-          datasource_name: voyages_c4
-          dataset_name: pipe_production_v20201001
-          table_name: proto_voyages_c4
-          version_number: 2.5
-        splitter:
-          column_name: SPLITTER_COLUMN
-          method_name: split_on_column_value
-        query: SELECT * FROM tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_voyages_c4
       all_vessels-2:
         type: query
         order_by: []
@@ -759,6 +675,118 @@ fluent_datasources:
           column_name: SPLITTER_COLUMN
           method_name: split_on_column_value
         query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_production_v20201001_encounters
+      port_events-3.0.1:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: port_events
+          dataset_name: pipe_ais_v3_alpha_internal
+          table_name: raw_port_events_
+          version_number: 3.0.1
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_internal_raw_port_events_
+      port_events-2.5:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: port_events
+          dataset_name: pipe_production_v20201001
+          table_name: proto_raw_port_events_
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_raw_port_events_
+      port_visits-3.0.1:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: port_visits
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: port_visits
+          version_number: 3.0.1
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_port_visits
+      port_visits-2.5:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: port_visits
+          dataset_name: pipe_production_v20201001
+          table_name: proto_port_visits
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_port_visits
+      voyages_c3-3.0.0:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: voyages_c3
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: voyages_c3
+          version_number: 3.0.0
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_voyages_c3
+      voyages_c3-2.5:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: voyages_c3
+          dataset_name: pipe_production_v20201001
+          table_name: proto_voyages_c3
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_voyages_c3
+      voyages_c4-3.0.0:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: voyages_c4
+          dataset_name: pipe_ais_v3_alpha_published
+          table_name: voyages_c4
+          version_number: 3.0.0
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_voyages_c4
+      voyages_c4-2.5:
+        type: query
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
+        batch_metadata:
+          datasource_name: voyages_c4
+          dataset_name: pipe_production_v20201001
+          table_name: proto_voyages_c4
+          version_number: 2.5
+        splitter:
+          column_name: SPLITTER_COLUMN
+          method_name: split_on_column_value
+        query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_production_v20201001_proto_voyages_c4
       information_schema_partitions_internal-3.0.0:
         type: query
         order_by:
@@ -803,7 +831,9 @@ fluent_datasources:
         query: SELECT * FROM world-fishing-827.tech_great_expectations.v_unfiltered_pipe_ais_v3_alpha_published_INFORMATION_SCHEMA_PARTITIONS
       information_schema_partitions_published-2.5:
         type: query
-        order_by: []
+        order_by:
+          - key: SPLITTER_COLUMN
+            reverse: true
         batch_metadata:
           datasource_name: information_schema_partitions_published
           dataset_name: pipe_production_v20201001
@@ -816,7 +846,7 @@ fluent_datasources:
     connection_string: bigquery://world-fishing-827/tech_great_expectations?credentials_path=/mnt/encrypted_data/git/api_keys/world-fishing-827-02584bdf5326.json
     create_temp_table: true
 include_rendered_content:
+  expectation_validation_result: false
   globally: false
   expectation_suite: false
-  expectation_validation_result: false
 notebooks:
