@@ -2,8 +2,6 @@ from airflow import DAG
 from airflow.utils.task_group import TaskGroup
 from airflow.decorators import task
 
-from airflow.providers.google.cloud.sensors.bigquery import BigQueryTablePartitionExistenceSensor
-from airflow.operators.python import PythonOperator
 import great_expectations as gx
 from great_expectations_provider.operators.great_expectations import GreatExpectationsOperator
 from airflow_dbt.operators.dbt_operator import (
@@ -15,7 +13,7 @@ from great_expectations_experimental.expectations.expect_queried_custom_query_to
 
 
 import logging
-from datetime import date,datetime,timedelta
+from datetime import datetime
 import os
 
 import json
@@ -23,6 +21,11 @@ from jinja2 import Template
 
 from google.cloud import bigquery
 from google.oauth2 import service_account
+
+import aiofiles
+import asyncio
+from gcloud.aio.storage import Storage
+import glob
 
 import pandas as pd
 
@@ -45,6 +48,37 @@ def safe_gb(bytes):
         return 0
     else:
         return round(bytes / (1000**3), 2)
+
+async def upload_local_directory_to_gcs(upload_list, target_bucket):
+    async with Storage() as client:
+        # Prepare all our upload data
+        uploads = []
+        for local_name, gcs_name in upload_list.items():
+            async with aiofiles.open(local_name, mode="rb") as f:
+                contents = await f.read()
+                uploads.append((gcs_name, contents))
+
+        # Simultaneously upload all files
+        await asyncio.gather(
+            *[
+                client.upload(target_bucket, path, file_)
+                for path, file_ in uploads
+            ]
+        )
+
+@task(task_id="upload_data_docs", trigger_rule="all_done")
+def upload_data_docs():
+    upload_list = {}
+    local_path = "/mnt/encrypted_data/git/data-testing/great_expectations/uncommitted/data_docs/local_site"
+    target_bucket = "data-testing-static-website"
+    remote_path = "great_expectations"
+    for f in glob.glob(f"{local_path}/**/*", recursive=True):
+        if os.path.isfile(f):
+            remote = f.replace(local_path, remote_path)
+            upload_list.update({f: remote})
+    
+    asyncio.run(upload_local_directory_to_gcs(upload_list=upload_list, target_bucket=target_bucket))
+
 
 @task(task_id="estimate_billing", trigger_rule="all_done")
 def get_jobs_statistics(**kwargs):
@@ -85,6 +119,8 @@ total_bytes_processed (GB): {safe_gb(df_jobs['total_bytes_processed'].sum())}
 estimated_bytes_processed (GB): {safe_gb(df_jobs['estimated_bytes_processed'].sum())}
     """)
 
+
+
 with DAG(
     "gx_run_constraints_checkpoints", 
     start_date=datetime(2023, 7 , 3), 
@@ -111,6 +147,8 @@ with DAG(
     gx_context_root_dir=os.getenv('GX_CONTEXT_ROOT_DIR')
     gx_context = gx.get_context(context_root_dir=gx_context_root_dir)
     gx_datasource = gx_context.get_datasource("gfw-google-827")
+
+    upload_data_docs_task = upload_data_docs()
 
     # TODO CHO20230707 This is only robust as long as we have a 1:1 mapping of expectation suite to checkpoint
     for current_expectation_suite_name in [es for es in gx_context.list_expectation_suite_names() if 'constraints' in es]:
@@ -163,4 +201,5 @@ with DAG(
                     retry_delay=3
                 )
 
-                dbt_prepare_partition_statistics_table >> dbt_test_partition_statistics_table >> load_templated_json(gx_validations) >> gx_constraints >> billing_estimate
+                dbt_prepare_partition_statistics_table >> dbt_test_partition_statistics_table >> \
+                    load_templated_json(gx_validations) >> gx_constraints >> [upload_data_docs_task, billing_estimate]
