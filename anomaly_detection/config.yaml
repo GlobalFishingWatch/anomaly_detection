@@ -12,13 +12,58 @@ anomalies:
               season_length: 
                 - 365
                 - 7
+              stl_kwargs:
+                robust: True
             train_start: "2012-01-01"
-            train_end: "Inf"
+            train_end: "2049-12-31"
             forecast_periods: 1
-    target_dataset: "scratch_christian_homberg_ttl120d"
+            forecast_error: 0.05
+    target_dataset: "world-fishing-827.tech_great_expectations"
+    target_table: "anomaly_detection_forecasts"
+  pipe3_stats_daily_num_ssvid:
+    source_dataset: "pipe_ais_v3_alpha_published"
+    source_table: "stats_daily"
+    source_date_column: "date"
+    source_date_column_sql: "date"
+    source_forecast_column: "num_ssvid"
+    source_forecast_column_sql: "MAX(num_ssvid)"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365
+                - 7
+              stl_kwargs:
+                robust: True
+            train_start: "2012-01-01"
+            train_end: "Today"
+            forecast_periods: 1
+            forecast_error: 0.05
+    target_dataset: "world-fishing-827.tech_great_expectations"
+    target_table: "anomaly_detection_forecasts"
+  pipe3_stats_daily_num_segs:
+    source_dataset: "pipe_ais_v3_alpha_published"
+    source_table: "stats_daily"
+    source_date_column: "date"
+    source_date_column_sql: "date"
+    source_forecast_column: "num_segs"
+    source_forecast_column_sql: "MAX(num_segs)"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365
+                - 7
+              stl_kwargs:
+                robust: True
+            train_start: "2012-01-01"
+            train_end: "Today"
+            forecast_periods: 1
+            forecast_error: 0.05
+    target_dataset: "world-fishing-827.tech_great_expectations"
     target_table: "anomaly_detection_forecasts"
   brazil_vms_bugged:
-    source_dataset: "scratch_christian_homberg_ttl120d"
+    source_dataset: "world-fishing-827.tech_great_expectations"
     source_table: "brazil_vms_normalized_anomaly_copy"
     source_date_column: "date"
     source_date_column_sql: "date"
@@ -30,10 +75,13 @@ anomalies:
               season_length: 
                 - 365
                 - 7
+              stl_kwargs:
+                robust: True
             train_start: "2012-01-01"
-            train_end: "Inf"
+            train_end: "Today"
             forecast_periods: 1
-    target_dataset: "scratch_christian_homberg_ttl120d"
+            forecast_error: 0.05
+    target_dataset: "world-fishing-827.tech_great_expectations"
     target_table: "anomaly_detection_forecasts"
   brazil_vms_production_v20211126:
     source_dataset: "pipe_brazil_production_v20211126"
@@ -55,10 +103,13 @@ anomalies:
               season_length: 
                 - 365
                 - 7
+              stl_kwargs:
+                robust: True
             train_start: "Inf"
-            train_end: "Inf"
+            train_end: "Today"
             forecast_periods: 1
-    target_dataset: "scratch_christian_homberg_ttl120d"
+            forecast_error: 0.05
+    target_dataset: "world-fishing-827.tech_great_expectations"
     target_table: "anomaly_detection_forecasts"
   norway_vms_normalized_20231022:
     source_dataset: "pipe_norway_production_v20220112"
@@ -80,8 +131,32 @@ anomalies:
               season_length: 
                 - 365
                 - 7
+              stl_kwargs:
+                robust: True
             train_start: "Inf"
-            train_end: "Inf"
+            train_end: "Today"
             forecast_periods: 1
-    target_dataset: "scratch_christian_homberg_ttl120d"
+            forecast_error: 0.05
+    target_dataset: "world-fishing-827.tech_great_expectations"
+    target_table: "anomaly_detection_forecasts"
+  pipe3_messages:
+    source_dataset: "pipe_ais_v3_alpha_published"
+    source_table: "messages"
+    source_date_column: "date"
+    source_date_column_sql: "date(timestamp)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365
+                - 7
+              stl_kwargs:
+                robust: True
+            train_start: "Inf"
+            train_end: "Today"
+            forecast_periods: 1
+            forecast_error: 0.05
+    target_dataset: "world-fishing-827.tech_great_expectations"
     target_table: "anomaly_detection_forecasts"
