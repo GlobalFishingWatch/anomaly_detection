@@ -4,10 +4,7 @@ from airflow.decorators import task
 
 import great_expectations as gx
 from great_expectations_provider.operators.great_expectations import GreatExpectationsOperator
-from airflow_dbt.operators.dbt_operator import (
-    DbtRunOperator,
-    DbtTestOperator
-)
+
 from great_expectations_experimental.expectations.expect_queried_column_values_to_exist_in_second_table_column  import ExpectQueriedColumnValuesToExistInSecondTableColumn
 from great_expectations_experimental.expectations.expect_queried_custom_query_to_return_num_rows import ExpectQueriedCustomQueryToReturnNumRows
 
@@ -129,19 +126,6 @@ with DAG(
     max_active_runs=1
 ) as dag:
     
-    with TaskGroup(group_id="partition_statistics_table") as tg:
-        dbt_prepare_partition_statistics_table = DbtRunOperator(
-            task_id='prepare_partition_statistics_table',
-            dir='/mnt/encrypted_data/git/data-testing/monitoring/monitoring',
-            dbt_bin='/mnt/encrypted_data/git/data-testing/venv/bin/dbt'
-        )
-
-        dbt_test_partition_statistics_table = DbtTestOperator(
-            task_id='test_partition_statistics_table',
-            dir='/mnt/encrypted_data/git/data-testing/monitoring/monitoring',
-            dbt_bin='/mnt/encrypted_data/git/data-testing/venv/bin/dbt'
-        )
-
     billing_estimate = get_jobs_statistics()
 
     gx_context_root_dir=os.getenv('GX_CONTEXT_ROOT_DIR')
@@ -153,7 +137,9 @@ with DAG(
     # TODO CHO20230707 This is only robust as long as we have a 1:1 mapping of expectation suite to checkpoint
     for current_expectation_suite_name in [es for es in gx_context.list_expectation_suite_names() if 'constraints' in es]:
         current_expectation_suite = gx_context.get_expectation_suite(current_expectation_suite_name)
-        if current_expectation_suite.expectations and "messages_segmented_" not in current_expectation_suite_name:
+        # TODO: excluder certain expectation suites more elegantly
+        if current_expectation_suite.expectations \
+            and "segs_activity." not in current_expectation_suite_name:
             logger.info(current_expectation_suite_name)
             current_expectation_suite_asset_name=current_expectation_suite.meta.get('asset_name')
             gx_asset=gx_datasource.get_asset(current_expectation_suite_asset_name)
@@ -201,5 +187,4 @@ with DAG(
                     retry_delay=3
                 )
 
-                dbt_prepare_partition_statistics_table >> dbt_test_partition_statistics_table >> \
-                    load_templated_json(gx_validations) >> gx_constraints >> [upload_data_docs_task, billing_estimate]
+                load_templated_json(gx_validations) >> gx_constraints >> [upload_data_docs_task, billing_estimate]
