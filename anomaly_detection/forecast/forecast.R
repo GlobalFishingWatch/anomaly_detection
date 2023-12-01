@@ -1,3 +1,7 @@
+# Sys.setenv(ANOMALY_DETECTION_CONFIG_NAME="pipe3_stats_daily_raw_positions")
+
+anomaly_detection_config_name = Sys.getenv("ANOMALY_DETECTION_CONFIG_NAME")
+
 suppressMessages({
   library(magrittr)
   library(data.table)
@@ -7,14 +11,20 @@ suppressMessages({
   library(glue)
 })
 
+# safe_query is required
+source("bq_utils.R")
+source("helpers.R")
+
 bigrquery::bq_auth(path = "/project/sa_api_key.json")
 con = DBI::dbConnect(drv = bigrquery::bigquery(), project = "world-fishing-827", use_legacy_sql = FALSE)
 
 
-target_table_actuals = "scratch_christian_homberg_ttl120d.anomaly_detection_actuals"
-target_table_forecasts = "scratch_christian_homberg_ttl120d.anomaly_detection_forecasts"
+target_table_actuals = "world-fishing-827.tech_great_expectations.anomaly_detection_actuals"
+target_table_forecasts = "world-fishing-827.tech_great_expectations.anomaly_detection_forecasts"
 
-anomaly_detection_config = yaml::read_yaml("/mnt/encrypted_data/git/data-testing/anomaly_detection/config.yaml")
+db_anomaly_detection_actuals = tbl(con, target_table_actuals)
+
+anomaly_detection_config = yaml::read_yaml("config.yaml")
 
 config_fields = c(
   "source_dataset",
@@ -26,154 +36,108 @@ config_fields = c(
   "source_sql"
 )
 
-current_anomaly_detection_config = anomaly_detection_config$anomalies[[1]]
+current_anomaly_detection_config = anomaly_detection_config$anomalies[[anomaly_detection_config_name]]
 
 # replace config fields by empty string if they don't exist, otherwise SQL string would be NULL
 current_anomaly_detection_config[config_fields] = config_fields %>% 
   set_names() %>% 
   imap(~ current_anomaly_detection_config[[.x]] %||% "")
 
-missing_dates = "date"
-
-delta_load = F
-delta_load
-
-if (delta_load) {
-  existing_dates = "SELECT DISTINCT date FROM target_table"  
-} else {
-  existing_dates = "'1979-01-01'"
-}
+print(current_anomaly_detection_config)
 
 maximum_valid_to = "9999-12-31 23:59:59 UTC"
 
-create_scd_statement = function(
-    select_date_value_sql,
-    current_anomaly_detection_config,
-    target_table,
-    forecast_column_sql = "",
-    maximum_valid_to = "9999-12-31 23:59:59 UTC"
-) {
-  current_timestamp = Sys.time() %>% strftime(tz = "UTC", usetz = T)
-  glue(.null = "", "
-MERGE INTO `{target_table}` AS target_table
-USING (
-  WITH target_table AS (SELECT * FROM `{target_table}`),
-  new_actuals AS (
-    SELECT 
-        '{current_anomaly_detection_config$source_dataset}' source_dataset, 
-        '{current_anomaly_detection_config$source_table}' source_table,
-        '{current_anomaly_detection_config$source_date_column}' source_date_column,
-        '{current_anomaly_detection_config$source_date_column_sql}' source_date_column_sql,
-        '{current_anomaly_detection_config$source_forecast_column}' source_forecast_column,
-        '{current_anomaly_detection_config$source_forecast_column_sql}' source_forecast_column_sql,
-        '{current_anomaly_detection_config$source_sql}' source_sql,
-     {select_date_value_sql}
-    ),
-  new_actuals_with_key AS (
-    SELECT 
-      MD5(CONCAT(
-        source_dataset,
-        source_table,
-        source_date_column,
-        source_date_column_sql,
-        source_forecast_column,
-        source_forecast_column_sql,
-        source_sql,
-        {forecast_column_sql}
-        date)) key,
-      * 
-    FROM new_actuals
-  )
-  SELECT key upsert_key, * FROM new_actuals_with_key
-  UNION ALL
-  SELECT NULL upsert_key, new_actuals_with_key.* FROM new_actuals_with_key 
-  JOIN target_table
-  ON   new_actuals_with_key.key = target_table.key
-  AND  new_actuals_with_key.value != target_table.value
-  AND target_table.valid_to = '{maximum_valid_to}'
-) delta_actuals
-ON   delta_actuals.upsert_key = target_table.key
-AND target_table.valid_to = '{maximum_valid_to}'
-WHEN MATCHED AND delta_actuals.value != target_table.value THEN UPDATE
-SET valid_to = '{current_timestamp}'
-WHEN NOT MATCHED THEN
-  INSERT VALUES (
-    key,
-    source_dataset,
-    source_table,
-    source_date_column,
-    source_date_column_sql,
-    source_forecast_column,
-    source_forecast_column_sql,
-    source_sql,
-    {forecast_column_sql}
-    date,
-    value,
-    '{current_timestamp}',
-    '{maximum_valid_to}'
-  )
-")
+# get the existing dates in actuals table so we can either filter by excluding existing or including 
+# missing dates
+existing_dates = get_anomaly_detection_actuals(
+  con,
+  db_anomaly_detection_actuals, 
+  current_anomaly_detection_config,
+  maximum_valid_to = "9999-12-31 23:59:59 UTC"
+) %>% 
+  .[, date]
+
+all_historic_dates = seq(as.Date("2012-01-01"), Sys.Date(), "day")
+
+missing_dates = all_historic_dates %>% setdiff(existing_dates) %>% as.Date(origin="1970-01-01")
+
+# set date sql filters so they always evaluate to true by default
+existing_dates_sql = "'1979-01-01'" # date is never in this dummy value
+missing_dates_sql = "date" # date is always in date
+
+delta_load = T
+delta_load
+
+# if we're doing a delta load and there are existing dates
+if (delta_load & length(existing_dates)) {
+  # only one of the two lists is required to filter, so remove the longer one
+  if (length(existing_dates) > length(missing_dates)) {
+    missing_dates_sql = paste0("'", missing_dates, "'", collapse = ", ")
+  } else {
+    existing_dates_sql = paste0("'", existing_dates, "'", collapse = ", ")
+  } 
 }
 
 select_date_value_sql = glue(.null = "", "
 {current_anomaly_detection_config$source_date_column_sql} date, 
   {current_anomaly_detection_config$source_forecast_column_sql} value
 FROM {current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}
-WHERE {current_anomaly_detection_config$source_date_column_sql} BETWEEN '2012-01-01' AND '2023-11-30'
-AND {current_anomaly_detection_config$source_date_column_sql} IN ({missing_dates})
-AND {current_anomaly_detection_config$source_date_column_sql} NOT IN ({existing_dates})
+WHERE {current_anomaly_detection_config$source_date_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
+AND {current_anomaly_detection_config$source_date_column_sql} IN ({missing_dates_sql})
+AND {current_anomaly_detection_config$source_date_column_sql} NOT IN ({existing_dates_sql})
 GROUP BY date
 ORDER BY date"
 )
 
-create_scd_statement(select_date_value_sql, current_anomaly_detection_config, target_table_actuals) %>% safe_cached_query(con, verbose = T)
+create_scd_statement(
+  select_date_value_sql, 
+  current_anomaly_detection_config, 
+  target_table_actuals
+) %>% 
+  safe_query(con = con, allowed_size = 20 * BQ_GB)
 
-db_anomaly_detection_actuals = tbl(con, "scratch_christian_homberg_ttl120d.anomaly_detection_actuals")
-
-db_anomaly_detection_actuals %>% safe_cached_query(overwrite_if_cached = T) %>% View
-
-
-dt_train = db_anomaly_detection_actuals %>% 
-  filter(valid_to == maximum_valid_to) %>% 
-  filter(
-    source_dataset == !!current_anomaly_detection_config$source_dataset &&
-      source_table == !!current_anomaly_detection_config$source_table &&
-      source_date_column == !!current_anomaly_detection_config$source_date_column &&
-      source_date_column_sql == !!current_anomaly_detection_config$source_date_column_sql &&
-      source_forecast_column == !!current_anomaly_detection_config$source_forecast_column &&
-      source_forecast_column_sql == !!current_anomaly_detection_config$source_forecast_column_sql &&
-      source_sql == !!current_anomaly_detection_config$source_sql
-  ) %>% 
-  filter(date != '1979-01-01') %>% 
-  collect() %>% 
-  select(date, y = value) %>% 
-  setDT() %>% 
+dt_train = get_anomaly_detection_actuals(
+  con,
+  db_anomaly_detection_actuals, 
+  current_anomaly_detection_config,
+  maximum_valid_to = "9999-12-31 23:59:59 UTC"
+) %>% 
+  .[, .(date, y = value)] %>% 
   .[order(date)]
 
 
-dates_to_forecast = seq(as.Date("2023-01-01"), as.Date("2023-11-30"), "day")
+# TODO: temporary solution
+# for now always forecast the last 31 days including today
+# if there is no data yet for the last few days there will also be no forecast but instead multiple 
+# forecasts for the most recent date - that's why we apply unique at the end
+forecast_date_from = as.Date(Sys.getenv("FORECAST_DATE_FROM"))
+if (is.na(forecast_date_from)) forecast_date_from = Sys.Date() - 31
+forecast_date_to = as.Date(Sys.getenv("FORECAST_DATE_TO"))
+if (is.na(forecast_date_to)) forecast_date_to = Sys.Date()
+dates_to_forecast = seq(forecast_date_from, forecast_date_to, "day")
 
 dt_forecasts = dates_to_forecast %>% 
   map_dfr(\(current_fc_day) {
     dt_current_train = dt_train[date < current_fc_day]
-    current_anomaly_detection_config$algorithms %>% 
-      map_dfr(\(current_algorithm_config) {
-        if (names(current_algorithm_config) == "mstl") {
+    names(current_anomaly_detection_config$algorithms) %>% 
+      map_dfr(\(current_fc_method) {
+        current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
+        if (current_fc_method == "mstl") {
           fc = dt_current_train[, y] %>% 
-            forecast::msts(current_algorithm_config$parameters$season_length) %>% 
+            forecast::msts(unlist(current_algorithm_config$parameters$season_length)) %>% 
             forecast::mstl() %>% 
             predict(h = current_algorithm_config$forecast_periods) %>% 
             .[["mean"]] %>% 
             as.numeric()
-        } else if (names(current_algorithm_config) == "mean") {
-          mean_x_last_days = current_algorithm_config$sliding_window
+        } else if (current_fc_method == "mean") {
+          mean_x_last_days = current_algorithm_config$parameters$sliding_window
           fc = dt_current_train %>% data.table::last(mean_x_last_days) %>% .[, y] %>% mean
         } else {
           return()
         }
-        data.table(date = current_fc_day, fc = fc, fc_method = current_fc_method)
+        data.table(date = dt_current_train[, max(date)], fc = fc, fc_method = current_fc_method)
       })
-  })
+  }) %>% unique
 
 forecast_methods_sql_string = paste0("'", dt_forecasts[, fc_method], "'", collapse = ", ")
 date_sql_string = paste0("DATE('", dt_forecasts[, date], "')", collapse = ", ")
@@ -189,4 +153,11 @@ FROM UNNEST([STRUCT<forecast_method STRING, date DATE, value FLOAT64>
 {forecast_string_sql}
 ])
 ")
-create_scd_statement(forecast_values_sql_string, current_anomaly_detection_config, target_table_forecasts, forecast_column_sql = "forecast_method,") %>% safe_cached_query(con, verbose = T)
+
+create_scd_statement(
+  forecast_values_sql_string, 
+  current_anomaly_detection_config, 
+  target_table_forecasts, 
+  forecast_column_sql = "forecast_method,"
+) %>% 
+  safe_query(con = con)

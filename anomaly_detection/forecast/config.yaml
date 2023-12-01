@@ -10,14 +10,15 @@ anomalies:
         mstl: 
             parameters: 
               season_length: 
-                - 365
+                - 365.25
                 - 7
-              stl_kwargs:
-                robust: True
             train_start: "2012-01-01"
             train_end: "2049-12-31"
             forecast_periods: 1
             forecast_error: 0.05
+        mean:
+            parameters:
+              sliding_window: 30
     target_dataset: "world-fishing-827.tech_great_expectations"
     target_table: "anomaly_detection_forecasts"
   pipe3_stats_daily_num_ssvid:
@@ -31,14 +32,15 @@ anomalies:
         mstl: 
             parameters: 
               season_length: 
-                - 365
+                - 365.25
                 - 7
-              stl_kwargs:
-                robust: True
             train_start: "2012-01-01"
             train_end: "Today"
             forecast_periods: 1
             forecast_error: 0.05
+        mean:
+            parameters:
+              sliding_window: 30
     target_dataset: "world-fishing-827.tech_great_expectations"
     target_table: "anomaly_detection_forecasts"
   pipe3_stats_daily_num_segs:
@@ -52,14 +54,15 @@ anomalies:
         mstl: 
             parameters: 
               season_length: 
-                - 365
+                - 365.25
                 - 7
-              stl_kwargs:
-                robust: True
             train_start: "2012-01-01"
             train_end: "Today"
             forecast_periods: 1
             forecast_error: 0.05
+        mean:
+            parameters:
+              sliding_window: 30
     target_dataset: "world-fishing-827.tech_great_expectations"
     target_table: "anomaly_detection_forecasts"
   brazil_vms_bugged:
@@ -73,14 +76,15 @@ anomalies:
         mstl: 
             parameters: 
               season_length: 
-                - 365
+                - 365.25
                 - 7
-              stl_kwargs:
-                robust: True
             train_start: "2012-01-01"
             train_end: "Today"
             forecast_periods: 1
             forecast_error: 0.05
+        mean:
+            parameters:
+              sliding_window: 30
     target_dataset: "world-fishing-827.tech_great_expectations"
     target_table: "anomaly_detection_forecasts"
   brazil_vms_production_v20211126:
@@ -101,10 +105,8 @@ anomalies:
         mstl: 
             parameters: 
               season_length: 
-                - 365
+                - 365.25
                 - 7
-              stl_kwargs:
-                robust: True
             train_start: "Inf"
             train_end: "Today"
             forecast_periods: 1
@@ -129,10 +131,8 @@ anomalies:
         mstl: 
             parameters: 
               season_length: 
-                - 365
+                - 365.25
                 - 7
-              stl_kwargs:
-                robust: True
             train_start: "Inf"
             train_end: "Today"
             forecast_periods: 1
@@ -150,10 +150,8 @@ anomalies:
         mstl: 
             parameters: 
               season_length: 
-                - 365
+                - 365.25
                 - 7
-              stl_kwargs:
-                robust: True
             train_start: "Inf"
             train_end: "Today"
             forecast_periods: 1
