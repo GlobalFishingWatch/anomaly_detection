@@ -135,7 +135,7 @@ select_date_value_sql = glue(.null = "", "
 {current_review_config$source_date_column_sql} date, 
   {current_review_config$source_forecast_column_sql} value
 FROM {current_review_config$source_dataset}.{current_review_config$source_table}
-WHERE {current_review_config$source_date_column_sql} BETWEEN '2023-01-01' AND '2023-02-12'
+WHERE {current_review_config$source_date_column_sql} BETWEEN '2012-01-01' AND '2023-11-30'
 AND {current_review_config$source_date_column_sql} IN ({missing_dates})
 AND {current_review_config$source_date_column_sql} NOT IN ({existing_dates})
 GROUP BY date
@@ -166,26 +166,45 @@ dt_train = db_anomaly_detection_actuals %>%
   setDT() %>% 
   .[order(date)]
 
-fc_methods %>% 
-  walk(\(current_fc_method) {
-    if (current_fc_method == "mstl") {
-      fc = dt_train[, y] %>% 
-        forecast::msts(c(365.25, 7)) %>% 
-        forecast::mstl() %>% 
-        predict(h = 1) %>% 
-        .[["mean"]] %>% 
-        as.numeric()
-    } else if ("mean" %in% current_fc_method) {
-      mean_x_last_days = current_fc_method %>% 
-        gsub(pattern = "mean_(.*)", replacement = "\\1") %>% 
-        as.integer()
-      fc = dt_train %>% data.table::last(mean_x_last_days) %>% .[, y] %>% mean
-    }
-    
-    select_date_value_sql = glue("
-    '{current_fc_method}' AS forecast_method,
-    DATE('{dt_train[, max(date)]}') AS date,
-    {fc} AS value
-    ")
-    create_scd_statement(select_date_value_sql, current_review_config, target_table_forecasts, forecast_column_sql = "forecast_method,") %>% safe_cached_query(con, verbose = T)
+
+dates_to_forecast = seq(as.Date("2023-01-01"), as.Date("2023-11-30"), "day")
+
+dt_forecasts = dates_to_forecast %>% 
+  map_dfr(\(current_fc_day) {
+    dt_current_train = dt_train[date < current_fc_day]
+    fc_methods %>% 
+      map_dfr(\(current_fc_method) {
+        if (current_fc_method == "mstl") {
+          fc = dt_current_train[, y] %>% 
+            forecast::msts(c(365.25, 7)) %>% 
+            forecast::mstl() %>% 
+            predict(h = 1) %>% 
+            .[["mean"]] %>% 
+            as.numeric()
+        } else if (current_fc_method %like% "mean") {
+          mean_x_last_days = current_fc_method %>% 
+            gsub(pattern = "mean_(.*)", replacement = "\\1") %>% 
+            as.integer()
+          fc = dt_current_train %>% data.table::last(mean_x_last_days) %>% .[, y] %>% mean
+        } else {
+          return()
+        }
+        data.table(date = current_fc_day, fc = fc, fc_method = current_fc_method)
+      })
   })
+
+forecast_methods_sql_string = paste0("'", dt_forecasts[, fc_method], "'", collapse = ", ")
+date_sql_string = paste0("DATE('", dt_forecasts[, date], "')", collapse = ", ")
+forecast_value_sql_string = paste0(dt_forecasts[, fc], collapse = ", ")
+
+forecast_string_sql = dt_forecasts[, glue_data(.SD, "
+('{fc_method}', DATE('{date}'), {fc})
+")] %>% paste0(collapse = ", ")
+
+forecast_values_sql_string = glue("
+forecast_method, date, value 
+FROM UNNEST([STRUCT<forecast_method STRING, date DATE, value FLOAT64>
+{forecast_string_sql}
+])
+")
+create_scd_statement(forecast_values_sql_string, current_review_config, target_table_forecasts, forecast_column_sql = "forecast_method,") %>% safe_cached_query(con, verbose = T)
