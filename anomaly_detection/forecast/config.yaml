@@ -60,7 +60,7 @@ anomalies:
             parameters:
               sliding_window: 30
   brazil_vms_bugged:
-    source_dataset: "world-fishing-827.tech_great_expectations"
+    source_dataset: "tech_great_expectations"
     source_table: "brazil_vms_normalized_anomaly_copy"
     source_date_column: "date"
     source_date_column_sql: "date"
@@ -87,10 +87,13 @@ anomalies:
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    SELECT PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) date, row_count y
+    PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) AS date, 
+    row_count AS value
     FROM `world-fishing-827.pipe_brazil_production_v20211126.__TABLES__` 
     WHERE table_id LIKE "brazil_vms_normalized_%"
     AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) IN ({missing_dates_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_dates_sql})
     ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1"))
     '
     algorithms: 
@@ -103,6 +106,9 @@ anomalies:
             train_end: "Today"
             forecast_periods: 1
             forecast_error: 0.05
+        mean:
+            parameters:
+              sliding_window: 30
   norway_vms_normalized_20231022:
     source_dataset: "pipe_norway_production_v20220112"
     source_table: "norway_vms_normalized_20231022"
@@ -111,10 +117,13 @@ anomalies:
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    SELECT PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) date, row_count y
+    PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) AS date, 
+    row_count AS value
     FROM `world-fishing-827.pipe_norway_production_v20220112.__TABLES__` 
     WHERE table_id LIKE "norway_vms_normalized_%"
     AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) IN ({missing_dates_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_dates_sql})
     ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1"))
     '
     algorithms: 
@@ -127,13 +136,46 @@ anomalies:
             train_end: "Today"
             forecast_periods: 1
             forecast_error: 0.05
-  pipe3_messages:
-    source_dataset: "pipe_ais_v3_alpha_published"
-    source_table: "messages"
+        mean:
+            parameters:
+              sliding_window: 30
+  # pipe3_messages:
+  #   source_dataset: "pipe_ais_v3_alpha_published"
+  #   source_table: "messages"
+  #   source_date_column: "date"
+  #   source_date_column_sql: "date(timestamp)"
+  #   source_forecast_column: "count"
+  #   source_forecast_column_sql: "COUNT(*)"
+  #   algorithms: 
+  #       mstl: 
+  #           parameters: 
+  #             season_length: 
+  #               - 365.25
+  #               - 7
+  #           train_start: "Inf"
+  #           train_end: "Today"
+  #           forecast_periods: 1
+  #           forecast_error: 0.05
+  #       mean:
+  #           parameters:
+  #             sliding_window: 30
+  ais_sources_normalized_spire:
+    source_dataset: "pipe_ais_sources_v20220628"
+    source_table: "normalized_spire_"
     source_date_column: "date"
     source_date_column_sql: "date(timestamp)"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) AS date, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__` 
+    WHERE table_id LIKE "normalized_spire_%"
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) IN ({missing_dates_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) NOT IN ({existing_dates_sql})
+    ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))
+    '
     algorithms: 
         mstl: 
             parameters: 
@@ -144,3 +186,36 @@ anomalies:
             train_end: "Today"
             forecast_periods: 1
             forecast_error: 0.05
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe3_messages_segmented:
+    source_dataset: "pipe_ais_v3_alpha_internal"
+    source_table: "messages_segmented_"
+    source_date_column: "date"
+    source_date_column_sql: "date(timestamp)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) AS date, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__` 
+    WHERE table_id LIKE "messages_segmented_%"
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) IN ({missing_dates_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) NOT IN ({existing_dates_sql})
+    ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1"))
+    '
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+            train_start: "Inf"
+            train_end: "Today"
+            forecast_periods: 1
+            forecast_error: 0.05
+        mean:
+            parameters:
+              sliding_window: 30

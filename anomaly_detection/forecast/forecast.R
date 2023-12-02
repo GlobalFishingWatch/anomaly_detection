@@ -1,4 +1,4 @@
-# Sys.setenv(ANOMALY_DETECTION_CONFIG_NAME="pipe3_stats_daily_raw_positions")
+# Sys.setenv(ANOMALY_DETECTION_CONFIG_NAME="ais_sources_normalized_spire")
 
 anomaly_detection_config_name = Sys.getenv("ANOMALY_DETECTION_CONFIG_NAME")
 
@@ -78,16 +78,22 @@ if (delta_load & length(existing_dates)) {
   } 
 }
 
-select_date_value_sql = glue(.null = "", "
-{current_anomaly_detection_config$source_date_column_sql} date, 
-  {current_anomaly_detection_config$source_forecast_column_sql} value
-FROM {current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}
-WHERE {current_anomaly_detection_config$source_date_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
-AND {current_anomaly_detection_config$source_date_column_sql} IN ({missing_dates_sql})
-AND {current_anomaly_detection_config$source_date_column_sql} NOT IN ({existing_dates_sql})
-GROUP BY date
-ORDER BY date"
-)
+if (current_anomaly_detection_config$source_sql != "") {
+  select_date_value_sql = glue(current_anomaly_detection_config$source_sql)
+  print(select_date_value_sql)
+} else {
+  select_date_value_sql = glue(.null = "", "
+    {current_anomaly_detection_config$source_date_column_sql} date, 
+      {current_anomaly_detection_config$source_forecast_column_sql} value
+    FROM {current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}
+    WHERE {current_anomaly_detection_config$source_date_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
+    AND {current_anomaly_detection_config$source_date_column_sql} IN ({missing_dates_sql})
+    AND {current_anomaly_detection_config$source_date_column_sql} NOT IN ({existing_dates_sql})
+    GROUP BY date
+    ORDER BY date"
+  )  
+}
+
 
 create_scd_statement(
   select_date_value_sql, 
@@ -110,9 +116,9 @@ dt_train = get_anomaly_detection_actuals(
 # for now always forecast the last 31 days including today
 # if there is no data yet for the last few days there will also be no forecast but instead multiple 
 # forecasts for the most recent date - that's why we apply unique at the end
-forecast_date_from = as.Date(Sys.getenv("FORECAST_DATE_FROM"))
+forecast_date_from = as.Date(Sys.getenv("FORECAST_DATE_FROM"), format = "%Y-%m-%d")
 if (is.na(forecast_date_from)) forecast_date_from = Sys.Date() - 31
-forecast_date_to = as.Date(Sys.getenv("FORECAST_DATE_TO"))
+forecast_date_to = as.Date(Sys.getenv("FORECAST_DATE_TO"), format = "%Y-%m-%d")
 if (is.na(forecast_date_to)) forecast_date_to = Sys.Date()
 dates_to_forecast = seq(forecast_date_from, forecast_date_to, "day")
 

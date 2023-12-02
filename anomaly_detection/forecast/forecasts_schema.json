@@ -1,3 +1,4 @@
+//asdasd
 [
     {"name": "key", "type": "BYTES"},
     {"name": "source_dataset", "type": "STRING"},
@@ -7,6 +8,7 @@
     {"name": "source_forecast_column", "type": "STRING"},
     {"name": "source_forecast_column_sql", "type": "STRING"},
     {"name": "source_sql", "type": "STRING"},
+    {"name": "source_sql_hash", "type": "STRING"},
     {"name": "forecast_method", "type": "STRING"},
     {"name": "date", "type": "DATE"},
     {"name": "value", "type": "FLOAT"},

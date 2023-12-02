@@ -7,6 +7,7 @@
     {"name": "source_forecast_column", "type": "STRING"},
     {"name": "source_forecast_column_sql", "type": "STRING"},
     {"name": "source_sql", "type": "STRING"},
+    {"name": "source_sql_hash", "type": "STRING"},
     {"name": "date", "type": "DATE"},
     {"name": "value", "type": "FLOAT"},
     {"name": "valid_from", "type": "TIMESTAMP"},

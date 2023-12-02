@@ -4,6 +4,7 @@ get_anomaly_detection_actuals = function(
     anomaly_detection_config, 
     maximum_valid_to = "9999-12-31 23:59:59 UTC"
 ) {
+  source_sql_hash = digest::digest(anomaly_detection_config$source_sql, algo = "md5")
   db_anomaly_detection_actuals %>% 
     filter(valid_to == maximum_valid_to) %>% 
     filter(
@@ -13,7 +14,7 @@ get_anomaly_detection_actuals = function(
         source_date_column_sql == !!anomaly_detection_config$source_date_column_sql &&
         source_forecast_column == !!anomaly_detection_config$source_forecast_column &&
         source_forecast_column_sql == !!anomaly_detection_config$source_forecast_column_sql &&
-        source_sql == !!anomaly_detection_config$source_sql
+        source_sql_hash == source_sql_hash
     ) %>% 
     filter(date != '1979-01-01') %>% 
     safe_query(con = con) %>% 
@@ -28,6 +29,8 @@ create_scd_statement = function(
     maximum_valid_to = "9999-12-31 23:59:59 UTC"
 ) {
   current_timestamp = Sys.time() %>% strftime(tz = "UTC", usetz = T)
+  source_sql_hash = digest::digest(current_anomaly_detection_config$source_sql, algo = "md5")
+  
   glue(.null = "", "
 MERGE INTO `{target_table}` AS target_table
 USING (
@@ -40,7 +43,8 @@ USING (
         '{current_anomaly_detection_config$source_date_column_sql}' source_date_column_sql,
         '{current_anomaly_detection_config$source_forecast_column}' source_forecast_column,
         '{current_anomaly_detection_config$source_forecast_column_sql}' source_forecast_column_sql,
-        '{current_anomaly_detection_config$source_sql}' source_sql,
+        '{sql(current_anomaly_detection_config$source_sql)}' source_sql,
+        '{source_sql_hash}' source_sql_hash,
      {select_date_value_sql}
     ),
   new_actuals_with_key AS (
@@ -53,6 +57,7 @@ USING (
         source_forecast_column,
         source_forecast_column_sql,
         source_sql,
+        source_sql_hash,
         {forecast_column_sql}
         date)) key,
       * 
@@ -80,6 +85,7 @@ WHEN NOT MATCHED THEN
     source_forecast_column,
     source_forecast_column_sql,
     source_sql,
+    source_sql_hash,
     {forecast_column_sql}
     date,
     value,
