@@ -89,7 +89,9 @@ validate_query_size = function(query, allowed_size = 0.1 * BQ_GB) {
 #'
 #' @examples
 safe_query = function(query, con, allowed_size = 0.1 * BQ_GB, 
-                      query_size_exceeded_handling = c("stop", "skip")[1], page_size = NULL) {
+                      query_size_exceeded_handling = c("stop", "skip")[1], page_size = NULL,
+                      verbose = F) {
+  if (verbose) cat(query, fill = T)
   if("tbl_lazy" %in% class(query)) {
     if(con %>% is.null()) con = query[1]$src$con
     query %<>% sql_render()
@@ -138,7 +140,6 @@ safe_cached_query = function(query, con = NULL, allowed_size = NULL,
   }
   beautified_query = query %>% 
     prettyfile::beautify_str("sql")
-  if (verbose) cat(beautified_query, fill = T)
   query_hash = digest::digest(beautified_query, algo = "md5")
   # for compatibility with minified queries also check whether minified query has been cached
   query_hash_minified = query %>% 
@@ -181,7 +182,8 @@ safe_cached_query = function(query, con = NULL, allowed_size = NULL,
     cat("Query found in cache - retrieving result", fill = T)
     return(arrow::read_feather(query_path) %>% setDT())
   } else {
-    dt = safe_query(query = query, con = con, allowed_size = allowed_size, page_size = page_size)
+    dt = safe_query(query = query, con = con, allowed_size = allowed_size, page_size = page_size, 
+                    verbose = verbose)
     if (!dir.exists(dirname(query_path))) dir.create(dirname(query_path), recursive = T)
     
     if ("list" %in% dt[, lapply(.SD, class)]) {

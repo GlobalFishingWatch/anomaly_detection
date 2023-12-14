@@ -2,8 +2,8 @@ anomalies:
   pipe3_stats_daily_raw_positions:
     source_dataset: "pipe_ais_v3_alpha_published"
     source_table: "stats_daily"
-    source_date_column: "date"
-    source_date_column_sql: "date"
+    source_datetime_column: "date"
+    source_datetime_column_sql: "date"
     source_forecast_column: "raw_positions"
     source_forecast_column_sql: "MAX(raw_positions)"
     algorithms: 
@@ -22,8 +22,8 @@ anomalies:
   pipe3_stats_daily_num_ssvid:
     source_dataset: "pipe_ais_v3_alpha_published"
     source_table: "stats_daily"
-    source_date_column: "date"
-    source_date_column_sql: "date"
+    source_datetime_column: "date"
+    source_datetime_column_sql: "date"
     source_forecast_column: "num_ssvid"
     source_forecast_column_sql: "MAX(num_ssvid)"
     algorithms: 
@@ -42,8 +42,8 @@ anomalies:
   pipe3_stats_daily_num_segs:
     source_dataset: "pipe_ais_v3_alpha_published"
     source_table: "stats_daily"
-    source_date_column: "date"
-    source_date_column_sql: "date"
+    source_datetime_column: "date"
+    source_datetime_column_sql: "date"
     source_forecast_column: "num_segs"
     source_forecast_column_sql: "MAX(num_segs)"
     algorithms: 
@@ -62,8 +62,8 @@ anomalies:
   brazil_vms_bugged:
     source_dataset: "tech_great_expectations"
     source_table: "brazil_vms_normalized_anomaly_copy"
-    source_date_column: "date"
-    source_date_column_sql: "date"
+    source_datetime_column: "date"
+    source_datetime_column_sql: "date"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     algorithms: 
@@ -82,8 +82,8 @@ anomalies:
   brazil_vms_production_v20211126:
     source_dataset: "pipe_brazil_production_v20211126"
     source_table: "brazil_vms_normalized_20231023"
-    source_date_column: "date"
-    source_date_column_sql: "date(timestamp)"
+    source_datetime_column: "date"
+    source_datetime_column_sql: "date(timestamp)"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
@@ -92,8 +92,8 @@ anomalies:
     FROM `world-fishing-827.pipe_brazil_production_v20211126.__TABLES__` 
     WHERE table_id LIKE "brazil_vms_normalized_%"
     AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) IN ({missing_dates_sql})
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_dates_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) IN ({missing_datetimes_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
     ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1"))
     '
     algorithms: 
@@ -112,8 +112,8 @@ anomalies:
   norway_vms_normalized_20231022:
     source_dataset: "pipe_norway_production_v20220112"
     source_table: "norway_vms_normalized_20231022"
-    source_date_column: "date"
-    source_date_column_sql: "date(timestamp)"
+    source_datetime_column: "date"
+    source_datetime_column_sql: "date(timestamp)"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
@@ -122,8 +122,8 @@ anomalies:
     FROM `world-fishing-827.pipe_norway_production_v20220112.__TABLES__` 
     WHERE table_id LIKE "norway_vms_normalized_%"
     AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) IN ({missing_dates_sql})
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_dates_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) IN ({missing_datetimes_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
     ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1"))
     '
     algorithms: 
@@ -142,8 +142,8 @@ anomalies:
   # pipe3_messages:
   #   source_dataset: "pipe_ais_v3_alpha_published"
   #   source_table: "messages"
-  #   source_date_column: "date"
-  #   source_date_column_sql: "date(timestamp)"
+  #   source_datetime_column: "date"
+  #   source_datetime_column_sql: "date(timestamp)"
   #   source_forecast_column: "count"
   #   source_forecast_column_sql: "COUNT(*)"
   #   algorithms: 
@@ -162,20 +162,21 @@ anomalies:
   ais_sources_normalized_spire:
     source_dataset: "pipe_ais_sources_v20220628"
     source_table: "normalized_spire_"
-    source_date_column: "date"
-    source_date_column_sql: "date(timestamp)"
+    source_datetime_column: "date"
+    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))'
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) AS date, 
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) AS datetime, 
     row_count AS value
     FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__` 
     WHERE table_id LIKE "normalized_spire_%"
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) IN ({missing_dates_sql})
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) NOT IN ({existing_dates_sql})
-    ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) IN ({missing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))
     '
+    history_start: "2017-01-01"
     algorithms: 
         mstl: 
             parameters: 
@@ -192,8 +193,8 @@ anomalies:
   pipe3_messages_segmented:
     source_dataset: "pipe_ais_v3_alpha_internal"
     source_table: "messages_segmented_"
-    source_date_column: "date"
-    source_date_column_sql: "date(timestamp)"
+    source_datetime_column: "date"
+    source_datetime_column_sql: "date(timestamp)"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
@@ -202,8 +203,8 @@ anomalies:
     FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__` 
     WHERE table_id LIKE "messages_segmented_%"
     AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) IN ({missing_dates_sql})
-    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) NOT IN ({existing_dates_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) IN ({missing_datetimes_sql})
+    AND PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
     ORDER BY PARSE_DATE("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1"))
     '
     algorithms: 
@@ -212,6 +213,28 @@ anomalies:
               season_length: 
                 - 365.25
                 - 7
+            train_start: "Inf"
+            train_end: "Today"
+            forecast_periods: 1
+            forecast_error: 0.05
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe_nmea_parsed_hourly:
+    source_dataset: "pipe_nmea_hourly"
+    source_table: "pipe-nmea-parsed-hourly"
+    source_datetime_column: "tagblock_timestamp"
+    source_datetime_column_sql: "TIMESTAMP_TRUNC(tagblock_timestamp, minute)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    period_length: "min"
+    history_start: "30 days"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 7
+                - 24
             train_start: "Inf"
             train_end: "Today"
             forecast_periods: 1
