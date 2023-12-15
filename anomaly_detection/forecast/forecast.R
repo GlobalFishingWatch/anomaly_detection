@@ -1,7 +1,7 @@
-Sys.setenv(ANOMALY_DETECTION_CONFIG_NAME="pipe_nmea_parsed_hourly")
-Sys.setenv(ALLOWED_SIZE=60 * (1024 ^ 3))
-Sys.setenv(FORECAST_DATETIME_FROM='2023-12-13 00:00:00')
-Sys.setenv(FORECAST_DATETIME_TO=strftime(Sys.time()))
+# Sys.setenv(ANOMALY_DETECTION_CONFIG_NAME="pipe_nmea_parsed_hourly")
+# Sys.setenv(ALLOWED_SIZE=10 * (1024 ^ 3))
+# Sys.setenv(FORECAST_DATETIME_FROM='2023-11-19 00:00:00')
+# Sys.setenv(FORECAST_DATETIME_TO=strftime(Sys.time()))
 
 anomaly_detection_config_name = Sys.getenv("ANOMALY_DETECTION_CONFIG_NAME")
 
@@ -145,7 +145,6 @@ periods_to_forecast = seq(
 )
 
 dt_forecasts = periods_to_forecast %>% 
-  .[1:10] %>% 
   map_dfr(\(current_fc_period) {
     dt_current_train = dt_train[datetime < current_fc_period]
     names(current_anomaly_detection_config$algorithms) %>% 
@@ -164,7 +163,10 @@ dt_forecasts = periods_to_forecast %>%
         } else {
           return()
         }
-        data.table(datetime = dt_current_train[, max(datetime)], fc = fc, fc_method = current_fc_method)
+        data.table(
+          datetime = dt_current_train[, max(datetime) + lubridate::period(
+            1, units = current_anomaly_detection_config$period_length)], 
+          fc = fc, fc_method = current_fc_method)
       })
   }) %>% unique
 
@@ -190,3 +192,4 @@ create_scd_statement(
   forecast_column_sql = "forecast_method,"
 ) %>% 
   safe_query(con = con, allowed_size = allowed_size, verbose = T)
+ 
