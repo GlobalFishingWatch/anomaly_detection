@@ -12,11 +12,19 @@ suppressMessages({
   library(dplyr)
   library(dbplyr)
   library(glue)
+  library(lubridate)
 })
 
 # safe_query is required
 source("bq_utils.R")
 source("helpers.R")
+
+no_cores = future::availableCores() - 2
+future::plan(future::multicore(), workers = no_cores)
+map_fun = partial(furrr::future_imap_dfr, .options = furrr::furrr_options(seed = T))
+cat(glue("Using {no_cores} cores"))
+
+map_fun = map_fun %>% compose(progressr::with_progress, .dir = "forward")
 
 allowed_size = as.numeric(Sys.getenv("ALLOWED_SIZE"))
 
@@ -31,6 +39,21 @@ db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 
 anomaly_detection_config = yaml::read_yaml("config.yaml")
 
+current_anomaly_detection_config = anomaly_detection_config$anomalies[[anomaly_detection_config_name]]
+
+parse_date_or_period = function(date_or_period_expression, reference_date = Sys.time()) {
+  if (is.na(ymd(date_or_period_expression, quiet = T))) {
+    return(reference_date - period(date_or_period_expression))
+  } else {
+    return(date_or_period_expression)
+  }
+}
+
+# history_start has to be either a date, datetime, or a period length to be subtracted from today
+history_start = current_anomaly_detection_config$history_start %||% "2012-01-01" %>% 
+  parse_date_or_period()
+current_anomaly_detection_config$period_length = current_anomaly_detection_config$period_length %||% "day"
+
 config_fields = c(
   "source_dataset",
   "source_table",
@@ -41,23 +64,12 @@ config_fields = c(
   "source_sql"
 )
 
-current_anomaly_detection_config = anomaly_detection_config$anomalies[[anomaly_detection_config_name]]
-
-# history_start has to be either a date, datetime, or a period length to be subtracted from today
-history_start = current_anomaly_detection_config$history_start %||% "2012-01-01"
-if (is.na(lubridate::ymd(history_start, quiet = T))) {
-  history_start = Sys.Date() - lubridate::period(history_start)
-}
-current_anomaly_detection_config$period_length = current_anomaly_detection_config$period_length %||% "day"
-
 # replace config fields by empty string if they don't exist, otherwise SQL string would be NULL
 current_anomaly_detection_config[config_fields] = config_fields %>% 
   set_names() %>% 
   imap(~ current_anomaly_detection_config[[.x]] %||% "")
 
 print(current_anomaly_detection_config)
-
-maximum_valid_to = "9999-12-31 23:59:59 UTC"
 
 # get the existing datetimes in actuals table so we can either filter by excluding existing or including 
 # missing datetimes
@@ -72,10 +84,11 @@ existing_datetimes = get_anomaly_detection_actuals(
 
 
 all_historic_datetimes = seq(
-  as.POSIXct(history_start, tz = "UTC"), 
-  lubridate::now(tz = "UTC"), 
+  as.POSIXct(history_start) %>% with_tz("UTC"), 
+  now(tz = "UTC"), 
   current_anomaly_detection_config$period_length
 )
+
 missing_datetimes = all_historic_datetimes %>% setdiff(existing_datetimes) %>% as.POSIXct(origin="1970-01-01", tz = "UTC") 
 
 # set date sql filters so they always evaluate to true by default
@@ -111,13 +124,19 @@ if (current_anomaly_detection_config$source_sql != "") {
   )  
 }
 
+if (length(missing_datetimes)) {
+  create_scd_statement(
+    select_datetime_value_sql, 
+    current_anomaly_detection_config, 
+    target_table_actuals
+  ) %>% 
+    safe_query(con = con, allowed_size = allowed_size, verbose = T) 
+} else {
+  cat("No actual data missing", fill = T)
+}
 
-create_scd_statement(
-  select_datetime_value_sql, 
-  current_anomaly_detection_config, 
-  target_table_actuals
-) %>% 
-  safe_query(con = con, allowed_size = allowed_size, verbose = T)
+
+# FORECASTING ---------------------------------------------------------------------------------
 
 dt_train = get_anomaly_detection_actuals(
   con,
@@ -130,45 +149,65 @@ dt_train = get_anomaly_detection_actuals(
   .[order(datetime)]
 
 
-# TODO: temporary solution
-# for now always forecast the last 31 days including today
-# if there is no data yet for the last few days there will also be no forecast but instead multiple 
-# forecasts for the most recent date - that's why we apply unique at the end
-forecast_datetime_from = as.POSIXct(Sys.getenv("FORECAST_DATETIME_FROM"), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
-if (is.na(forecast_datetime_from)) forecast_datetime_from = Sys.time() - 31
-forecast_datetime_to = as.POSIXct(Sys.getenv("FORECAST_DATETIME_TO"), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
-if (is.na(forecast_datetime_to)) forecast_datetime_to = Sys.Date()
+# By default forecast the last 7 days, unless this is provided by the config or environment
+if (Sys.getenv("FORECAST_DATETIME_FROM") != "") {
+  forecast_datetime_from = as.POSIXct(Sys.getenv("FORECAST_DATETIME_FROM"), format = "%Y-%m-%d %H:%M:%S") %>% 
+    with_tz("UTC")
+} else {
+  forecast_datetime_from = current_anomaly_detection_config$forecast_start %||% "7 days" %>% 
+    parse_date_or_period()  %>% 
+    with_tz("UTC")
+}
+
+
+forecast_datetime_to = as.POSIXct(Sys.getenv("FORECAST_DATETIME_TO"), format = "%Y-%m-%d %H:%M:%S") %>% 
+  with_tz("UTC")
+if (is.na(forecast_datetime_to)) forecast_datetime_to = Sys.time() %>% with_tz("UTC")
 periods_to_forecast = seq(
   forecast_datetime_from, 
   forecast_datetime_to, 
   current_anomaly_detection_config$period_length
 )
 
-dt_forecasts = periods_to_forecast %>% 
-  map_dfr(\(current_fc_period) {
-    dt_current_train = dt_train[datetime < current_fc_period]
-    names(current_anomaly_detection_config$algorithms) %>% 
-      map_dfr(\(current_fc_method) {
-        current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
-        if (current_fc_method == "mstl") {
-          fc = dt_current_train[, y] %>% 
-            forecast::msts(unlist(current_algorithm_config$parameters$season_length)) %>% 
-            forecast::mstl() %>% 
-            predict(h = current_algorithm_config$forecast_periods) %>% 
-            .[["mean"]] %>% 
-            as.numeric()
-        } else if (current_fc_method == "mean") {
-          mean_x_last_periods = current_algorithm_config$parameters$sliding_window
-          fc = dt_current_train %>% data.table::last(mean_x_last_periods) %>% .[, y] %>% mean
-        } else {
-          return()
-        }
-        data.table(
-          datetime = dt_current_train[, max(datetime) + lubridate::period(
-            1, units = current_anomaly_detection_config$period_length)], 
-          fc = fc, fc_method = current_fc_method)
-      })
-  }) %>% unique
+# if there is no data yet for the last few days there will also be no forecast but instead multiple 
+# forecasts for the most recent date - that's why we apply unique at the end
+generate_forecasts = function(periods_to_forecast) {
+  p = progressr::progressor(steps = length(periods_to_forecast))
+  
+  periods_to_forecast %>% 
+    furrr::future_imap_dfr(\(current_fc_period, index) {
+      # cat(glue("forecasting {index} / {length(periods_to_forecast)}: {current_fc_period}"), fill = T)
+      p()
+      dt_current_train = dt_train[datetime < current_fc_period]
+      if (dt_current_train[, .N] < 30) return(data.table(datetime = NA, fc = NA, fc_method = NA))
+      names(current_anomaly_detection_config$algorithms) %>% 
+        map_dfr(\(current_fc_method) {
+          current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
+          if (current_fc_method == "mstl") {
+            fc = dt_current_train[, y] %>% 
+              forecast::msts(unlist(current_algorithm_config$parameters$season_length)) %>% 
+              forecast::mstl() %>% 
+              predict(h = 1) %>% 
+              .[["mean"]] %>% 
+              as.numeric()
+          } else if (current_fc_method == "mean") {
+            mean_x_last_periods = current_algorithm_config$parameters$sliding_window
+            fc = dt_current_train %>% data.table::last(mean_x_last_periods) %>% .[, y] %>% mean
+          } else {
+            return()
+          }
+          data.table(
+            datetime = dt_current_train[, max(datetime) + period(
+              1, units = current_anomaly_detection_config$period_length)], 
+            fc = fc, fc_method = current_fc_method)
+        })
+    }) %>% 
+    .[!is.na(datetime)] %>% 
+    .[order(datetime, fc_method)] %>% 
+    unique
+}
+
+dt_forecasts = progressr::with_progress(generate_forecasts(periods_to_forecast), enable = T)
 
 forecast_methods_sql_string = paste0("'", dt_forecasts[, fc_method], "'", collapse = ", ")
 date_sql_string = paste0("TIMESTAMP('", dt_forecasts[, datetime], "')", collapse = ", ")
