@@ -207,9 +207,10 @@ anomalies:
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) IN ({missing_datetimes_sql})
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) >= "2023-09-30"
     ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1"))
     '
-    history_start: "2023-09-26"
+    history_start: "2023-09-30"
     algorithms: 
         mstl: 
             parameters: 
@@ -258,6 +259,23 @@ anomalies:
             parameters: 
               season_length: 
                 - 24
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe_nmea_parsed_daily:
+    source_dataset: "pipe_nmea_hourly"
+    source_table: "pipe-nmea-parsed-hourly"
+    source_datetime_column: "day"
+    source_datetime_column_sql: "TIMESTAMP_TRUNC(tagblock_timestamp, day)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    period_length: "day"
+    history_start: "90 days"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length:
                 - 7
         mean:
             parameters:
