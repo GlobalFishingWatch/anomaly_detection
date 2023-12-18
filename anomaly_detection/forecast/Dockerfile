@@ -23,8 +23,6 @@ COPY ./renv/ renv
 COPY sa_api_key.json .
 
 COPY bq_utils.R .
-COPY forecasts_schema.json .
-COPY actuals_schema.json .
 COPY helpers.R .
 COPY forecast.R .
 COPY config.yaml .
