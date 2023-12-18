@@ -119,6 +119,7 @@ if (current_anomaly_detection_config$source_sql != "") {
     WHERE {current_anomaly_detection_config$source_datetime_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
     AND {current_anomaly_detection_config$source_datetime_column_sql} IN ({missing_datetimes_sql})
     AND {current_anomaly_detection_config$source_datetime_column_sql} NOT IN ({existing_datetimes_sql})
+    AND {current_anomaly_detection_config$source_datetime_column_sql} >= '{history_start}'
     GROUP BY datetime
     ORDER BY datetime"
   )  
@@ -151,8 +152,7 @@ dt_train = get_anomaly_detection_actuals(
 
 # By default forecast the last 7 days, unless this is provided by the config or environment
 if (Sys.getenv("FORECAST_DATETIME_FROM") != "") {
-  forecast_datetime_from = as.POSIXct(Sys.getenv("FORECAST_DATETIME_FROM"), format = "%Y-%m-%d %H:%M:%S") %>% 
-    with_tz("UTC")
+  forecast_datetime_from = as.POSIXct(Sys.getenv("FORECAST_DATETIME_FROM"), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 } else {
   forecast_datetime_from = current_anomaly_detection_config$forecast_start %||% "7 days" %>% 
     parse_date_or_period()  %>% 
@@ -179,7 +179,7 @@ generate_forecasts = function(periods_to_forecast) {
       # cat(glue("forecasting {index} / {length(periods_to_forecast)}: {current_fc_period}"), fill = T)
       p()
       dt_current_train = dt_train[datetime < current_fc_period]
-      if (dt_current_train[, .N] < 30) return(data.table(datetime = NA, fc = NA, fc_method = NA))
+      if (dt_current_train[, .N] < 15) return(data.table(datetime = NA, fc = NA, fc_method = NA))
       names(current_anomaly_detection_config$algorithms) %>% 
         map_dfr(\(current_fc_method) {
           current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
