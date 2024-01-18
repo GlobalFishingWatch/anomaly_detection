@@ -135,7 +135,7 @@ with DAG(
     upload_data_docs_task = upload_data_docs()
 
     # TODO CHO20230707 This is only robust as long as we have a 1:1 mapping of expectation suite to checkpoint
-    for current_expectation_suite_name in [es for es in gx_context.list_expectation_suite_names() if 'anomalies' in es]:
+    for current_expectation_suite_name in [es for es in gx_context.list_expectation_suite_names() if 'anomalies' in es and 'vms' not in es]:
         current_expectation_suite = gx_context.get_expectation_suite(current_expectation_suite_name)
         # TODO: excluder certain expectation suites more elegantly
         if current_expectation_suite.expectations \
