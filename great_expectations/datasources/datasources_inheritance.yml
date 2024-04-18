@@ -1,0 +1,502 @@
+config_version: 2.0.0
+datasources_version: 1.0.0
+project: gfw-google-827
+environments:
+  - dev:
+    version: 3.0.0
+  - prod:
+    version: 2.5
+pipe_versions:
+  - 3.0.0:
+    - datasets:
+      - internal
+      - published
+      - andres_scratch
+  - 2.5:
+    - datasets:
+      - production
+      - vessel_database
+  - v3_backup:
+    - datasets:
+      - backup
+  - vessel_characterisation_sample_202012_base:
+    - datasets:
+      - andres_scratch
+  - vessel_characterisation_sample_202012_stationary_filter:
+    - datasets:
+      - andres_scratch
+  - vessel_characterisation_pipe2_code:
+    - datasets:
+      - andres_scratch
+  - vessel_characterisation_pipe2_original:
+    - datasets:
+      - andres_scratch 
+      - chris_scratch
+  - pipe3_vessel_characterisation_broken:
+    - datasets:
+      - andres_scratch
+  - 3.0.0_gapfix:
+    - datasets:
+      - ml_dev
+  - 3.0.0_gapfix_larger_sample:
+    - datasets:
+      - ml_dev
+  - 3.0.0_gapfix_3:
+    - datasets:
+      - ml_dev
+sources:
+  - ais
+  - brazil_vms
+  - orbcomm
+  - marine_traffice
+datasets:
+  ais:
+    versions:
+      3.0.0:
+        internal: pipe_ais_v3_internal
+        published: pipe_ais_v3_published
+        andres_scratch: scratch_andres_ttl30d
+      2.5:
+        production: pipe_production_v20201001
+        vessel_database: vessel_database
+      v3_backup:
+        backup: backup_ttl_60d_pipe_ais_v3_alpha
+      vessel_characterisation_sample_202012_base:
+        andres_scratch: scratch_andres_ttl30d
+      vessel_characterisation_sample_202012_stationary_filter:
+        andres_scratch: scratch_andres_ttl30d
+      vessel_characterisation_pipe2_code:
+        andres_scratch: scratch_andres_ttl30d
+      vessel_characterisation_pipe2_original:
+        andres_scratch: scratch_andres_ttl30d
+        chris_scratch: scratch_christian_homberg_ttl120d
+      pipe3_vessel_characterisation_broken:
+        andres_scratch: scratch_andres_ttl30d
+      3.0.0_gapfix:
+        ml_dev: machine_learning_dev_ttl_120d
+      3.0.0_gapfix_larger_sample:
+        ml_dev: machine_learning_dev_ttl_120d
+      3.0.0_gapfix_3:
+        ml_dev: machine_learning_dev_ttl_120d
+  brazil_vms:
+    versions:
+      3.0.0:
+        internal: pipe_brazil_v3_staging_internal
+        published: pipe_brazil_v3_staging_published
+      2.5:
+        production: pipe_brazil_production_v20211126
+  marine_traffic:
+    versions:
+      3.0.0:
+        internal: pipe_marinetraffic_staging_internal
+        published: pipe_marinetraffic_staging_published
+  orbcomm:
+    versions:
+      3.0.0:
+        internal: pipe_orbcomm22_staging_internal
+        published: pipe_orbcomm22_staging_published
+datasources:
+  - name: messages
+    description: AIS position table (thinned)
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: messages
+      2.5:
+        dataset: ${{production}}
+        table: research_messages
+  - name: research_positions
+    description:
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: messages
+      2.5:
+        dataset: ${{production}}
+        table: research_positions
+  - name: satellite_timing_offsets
+    description: Satellite timing offsets
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: satellite_timing_offsets
+      2.5:
+        dataset: ${{production}}
+        table: research_satellite_timing
+  - name: segs_activity
+    description: AIS activity aggregated at the segment level with noise indicators
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: segs_activity
+      2.5:
+        dataset: ${{production}}
+        table: research_segs
+  - name: segs_activity_daily
+    description: AIS activity aggregated at the daily segment level with noise indicators
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: segs_activity_daily
+      2.5:
+        dataset: ${{production}}
+        table: research_segs_daily
+  - name: ssvids_identities
+    description: Aggregated raw AIS identity information by ssvid
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: ssvids_identities
+      2.5:
+        dataset: ${{production}}
+        table: research_ids
+  - name: ssvids_identities_daily
+    description: Daily raw AIS identity information by ssvid
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: ssvids_identities_daily
+      2.5:
+        dataset: ${{production}}
+        table: research_ids_daily
+  - name: stats_daily
+    description: Stats on AIS data daily
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: stats_daily
+      2.5:
+        dataset: ${{production}}
+        table: research_stats
+  - name: vessel_info
+    description: Aggregated vessel identity information by vessel id and ssvid
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: vessel_info
+      2.5:
+        dataset: ${{production}}
+        table: vessel_info
+  - name: features_
+    description: AIS ML features used in the fishing model estimates
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: features_
+      2.5:
+        dataset: ${{production}}
+        table: features_
+  - name: features_by_ssvid
+    description: AIS ML features used in the vessel characterisation model
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: features_by_ssvid
+      2.5:
+        dataset: ${{production}}
+        table: features_by_ssvid_
+      vessel_characterisation_sample_202012_base:
+        dataset: ${{andres_scratch}}
+        table: stationary_filter_features_by_ssvid
+      vessel_characterisation_sample_202012_stationary_filter:
+        dataset: ${{andres_scratch}}
+        table: stationary_filter_features_by_ssvid
+      vessel_characterisation_pipe2_code:
+        dataset: ${{andres_scratch}}
+        table: monthly_group_features_by_ssvid
+      vessel_characterisation_pipe2_original:
+        dataset: ${{andres_scratch}}
+        table: pipe_2_features_by_ssvid
+      pipe3_vessel_characterisation_broken:
+        dataset: ${{andres_scratch}}
+        table: pipe_3_archive_features_by_ssvid
+  - name: vessel_characteristics_by_ssvid
+    description: Classifications from the vessel characterisation model
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: vessel_characteristics_by_ssvid_
+      2.5:
+        dataset: ${{production}}
+        table: vessel_characteristics_by_ssvid_
+      vessel_characterisation_sample_202012_base:
+        dataset: ${{andres_scratch}}
+        table: baseline_vessel_characteristics_by_ssvid_
+      vessel_characterisation_sample_202012_stationary_filter:
+        dataset: ${{andres_scratch}}
+        table: stationary_filter_vessel_characteristics_by_ssvid_
+      vessel_characterisation_pipe2_code:
+        dataset: ${{andres_scratch}}
+        table: monthly_group_vessel_characteristics_by_ssvid_
+      vessel_characterisation_pipe2_original:
+        dataset: ${{chris_scratch}}
+        table: pipe2_vessel_characteristics_sample_
+      pipe3_vessel_characterisation_broken:
+        dataset: ${{andres_scratch}}
+        table: pipe_3_archive_vessel_characteristics_by_ssvid_
+  - name: fishing_score_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: fishing_score_
+      2.5:
+        dataset: ${{production}}
+        table: fishing_score_
+  - name: fragments
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: fragments_
+  - name: messages_positions
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: messages_positions
+      2.5:
+        dataset: ${{production}}
+        table: position_messages_
+        is_sharded: true
+  - name: messages_scored_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: messages_scored_
+      2.5:
+        dataset: ${{production}}
+        table: messages_scored_
+  - name: messages_segmented_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: messages_segmented_
+      2.5:
+        dataset: ${{production}}
+        table: messages_segmented_
+  - name: segment_identity_daily_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: segment_identity_daily_
+      2.5:
+        dataset: ${{production}}
+        table: segment_identity_daily_
+  - name: segment_info
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: segment_info
+      2.5:
+        dataset: ${{production}}
+        table: segment_info
+      # 4.0.0_baby_pipe:
+      #   dataset: scratch_jenn
+      #   table: segment_info_baby_pipe
+  - name: segment_vessel
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: segment_vessel
+      2.5:
+        dataset: ${{production}}
+        table: segment_vessel
+  - name: segment_vessel_daily_
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: segment_vessel_daily_
+      2.5:
+        dataset: ${{production}}
+        table: segment_vessel_daily_
+  - name: segments
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: segments_
+      2.5:
+        dataset: ${{production}}
+        table: segments_
+  - name: encounters
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: encounters
+      2.5:
+        dataset: ${{production}}
+        table: encounters
+        partition_by: DATE(start_time)
+  - name: loitering
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: loitering
+      2.5:
+        dataset: ${{production}}
+        table: loitering
+  - name: port_visits
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: port_visits
+      v3_backup:
+        dataset: ${{backup}}
+        table: port_visits
+      2.5:
+        dataset: ${{production}}
+        table: proto_port_visits
+      3.0.0_gapfix:
+        dataset: ${{ml_dev}}
+        table: port_visits_gapfix_
+      3.0.0_gapfix_larger_sample:
+        dataset: ${{ml_dev}}
+        table: port_visits_gapfix2_
+      3.0.0_gapfix_3:
+        dataset: ${{ml_dev}}
+        table: port_visits_gapfix3_
+  - name: voyages_c3
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: voyages_c3
+      2.5:
+        dataset: ${{production}}
+        table: proto_voyages_c3
+  - name: voyages_c4
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: voyages_c4
+      2.5:
+        dataset: ${{production}}
+        table: proto_voyages_c4
+  - name: all_vessels_v2
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{published}}
+        table: all_vessels_byyear_v2
+      2.5:
+        dataset: ${{production}}
+        table: all_vessels_byyear_v2
+  - name: port_events
+    description: 
+    latest_version: 3.0.0
+    versions:
+      3.0.0:
+        dataset: ${{internal}}
+        table: raw_port_events_
+      v3_backup:
+        dataset: ${{backup}}
+        table: raw_port_events_
+      2.5:
+        dataset: ${{production}}
+        table: proto_raw_port_events_
+  # - name: information_schema_partitions_${{internal}}
+  #   description:
+  #   asset_exists_behaviour: overwrite
+  #   latest_version: 3.0.0
+  #   custom_table_filter: WHERE table_name NOT LIKE '%_20%'
+  #   versions:
+  #     3.0.0:
+  #       dataset: ${{internal}}
+  #       table: INFORMATION_SCHEMA.PARTITIONS
+  #       partition_by: table_name
+  #     2.5:
+  #       dataset: ${{production}}
+  #       table: INFORMATION_SCHEMA.PARTITIONS
+  #       partition_by: table_name
+  # - name: information_schema_partitions_${{published}}
+  #   description:
+  #   asset_exists_behaviour: overwrite
+  #   latest_version: 3.0.0
+  #   custom_table_filter: WHERE table_name NOT LIKE '%_20%'
+  #   versions:
+  #     3.0.0:
+  #       dataset: ${{published}}
+  #       table: INFORMATION_SCHEMA.PARTITIONS
+  #       partition_by: table_name
+  #     2.5:
+  #       dataset: ${{production}}
+  #       table: INFORMATION_SCHEMA.PARTITIONS
+  #       partition_by: table_name
+  - name: anomaly_detection_deltas
+    description:
+    asset_exists_behaviour: overwrite
+    latest_version: 0.0.1
+    versions:
+      0.0.1:
+        dataset: tech_great_expectations
+        table: v_anomaly_detection_deltas
+  - name: ais_normalized
+    description:
+    latest_version: marine_traffic
+    versions:
+      marine_traffic:
+        dataset: pipe_ais_sources_v20220628
+        table: pipe_nmea_marinetraffic_normalized_
+      orbcomm:
+        dataset: pipe_ais_sources_v20220628
+        table: normalized_orbcomm_
+      brazil_vms:
+        dataset: pipe_brazil_production_v20211126
+        table: brazil_vms_normalized_
+      spire_pre_increase:
+        dataset: pipe_ais_sources_v20220628
+        table: normalized_spire_
+      spire_post_increase:
+        dataset: pipe_ais_sources_v20220628
+        table: normalized_spire_
+      nmea:
+        dataset: pipe_ais_sources_v20220628
+        table: pipe_nmea_normalized_
+  - name: ais_parsed
+    description:
+    latest_version: marine_traffic
+    versions:
+      v_20201001:
+        dataset: pipe_ais_sources_v20201001
+        table: pipe-nmea-parsed
+      
+      

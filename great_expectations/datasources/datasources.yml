@@ -1,3 +1,4 @@
+# deprecated - this config is no longer maintained and is superseded by the more generic datasources_inheritance.yml
 config_version: 1.0.0
 datasources_version: 1.0.0
 project: gfw-google-827
@@ -12,7 +13,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: messages
       2.5:
         dataset: pipe_production_v20201001
@@ -28,7 +29,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: satellite_timing_offsets
       2.5:
         dataset: pipe_production_v20201001
@@ -38,7 +39,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: segs_activity
       2.5:
         dataset: pipe_production_v20201001
@@ -54,7 +55,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: segs_activity_daily
       2.5:
         dataset: pipe_production_v20201001
@@ -70,7 +71,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: ssvids_identities
       2.5:
         dataset: pipe_production_v20201001
@@ -86,7 +87,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: ssvids_identities_daily
       2.5:
         dataset: pipe_production_v20201001
@@ -102,7 +103,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: stats_daily
       2.5:
         dataset: pipe_production_v20201001
@@ -118,7 +119,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: vessel_info
       2.5:
         dataset: pipe_production_v20201001
@@ -134,7 +135,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: features_
       2.5:
         dataset: pipe_production_v20201001
@@ -144,7 +145,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: fishing_score_
       2.5:
         dataset: pipe_production_v20201001
@@ -154,14 +155,14 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: fragments_
   - name: messages_positions
     description: 
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: messages_positions
       2.5:
         dataset: pipe_production_v20201001
@@ -172,7 +173,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: messages_scored_
       2.5:
         dataset: pipe_production_v20201001
@@ -182,7 +183,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: messages_segmented_
       2.5:
         dataset: pipe_production_v20201001
@@ -192,7 +193,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: segment_identity_daily_
       2.5:
         dataset: pipe_production_v20201001
@@ -202,7 +203,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: segment_info
       2.5:
         dataset: pipe_production_v20201001
@@ -215,7 +216,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: segment_vessel
       2.5:
         dataset: pipe_production_v20201001
@@ -225,7 +226,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: segment_vessel_daily_
       2.5:
         dataset: pipe_production_v20201001
@@ -235,7 +236,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: segments_
       2.5:
         dataset: pipe_production_v20201001
@@ -245,7 +246,7 @@ datasources:
     # latest_version: 3.0.0
     # versions:
       # 3.0.0:
-        # dataset: pipe_ais_v3_alpha_internal
+        # dataset: pipe_ais_v3_internal
         # table: 
       # 2.5:
         # dataset: pipe_production_v20201001
@@ -255,7 +256,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: encounters
       2.5:
         dataset: pipe_production_v20201001
@@ -272,7 +273,7 @@ datasources:
     latest_version: 3.0.0
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: loitering
       2.5:
         dataset: pipe_production_v20201001
@@ -288,10 +289,10 @@ datasources:
     latest_version: 3.0.1
     versions:
       3.0.1:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: port_visits
       3.0.0:
-        dataset: backup_ttl_60d_pipe_ais_v3_alpha
+        dataset: backup_ttl_60d_pipe_ais_v3
         table: port_visits
       2.5:
         dataset: pipe_production_v20201001
@@ -305,10 +306,9 @@ datasources:
   - name: voyages_c3
     description: 
     latest_version: 3.0.0
-    asset_exists_behaviour: overwrite
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: voyages_c3
       2.5:
         dataset: pipe_production_v20201001
@@ -322,10 +322,9 @@ datasources:
   - name: voyages_c4
     description: 
     latest_version: 3.0.0
-    asset_exists_behaviour: overwrite
     versions:
       3.0.0:
-        dataset: pipe_ais_v3_alpha_published
+        dataset: pipe_ais_v3_published
         table: voyages_c4
       2.5:
         dataset: pipe_production_v20201001
@@ -353,42 +352,42 @@ datasources:
     has_2012_table: False
     versions:
       3.0.1:
-        dataset: pipe_ais_v3_alpha_internal
+        dataset: pipe_ais_v3_internal
         table: raw_port_events_
       3.0.0:
-        dataset: backup_ttl_60d_pipe_ais_v3_alpha
+        dataset: backup_ttl_60d_pipe_ais_v3
         table: raw_port_events_
       2.5:
         dataset: pipe_production_v20201001
         table: proto_raw_port_events_
-  - name: information_schema_partitions_internal
-    description:
-    asset_exists_behaviour: overwrite
-    latest_version: 3.0.0
-    custom_table_filter: WHERE table_name NOT LIKE '%_20%'
-    versions:
-      3.0.0:
-        dataset: pipe_ais_v3_alpha_internal
-        table: INFORMATION_SCHEMA.PARTITIONS
-        partition_by: table_name
-      2.5:
-        dataset: pipe_production_v20201001
-        table: INFORMATION_SCHEMA.PARTITIONS
-        partition_by: table_name
-  - name: information_schema_partitions_published
-    description:
-    asset_exists_behaviour: overwrite
-    latest_version: 3.0.0
-    custom_table_filter: WHERE table_name NOT LIKE '%_20%'
-    versions:
-      3.0.0:
-        dataset: pipe_ais_v3_alpha_published
-        table: INFORMATION_SCHEMA.PARTITIONS
-        partition_by: table_name
-      2.5:
-        dataset: pipe_production_v20201001
-        table: INFORMATION_SCHEMA.PARTITIONS
-        partition_by: table_name
+  # - name: information_schema_partitions_internal
+  #   description:
+  #   asset_exists_behaviour: overwrite
+  #   latest_version: 3.0.0
+  #   custom_table_filter: WHERE table_name NOT LIKE '%_20%'
+  #   versions:
+  #     3.0.0:
+  #       dataset: pipe_ais_v3_internal
+  #       table: INFORMATION_SCHEMA.PARTITIONS
+  #       partition_by: table_name
+  #     2.5:
+  #       dataset: pipe_production_v20201001
+  #       table: INFORMATION_SCHEMA.PARTITIONS
+  #       partition_by: table_name
+  # - name: information_schema_partitions_published
+  #   description:
+  #   asset_exists_behaviour: overwrite
+  #   latest_version: 3.0.0
+  #   custom_table_filter: WHERE table_name NOT LIKE '%_20%'
+  #   versions:
+  #     3.0.0:
+  #       dataset: pipe_ais_v3_published
+  #       table: INFORMATION_SCHEMA.PARTITIONS
+  #       partition_by: table_name
+  #     2.5:
+  #       dataset: pipe_production_v20201001
+  #       table: INFORMATION_SCHEMA.PARTITIONS
+  #       partition_by: table_name
   - name: anomaly_detection_deltas
     description:
     asset_exists_behaviour: overwrite
@@ -407,3 +406,17 @@ datasources:
       orbcomm:
         dataset: pipe_ais_sources_v20220628
         table: normalized_orbcomm_
+      brazil_vms:
+        dataset: pipe_brazil_production_v20211126
+        table: brazil_vms_normalized_
+      spire_pre_increase:
+        dataset: pipe_ais_sources_v20220628
+        table: normalized_spire_
+      spire_post_increase:
+        dataset: pipe_ais_sources_v20220628
+        table: normalized_spire_
+      nmea:
+        dataset: pipe_ais_sources_v20220628
+        table: pipe_nmea_normalized_
+      
+      
