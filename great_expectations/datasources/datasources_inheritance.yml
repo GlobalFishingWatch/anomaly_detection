@@ -46,6 +46,7 @@ pipe_versions:
       - ml_dev
 sources:
   - ais
+  - vms
   - brazil_vms
   - orbcomm
   - marine_traffice
@@ -78,6 +79,20 @@ datasets:
         ml_dev: machine_learning_dev_ttl_120d
       3.0.0_gapfix_3:
         ml_dev: machine_learning_dev_ttl_120d
+      20201001:
+        public_common: skytruth-pelagos-production.ais_global_v20201001_public_common
+        fishing_effort_public: skytruth-pelagos-production.ais_global_v20201001_fishing_effort_public
+      20231026:
+        public_common: skytruth-pelagos-production.ais_global_v20231026_public_common
+        fishing_effort_public: skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public
+      v3:
+        public_common: skytruth-pelagos-production.ais_global_v3_public_common
+        fishing_effort_public: skytruth-pelagos-production.ais_global_v3_fishing_effort_public
+  vms:
+    versions:
+      3.0.0:
+        internal: pipe_vms_v3_alpha_internal
+        published: pipe_vms_v3_alpha_published
   brazil_vms:
     versions:
       3.0.0:
@@ -410,13 +425,13 @@ datasources:
       2.5:
         dataset: ${{production}}
         table: proto_voyages_c4
-  - name: all_vessels_v2
+  - name: product_vessel_info_summary
     description: 
     latest_version: 3.0.0
     versions:
       3.0.0:
         dataset: ${{published}}
-        table: all_vessels_byyear_v2
+        table: product_vessel_info_summary
       2.5:
         dataset: ${{production}}
         table: all_vessels_byyear_v2
@@ -498,5 +513,27 @@ datasources:
       v_20201001:
         dataset: pipe_ais_sources_v20201001
         table: pipe-nmea-parsed
+  - name: published_events_fishing
+    versions:
+      20201001:
+        dataset: ${{public_common}}
+        table: published_events_fishing
+      20231026:
+        dataset: ${{public_common}}
+        table: published_events_fishing
+      v3:
+        dataset: ${{public_common}}
+        table: events_fishing_public
+  - name: fishing_effort_public
+    versions:
+      20201001:
+        dataset: ${{fishing_effort_public}}
+        table: ais_global_v20201001_fishing_effort_public
+      20231026:
+        dataset: ${{fishing_effort_public}}
+        table: ais_global_v20231026_fishing_effort_public
+      v3:
+        dataset: ${{fishing_effort_public}}
+        table: fishing_effort_public
       
       
