@@ -1,0 +1,7 @@
+
+version: 2
+
+models:
+
+  - name: v_anomaly_detection_deltas
+    description: "Calculation of deltas in anomaly detection"

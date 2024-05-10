@@ -33,8 +33,10 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   monitoring:
     # Config indicated by + and applies to all files under models/example/
-    example:
+    partitions:
       +materialized: view
+    fishing_hours:
+    anomaly_detection:
 
 
 vars:
@@ -49,3 +51,5 @@ vars:
   
   #Table name of the segments table to use as a baseline
   SEGMENTS_BASELINE_TABLE: research_segs
+  
+  "dbt_date:time_zone": "UTC"

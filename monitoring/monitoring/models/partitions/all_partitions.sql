@@ -7,25 +7,53 @@ WITH
     UNION ALL
     SELECT * FROM `world-fishing-827.pipe_ais_v3_alpha_internal.INFORMATION_SCHEMA.PARTITIONS`
     UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_ais_v3_published.INFORMATION_SCHEMA.PARTITIONS`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_ais_v3_internal.INFORMATION_SCHEMA.PARTITIONS`
+    UNION ALL
     SELECT * FROM `world-fishing-827.pipe_production_v20201001.INFORMATION_SCHEMA.PARTITIONS`
     UNION ALL
     SELECT * FROM `world-fishing-827.pipe_ais_sources_v20220628.INFORMATION_SCHEMA.PARTITIONS`
     UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_nmea_hourly.INFORMATION_SCHEMA.PARTITIONS`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_ais_sources_v20201001.INFORMATION_SCHEMA.PARTITIONS`
+    UNION ALL
     SELECT * FROM `world-fishing-827.backup_ttl_60d_pipe_ais_v3_alpha.INFORMATION_SCHEMA.PARTITIONS`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.scratch_andres_ttl30d.INFORMATION_SCHEMA.PARTITIONS`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.scratch_christian_homberg_ttl120d.INFORMATION_SCHEMA.PARTITIONS`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_brazil_production_v20211126.INFORMATION_SCHEMA.PARTITIONS`
   ),
   unioned_dataset_shards AS (
     SELECT * FROM `world-fishing-827.pipe_ais_v3_alpha_published.__TABLES__`
     UNION ALL
     SELECT * FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__`
     UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_ais_v3_published.__TABLES__`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_ais_v3_internal.__TABLES__`
+    UNION ALL
     SELECT * FROM `world-fishing-827.pipe_production_v20201001.__TABLES__`
     UNION ALL
     SELECT * FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__`
     UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_nmea_hourly.__TABLES__`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_ais_sources_v20201001.__TABLES__`
+    UNION ALL
     SELECT * FROM `world-fishing-827.backup_ttl_60d_pipe_ais_v3_alpha.__TABLES__`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.scratch_andres_ttl30d.__TABLES__`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.scratch_christian_homberg_ttl120d.__TABLES__`
+    UNION ALL
+    SELECT * FROM `world-fishing-827.pipe_brazil_production_v20211126.__TABLES__`
   ),
   partitioned_tables AS (
-    SELECT *
+    SELECT *, TIMESTAMP(NULL) as creation_time
     FROM unioned_dataset_partitions
     WHERE table_name NOT LIKE '%_20%' ),
   sharded_tables AS (
@@ -38,7 +66,8 @@ WITH
       size_bytes AS total_logical_bytes,
       size_bytes AS total_billable_bytes,
       TIMESTAMP_MILLIS(last_modified_time) last_modified_time,
-      '' AS storage_tier
+      '' AS storage_tier,
+      TIMESTAMP_MILLIS(creation_time) creation_time
     FROM unioned_dataset_shards
     WHERE table_id  LIKE '%\\_20______' -- matches e.g. _20230101 but excludes _2012 and potential _2013 tables
       ),
