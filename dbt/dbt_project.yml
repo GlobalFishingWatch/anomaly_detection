@@ -33,23 +33,8 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   monitoring:
     # Config indicated by + and applies to all files under models/example/
-    partitions:
-      +materialized: view
-    fishing_hours:
     anomaly_detection:
 
 
 vars:
-  # Dataset of the messages table to use as a baseline
-  MESSAGES_BASELINE_DATASET: pipe_production_v20201001
-  
-  #Table name of the messages table to use as a baseline
-  MESSAGES_BASELINE_TABLE: messages_segmented
-  
-  #Dataset of the segments table to use as a baseline
-  SEGMENTS_BASELINE_DATASET: world-fishing-827.pipe_production_v20201001
-  
-  #Table name of the segments table to use as a baseline
-  SEGMENTS_BASELINE_TABLE: research_segs
-  
   "dbt_date:time_zone": "UTC"

@@ -1,7 +1,0 @@
-
-version: 2
-
-models:
-
-  - name: partition_row_counts
-    description: "Partition row counts for all tables in all datasets"

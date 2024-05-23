@@ -1,38 +1,32 @@
-# data-testing
-Automated data testing
+# Workflow
+1) Generate forecast for latest day.
+2) If delta between actual vs forecast exceeds preset threshold an alert is raised.
 
-## Overview
-
-### Great Expectations (GX/GE)
-Great Expectations (GX/GE) allows to define expectation suites (a group of tests) in order to validate tables or subsets of tables.
-
-More information in [great_expectations/README](great_expectations/README.md)
-
-### Airflow
-The [dags](dags) folder contains Airflow dags for running tests from Airflow.
-
-
-### Dataset and table versioning
-Great Expectations does not have a concept for table versions. Therefore, we define a [datasource config](great_expectations/datasources/datasources.yml) which maps different versions of the same table. That way, the same expectation suites can be run on different versions of the same table. This also allows running version related QA, e.g. in order to find and investigate differences.
+# Generating Forecasts
 
 ## Usage
 
-```
-python3.9 -m venv venv
-source venv/bin/activate
-pip3 install -r requirements.txt
-jupyter-lab
-```
+### Config
+Forecasts are configured in config.yml. There are two modes:
+1) Specify date and forecast column
+2) Manually specify an SQL script
 
-## Caveats
- - [ ] The current version of GX expectation suites must be run on a fork of Great Expectations that fixes [an issue when applying add_splitter_column_value on date columns](https://github.com/great-expectations/great_expectations/issues/8236)
- - [ ] Sharded tables are generally supported in GX but require further development in the code that generates data assets
- - [ ] The hack that automatically creates views to circumvent partition filter enforcement has not been tested on tables with non-date partition columns and further adjustment is probably necessary
-
-## Airflow sample
-<img src="README-airflow-dag.png" width="1200"/>
-
-## Data Docs sample
-<img src="README-data-docs.png" width="1200"/>
+#1 is only possible, if the source table already has the available columns and allows to SUM/COUNT forecast column and GROUP BY `date_column`. If this is not possible, a custom SQL script can be provided that needs to return 2 columns: `timestamp` and `value`.
 
 
+### Docker
+For production purposes a Dockerfile has been provided.
+
+### R
+For development and manually generating forecasts you may use the R project which includes `generate_forecasts.R`, which is a wrapper to quickly generate a full load of forecasts.
+
+
+# Anomaly Configuration
+
+## Data
+Each anomaly configuration requires a unique definition for loading the data. The data definition is uniquely specified by:
+ - dataset
+ - table
+ - timestamp column
+ - value column
+ - period length
