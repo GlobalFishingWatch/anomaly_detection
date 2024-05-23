@@ -1,3 +1,33 @@
+#' Parse date or period
+#'
+#' @param date_or_period_expression A string that can be parsed as a date or a period
+#' @param reference_date  A reference date to subtract the period from if the input is a period
+#'
+#' @return
+#' @export
+#'
+#' @examples parse_date_or_period("2021-01-01")
+#' @examples parse_date_or_period("1 week")
+parse_date_or_period = function(date_or_period_expression, reference_date = Sys.time()) {
+  if (is.na(ymd(date_or_period_expression, quiet = T))) {
+    return(reference_date - period(date_or_period_expression))
+  } else {
+    return(date_or_period_expression)
+  }
+}
+
+#' Get anomaly detection actuals
+#'
+#' @param con dbi connection
+#' @param db_anomaly_detection_actuals tbl containing connection to anomaly detection actuals
+#' @param anomaly_detection_config list containing anomaly detection config
+#' @param maximum_valid_to Valid to date for filtering SCD2 table
+#' @param allowed_size Maximum allowed size for the query
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_anomaly_detection_actuals = function(
     con,
     db_anomaly_detection_actuals, 
@@ -19,7 +49,7 @@ get_anomaly_detection_actuals = function(
     ) %>% 
     filter(sql(glue::glue("source_datetime_column_sql = '{anomaly_detection_config$source_datetime_column_sql}'"))) %>% 
     filter(datetime != '1979-01-01') %>% 
-    safe_query(con = con, allowed_size = allowed_size)
+    safe_query(con = con, allowed_size = allowed_size, verbose = T)
 }
 
 create_scd_statement = function(
