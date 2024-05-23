@@ -1,41 +1,73 @@
-{{ config(materialized='view') }}
+{{ config(
+  materialized='view',
+  alias='v_' ~ env_var('DBT_ENVIRONMENT') ~'_anomaly_detection_deltas'
+) }}
 
 WITH latest_fc AS (
       SELECT 
-        * EXCEPT(forecasts, actuals),
+        *,
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column,
-        CASE WHEN execution_time = MAX(execution_time) OVER (PARTITION BY source_dataset, source_table, source_forecast_column, fc.date) THEN True END AS latest_forecast
-      FROM `world-fishing-827.tech_great_expectations.anomaly_detection_forecasts`
-      CROSS JOIN UNNEST(forecasts) fc
+        CONCAT(source_dataset, ".", source_table, ".", source_forecast_column, ".", source_timestamp_column_sql, ".", 
+        source_forecast_column_sql, ".", source_sql_hash, ".", period_length) forecast_actuals_join_key,
+        IFNULL(low_confidence, 0.2) low_confidence_upper,
+        IFNULL(-low_confidence, -0.2) low_confidence_lower,
+        IFNULL(high_confidence, 0.5) high_confidence_upper,
+        IFNULL(-high_confidence, -0.5) high_confidence_lower
+      FROM `world-fishing-827.tech_great_expectations.{{ env_var('DBT_ENVIRONMENT') }}_anomaly_detection_forecasts`
+      WHERE valid_to = '9999-12-31 23:59:59 UTC'
     ),
     latest_ac AS (
       SELECT 
-        * EXCEPT(forecasts, actuals),
+        *,
+        LAG(value, 365) OVER (
+        PARTITION BY 
+          source_dataset,
+          source_table,
+          source_timestamp_column,
+          source_timestamp_column_sql,
+          source_forecast_column,
+          source_forecast_column_sql,
+          source_sql,
+          source_sql_hash
+        ORDER BY timestamp) AS previous_year_actual_value,
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column,
-        CASE WHEN execution_time = MAX(execution_time) OVER (PARTITION BY source_dataset, source_table, source_forecast_column, ac.date) THEN True END AS latest_actual
-      FROM `world-fishing-827.tech_great_expectations.anomaly_detection_forecasts`
-      CROSS JOIN UNNEST(actuals) ac
+        CONCAT(source_dataset, ".", source_table, ".", source_forecast_column, ".", source_timestamp_column_sql, ".", 
+        source_forecast_column_sql, ".", source_sql_hash, ".", period_length) forecast_actuals_join_key
+      FROM `world-fishing-827.tech_great_expectations.{{ env_var('DBT_ENVIRONMENT') }}_anomaly_detection_actuals`
+      WHERE valid_to = '9999-12-31 23:59:59 UTC'
     ),
     forecasts_actuals AS (
       SELECT 
-        latest_fc.* EXCEPT (date, value), 
-        latest_fc.date as forecast_date, 
+        forecast_method,
+        low_confidence_upper,
+        low_confidence_lower,
+        high_confidence_upper,
+        high_confidence_lower,
+        latest_fc.timestamp as forecast_timestamp, 
         latest_fc.value as forecast_value, 
-        latest_ac.date actual_date, 
-        latest_ac.value actual_value
-      FROM latest_fc
-      JOIN latest_ac
-      USING(source_dataset_table_column, date)
-      WHERE latest_forecast 
-      AND latest_actual
+        latest_ac.timestamp actual_timestamp, 
+        IFNULL(latest_ac.value, 0) actual_value,
+        COALESCE(latest_fc.timestamp, latest_ac.timestamp) timestamp,
+        COALESCE(latest_fc.config_name, latest_ac.config_name) config_name,
+        COALESCE(latest_fc.source_sql, latest_ac.source_sql) source_sql,
+        COALESCE(latest_fc.source_sql_hash, latest_ac.source_sql_hash) source_sql_hash,
+        COALESCE(latest_fc.source_dataset_table, latest_ac.source_dataset_table) source_dataset_table,
+        COALESCE(latest_fc.source_dataset_table_column, latest_ac.source_dataset_table_column) source_dataset_table_column,
+        COALESCE(latest_fc.period_length, latest_ac.period_length) period_length,
+      FROM latest_ac
+      FULL JOIN latest_fc
+      USING(forecast_actuals_join_key, timestamp)
     )
     SELECT
       DISTINCT
       *,
       actual_value - forecast_value delta,
-      (actual_value - forecast_value) / forecast_value delta_rel,
+      SAFE_DIVIDE((actual_value - forecast_value), forecast_value) delta_rel,
       abs(actual_value - forecast_value) abs_delta,
-      abs((actual_value - forecast_value) / forecast_value) abs_delta_rel
+      abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) abs_delta_rel,
+      low_confidence_lower + abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) distance_from_lower_threshold,
+      high_confidence_lower + abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) distance_from_higher_threshold
     FROM forecasts_actuals
+  
