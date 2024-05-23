@@ -12,5 +12,6 @@
     {"name": "timestamp", "type": "TIMESTAMP"},
     {"name": "value", "type": "FLOAT"},
     {"name": "valid_from", "type": "TIMESTAMP"},
-    {"name": "valid_to", "type": "TIMESTAMP"}
+    {"name": "valid_to", "type": "TIMESTAMP"},
+    {"name": "config_name", "type": "STRING"}
   ]

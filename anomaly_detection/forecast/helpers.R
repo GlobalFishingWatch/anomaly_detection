@@ -39,15 +39,8 @@ get_anomaly_detection_actuals = function(
   db_anomaly_detection_actuals %>% 
     filter(valid_to == maximum_valid_to) %>% 
     filter(
-      source_dataset == !!anomaly_detection_config$source_dataset &&
-        source_table == !!anomaly_detection_config$source_table &&
-        source_timestamp_column == !!anomaly_detection_config$source_timestamp_column &&
-        source_forecast_column == !!anomaly_detection_config$source_forecast_column &&
-        source_forecast_column_sql == !!anomaly_detection_config$source_forecast_column_sql &&
-        source_sql_hash == source_sql_hash &&
-        period_length == !!anomaly_detection_config$period_length
+      config_name == !!anomaly_detection_config$name
     ) %>% 
-    filter(sql(glue::glue("source_timestamp_column_sql = '{anomaly_detection_config$source_timestamp_column_sql}'"))) %>% 
     filter(timestamp != '1979-01-01') %>% 
     safe_query(con = con, allowed_size = allowed_size, verbose = T)
 }
@@ -68,6 +61,7 @@ USING (
   WITH target_table AS (SELECT * FROM `{target_table}`),
   new_actuals AS (
     SELECT 
+      '{current_anomaly_detection_config$name}' config_name,
         '{current_anomaly_detection_config$source_dataset}' source_dataset, 
         '{current_anomaly_detection_config$source_table}' source_table,
         '{current_anomaly_detection_config$source_timestamp_column}' source_timestamp_column,
@@ -82,6 +76,7 @@ USING (
   new_actuals_with_key AS (
     SELECT 
       MD5(CONCAT(
+        config_name,
         source_dataset,
         source_table,
         source_timestamp_column,
@@ -124,7 +119,8 @@ WHEN NOT MATCHED THEN
     timestamp,
     value,
     '{current_timestamp}',
-    '{maximum_valid_to}'
+    '{maximum_valid_to}',
+    config_name
   )
 ")
 }

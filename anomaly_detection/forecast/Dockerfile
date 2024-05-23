@@ -1,8 +1,10 @@
 FROM r-base:4.1.2
 
-RUN apt update -y
-RUN apt install libcurl4-openssl-dev libssl-dev -y
+RUN apt update -y && apt install libcurl4-openssl-dev libssl-dev curl gpg -y
 
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+RUN apt-get update && apt install google-cloud-sdk -y
 RUN R -e "install.packages('renv', repos = c(CRAN = 'https://cloud.r-project.org'))"
 
 WORKDIR /project
@@ -27,8 +29,11 @@ COPY helpers.R .
 COPY forecast.R .
 COPY config.yaml .
 
-## TODO: Need to figure out where to create the tables
-# RUN bq mk -t tech_great_expectations.anomaly_detection_actuals actuals_schema.json
-# RUN bq mk -t tech_great_expectations.anomaly_detection_forecasts forecasts_schema.json
+COPY init.sh .
+RUN chmod +x init.sh
 
-CMD ["Rscript", "forecast.R"]
+COPY actuals_schema.json .
+COPY forecasts_schema.json .
+
+ENTRYPOINT ["/project/init.sh"]
+CMD [ "bash" ]

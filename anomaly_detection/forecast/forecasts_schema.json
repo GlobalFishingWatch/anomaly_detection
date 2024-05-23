@@ -10,8 +10,11 @@
     {"name": "source_sql_hash", "type": "STRING"},
     {"name": "period_length", "type": "STRING"},
     {"name": "forecast_method", "type": "STRING"},
+    {"name": "low_confidence", "type": "FLOAT"},
+    {"name": "high_confidence", "type": "FLOAT"},
     {"name": "timestamp", "type": "TIMESTAMP"},
     {"name": "value", "type": "FLOAT"},
     {"name": "valid_from", "type": "TIMESTAMP"},
-    {"name": "valid_to", "type": "TIMESTAMP"}
+    {"name": "valid_to", "type": "TIMESTAMP"},
+    {"name": "config_name", "type": "STRING"}
   ]

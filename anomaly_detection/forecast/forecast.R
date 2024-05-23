@@ -27,8 +27,8 @@ bigrquery::bq_auth(path = "/project/sa_api_key.json")
 con = DBI::dbConnect(drv = bigrquery::bigquery(), project = "world-fishing-827", use_legacy_sql = FALSE)
 
 
-target_table_actuals = "world-fishing-827.tech_great_expectations.anomaly_detection_actuals_timestamp"
-target_table_forecasts = "world-fishing-827.tech_great_expectations.anomaly_detection_forecasts_timestamp"
+target_table_actuals = Sys.getenv("ACTUALS_TABLE_FQN") %||% "world-fishing-827.tech_great_expectations.anomaly_detection_actuals_timestamp"
+target_table_forecasts = Sys.getenv("FORECASTS_TABLE_FQN") %||% "world-fishing-827.tech_great_expectations.anomaly_detection_forecasts_timestamp"
 
 db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 
@@ -83,7 +83,7 @@ missing_timestamps = all_historic_timestamps %>% setdiff(existing_timestamps) %>
 existing_timestamps_sql = "'1979-01-01 00:00:00'" # timestamp is never in this dummy value
 missing_timestamps_sql = current_anomaly_detection_config$source_timestamp_column_sql # date is always in date
 
-delta_load = T
+delta_load = Sys.getenv("DELTA_LOAD") %>% as.logical()
 delta_load
 
 # if we're doing a delta load and there are existing dates
@@ -136,7 +136,6 @@ dt_train = get_anomaly_detection_actuals(
 ) %>% 
   .[, .(timestamp, y = value)] %>% 
   .[order(timestamp)]
-
 
 # By default forecast the last 7 days, unless this is provided by the config or environment
 if (Sys.getenv("FORECAST_TIMESTAMP_FROM") != "") {
@@ -192,8 +191,7 @@ generate_forecasts = function(periods_to_forecast) {
           fc = max(0, fc)
           
           data.table(
-            timestamp = dt_current_train[, max(timestamp) + period(
-              1, units = current_anomaly_detection_config$period_length)], 
+            timestamp = current_fc_period, 
             fc = fc,
             fc_method = current_fc_method,
             low_confidence = current_thresholds$low,
