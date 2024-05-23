@@ -1,8 +1,3 @@
-# Sys.setenv(ANOMALY_DETECTION_CONFIG_NAME="pipe_nmea_parsed_hourly")
-# Sys.setenv(ALLOWED_SIZE=10 * (1024 ^ 3))
-# Sys.setenv(FORECAST_DATETIME_FROM='2023-11-19 00:00:00')
-# Sys.setenv(FORECAST_DATETIME_TO=strftime(Sys.time()))
-
 anomaly_detection_config_name = Sys.getenv("ANOMALY_DETECTION_CONFIG_NAME")
 
 suppressMessages({
@@ -40,14 +35,7 @@ db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 anomaly_detection_config = yaml::read_yaml("config.yaml")
 
 current_anomaly_detection_config = anomaly_detection_config$anomalies[[anomaly_detection_config_name]]
-
-parse_date_or_period = function(date_or_period_expression, reference_date = Sys.time()) {
-  if (is.na(ymd(date_or_period_expression, quiet = T))) {
-    return(reference_date - period(date_or_period_expression))
-  } else {
-    return(date_or_period_expression)
-  }
-}
+current_anomaly_detection_config$name = anomaly_detection_config_name
 
 # history_start has to be either a date, datetime, or a period length to be subtracted from today
 history_start = current_anomaly_detection_config$history_start %||% "2012-01-01" %>% 
@@ -84,7 +72,7 @@ existing_datetimes = get_anomaly_detection_actuals(
 
 
 all_historic_datetimes = seq(
-  as.POSIXct(history_start) %>% with_tz("UTC"), 
+  history_start %>% as.Date() %>% as.POSIXct() %>% with_tz("UTC"), 
   now(tz = "UTC"), 
   current_anomaly_detection_config$period_length
 )
@@ -101,7 +89,7 @@ delta_load
 # if we're doing a delta load and there are existing dates
 if (delta_load & length(existing_datetimes)) {
   # only one of the two lists is required to filter, so remove the longer one
-  if (length(existing_datetimes_sql) > length(missing_datetimes)) {
+  if (length(existing_datetimes) > length(missing_datetimes)) {
     missing_datetimes_sql = paste0("'", missing_datetimes, "'", collapse = ", ")
   } else {
     existing_datetimes_sql = paste0("'", existing_datetimes, "'", collapse = ", ")
@@ -113,7 +101,7 @@ if (current_anomaly_detection_config$source_sql != "") {
   print(select_datetime_value_sql)
 } else {
   select_datetime_value_sql = glue(.null = "", "
-    {current_anomaly_detection_config$source_datetime_column_sql} datetime, 
+    TIMESTAMP_TRUNC({current_anomaly_detection_config$source_datetime_column_sql}, {current_anomaly_detection_config$period_length}) datetime, 
       {current_anomaly_detection_config$source_forecast_column_sql} value
     FROM `{current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}`
     WHERE {current_anomaly_detection_config$source_datetime_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
@@ -183,6 +171,7 @@ generate_forecasts = function(periods_to_forecast) {
       names(current_anomaly_detection_config$algorithms) %>% 
         map_dfr(\(current_fc_method) {
           current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
+          current_thresholds = current_algorithm_config$thresholds %||% list(low = .02, high = .2)
           if (current_fc_method == "mstl") {
             fc = dt_current_train[, y] %>% 
               forecast::msts(unlist(current_algorithm_config$parameters$season_length)) %>% 
@@ -193,13 +182,23 @@ generate_forecasts = function(periods_to_forecast) {
           } else if (current_fc_method == "mean") {
             mean_x_last_periods = current_algorithm_config$parameters$sliding_window
             fc = dt_current_train %>% data.table::last(mean_x_last_periods) %>% .[, y] %>% mean
+          } else if (current_fc_method == "median") {
+            median_x_last_periods = current_algorithm_config$parameters$sliding_window
+            fc = dt_current_train %>% data.table::last(median_x_last_periods) %>% .[, y] %>% median
           } else {
             return()
           }
+          
+          fc = max(0, fc)
+          
           data.table(
             datetime = dt_current_train[, max(datetime) + period(
               1, units = current_anomaly_detection_config$period_length)], 
-            fc = fc, fc_method = current_fc_method)
+            fc = fc,
+            fc_method = current_fc_method,
+            low_confidence = current_thresholds$low,
+            high_confidence = current_thresholds$high
+          )
         })
     }) %>% 
     .[!is.na(datetime)] %>% 
@@ -214,12 +213,17 @@ date_sql_string = paste0("TIMESTAMP('", dt_forecasts[, datetime], "')", collapse
 forecast_value_sql_string = paste0(dt_forecasts[, fc], collapse = ", ")
 
 forecast_string_sql = dt_forecasts[, glue_data(.SD, "
-('{fc_method}', TIMESTAMP('{datetime}'), {fc})
+('{fc_method}', {low_confidence}, {high_confidence}, TIMESTAMP('{datetime}'), {fc})
 ")] %>% paste0(collapse = ", ")
 
 forecast_values_sql_string = glue("
-forecast_method, datetime, value 
-FROM UNNEST([STRUCT<forecast_method STRING, datetime TIMESTAMP, value FLOAT64>
+forecast_method, datetime, value, low_confidence, high_confidence
+FROM UNNEST([STRUCT<
+  forecast_method STRING, 
+  low_confidence FLOAT64, 
+  high_confidence FLOAT64, 
+  datetime TIMESTAMP, 
+  value FLOAT64>
 {forecast_string_sql}
 ])
 ")
@@ -228,7 +232,7 @@ create_scd_statement(
   forecast_values_sql_string, 
   current_anomaly_detection_config, 
   target_table_forecasts, 
-  forecast_column_sql = "forecast_method,"
+  forecast_column_sql = "forecast_method, low_confidence, high_confidence,"
 ) %>% 
   safe_query(con = con, allowed_size = allowed_size, verbose = T)
  
