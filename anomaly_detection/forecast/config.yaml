@@ -28,9 +28,15 @@ anomalies:
               season_length: 
                 - 365.25
                 - 7
+            thresholds:
+              low: .01
+              high: .1
         mean:
             parameters:
               sliding_window: 30
+            thresholds:
+              low: .03
+              high: .15
   pipe3_stats_daily_num_segs:
     source_dataset: "pipe_ais_v3_alpha_published"
     source_table: "stats_daily"
@@ -306,5 +312,110 @@ anomalies:
                 - 24
                 - 7
         mean:
+            parameters:
+              sliding_window: 30
+  vessel_characteristics_by_ssvid_pipe3:
+    source_dataset: "pipe_ais_v3_alpha_internal"
+    source_table: "vessel_characteristics_by_ssvid_"
+    source_datetime_column: "date"
+    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1"))'
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    period_length: "month"
+    source_sql: '
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) AS datetime, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__` 
+    WHERE table_id LIKE "vessel_characteristics_by_ssvid_%"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) IN ({missing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1"))
+    '
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 12
+        mean:
+            parameters:
+              sliding_window: 6
+  fishing_hours_monthly_pipe3:
+    source_dataset: "tech_great_expectations."
+    source_table: "t_fishing_hours"
+    source_datetime_column: "date"
+    source_datetime_column_sql: 'CAST(DATE_TRUNC(date, month) AS TIMESTAMP)'
+    source_forecast_column: "sad_pipe3_fishing_hours"
+    source_forecast_column_sql: "SUM(sad_pipe3_fishing_hours)"
+    period_length: "month"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 12
+        mean:
+            parameters:
+              sliding_window: 6
+  fishing_hours_monthly_pipe2_5:
+    source_dataset: "tech_great_expectations."
+    source_table: "t_fishing_hours"
+    source_datetime_column: "date"
+    source_datetime_column_sql: 'CAST(DATE_TRUNC(date, month) AS TIMESTAMP)'
+    source_forecast_column: "sad_pipe2_5_fishing_hours"
+    source_forecast_column_sql: "SUM(sad_pipe2_5_fishing_hours)"
+    period_length: "month"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 12
+        mean:
+            parameters:
+              sliding_window: 6
+  fishing_effort_pipe3:
+    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public."
+    source_table: "fishing_effort_public"
+    source_datetime_column: "timestamp"
+    source_datetime_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  fishing_effort_pipe3_esp:
+    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public."
+    source_table: "fishing_effort_public"
+    source_datetime_column: "timestamp"
+    source_datetime_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS datetime
+    FROM `skytruth-pelagos-production.ais_global_v3_fishing_effort_public.fishing_effort_public`
+    WHERE flag = "ESP"
+    GROUP BY datetime
+    ORDER BY datetime
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
             parameters:
               sliding_window: 30
