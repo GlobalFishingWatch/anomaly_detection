@@ -27,8 +27,8 @@ bigrquery::bq_auth(path = "/project/sa_api_key.json")
 con = DBI::dbConnect(drv = bigrquery::bigquery(), project = "world-fishing-827", use_legacy_sql = FALSE)
 
 
-target_table_actuals = "world-fishing-827.tech_great_expectations.anomaly_detection_actuals_datetime"
-target_table_forecasts = "world-fishing-827.tech_great_expectations.anomaly_detection_forecasts_datetime"
+target_table_actuals = "world-fishing-827.tech_great_expectations.anomaly_detection_actuals_timestamp"
+target_table_forecasts = "world-fishing-827.tech_great_expectations.anomaly_detection_forecasts_timestamp"
 
 db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 
@@ -37,7 +37,7 @@ anomaly_detection_config = yaml::read_yaml("config.yaml")
 current_anomaly_detection_config = anomaly_detection_config$anomalies[[anomaly_detection_config_name]]
 current_anomaly_detection_config$name = anomaly_detection_config_name
 
-# history_start has to be either a date, datetime, or a period length to be subtracted from today
+# history_start has to be either a date, timestamp, or a period length to be subtracted from today
 history_start = current_anomaly_detection_config$history_start %||% "2012-01-01" %>% 
   parse_date_or_period()
 current_anomaly_detection_config$period_length = current_anomaly_detection_config$period_length %||% "day"
@@ -45,8 +45,8 @@ current_anomaly_detection_config$period_length = current_anomaly_detection_confi
 config_fields = c(
   "source_dataset",
   "source_table",
-  "source_datetime_column",
-  "source_datetime_column_sql",
+  "source_timestamp_column",
+  "source_timestamp_column_sql",
   "source_forecast_column",
   "source_forecast_column_sql",
   "source_sql"
@@ -59,63 +59,63 @@ current_anomaly_detection_config[config_fields] = config_fields %>%
 
 print(current_anomaly_detection_config)
 
-# get the existing datetimes in actuals table so we can either filter by excluding existing or including 
-# missing datetimes
-existing_datetimes = get_anomaly_detection_actuals(
+# get the existing timestamps in actuals table so we can either filter by excluding existing or including 
+# missing timestamps
+existing_timestamps = get_anomaly_detection_actuals(
   con,
   db_anomaly_detection_actuals, 
   current_anomaly_detection_config,
   maximum_valid_to = "9999-12-31 23:59:59 UTC",
   allowed_size = allowed_size
 ) %>% 
-  .[, datetime]
+  .[, timestamp]
 
 
-all_historic_datetimes = seq(
+all_historic_timestamps = seq(
   history_start %>% as.Date() %>% as.POSIXct() %>% with_tz("UTC"), 
   now(tz = "UTC"), 
   current_anomaly_detection_config$period_length
 )
 
-missing_datetimes = all_historic_datetimes %>% setdiff(existing_datetimes) %>% as.POSIXct(origin="1970-01-01", tz = "UTC") 
+missing_timestamps = all_historic_timestamps %>% setdiff(existing_timestamps) %>% as.POSIXct(origin="1970-01-01", tz = "UTC") 
 
 # set date sql filters so they always evaluate to true by default
-existing_datetimes_sql = "'1979-01-01 00:00:00'" # datetime is never in this dummy value
-missing_datetimes_sql = current_anomaly_detection_config$source_datetime_column_sql # date is always in date
+existing_timestamps_sql = "'1979-01-01 00:00:00'" # timestamp is never in this dummy value
+missing_timestamps_sql = current_anomaly_detection_config$source_timestamp_column_sql # date is always in date
 
 delta_load = T
 delta_load
 
 # if we're doing a delta load and there are existing dates
-if (delta_load & length(existing_datetimes)) {
+if (delta_load & length(existing_timestamps)) {
   # only one of the two lists is required to filter, so remove the longer one
-  if (length(existing_datetimes) > length(missing_datetimes)) {
-    missing_datetimes_sql = paste0("'", missing_datetimes, "'", collapse = ", ")
+  if (length(existing_timestamps) > length(missing_timestamps)) {
+    missing_timestamps_sql = paste0("'", missing_timestamps, "'", collapse = ", ")
   } else {
-    existing_datetimes_sql = paste0("'", existing_datetimes, "'", collapse = ", ")
+    existing_timestamps_sql = paste0("'", existing_timestamps, "'", collapse = ", ")
   } 
 }
 
 if (current_anomaly_detection_config$source_sql != "") {
-  select_datetime_value_sql = glue(current_anomaly_detection_config$source_sql)
-  print(select_datetime_value_sql)
+  select_timestamp_value_sql = glue(current_anomaly_detection_config$source_sql)
+  print(select_timestamp_value_sql)
 } else {
-  select_datetime_value_sql = glue(.null = "", "
-    TIMESTAMP_TRUNC({current_anomaly_detection_config$source_datetime_column_sql}, {current_anomaly_detection_config$period_length}) datetime, 
+  select_timestamp_value_sql = glue(.null = "", "
+    TIMESTAMP_TRUNC({current_anomaly_detection_config$source_timestamp_column_sql}, {current_anomaly_detection_config$period_length}) timestamp, 
       {current_anomaly_detection_config$source_forecast_column_sql} value
     FROM `{current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}`
-    WHERE {current_anomaly_detection_config$source_datetime_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
-    AND {current_anomaly_detection_config$source_datetime_column_sql} IN ({missing_datetimes_sql})
-    AND {current_anomaly_detection_config$source_datetime_column_sql} NOT IN ({existing_datetimes_sql})
-    AND {current_anomaly_detection_config$source_datetime_column_sql} >= '{history_start}'
-    GROUP BY datetime
-    ORDER BY datetime"
+    WHERE {current_anomaly_detection_config$source_timestamp_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
+    AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
+    AND {current_anomaly_detection_config$source_timestamp_column_sql} NOT IN ({existing_timestamps_sql})
+    AND {current_anomaly_detection_config$source_timestamp_column_sql} >= '{history_start}'
+    GROUP BY timestamp
+    ORDER BY timestamp"
   )  
 }
 
-if (length(missing_datetimes)) {
+if (length(missing_timestamps)) {
   create_scd_statement(
-    select_datetime_value_sql, 
+    select_timestamp_value_sql, 
     current_anomaly_detection_config, 
     target_table_actuals
   ) %>% 
@@ -134,26 +134,26 @@ dt_train = get_anomaly_detection_actuals(
   maximum_valid_to = "9999-12-31 23:59:59 UTC",
   allowed_size = allowed_size
 ) %>% 
-  .[, .(datetime, y = value)] %>% 
-  .[order(datetime)]
+  .[, .(timestamp, y = value)] %>% 
+  .[order(timestamp)]
 
 
 # By default forecast the last 7 days, unless this is provided by the config or environment
-if (Sys.getenv("FORECAST_DATETIME_FROM") != "") {
-  forecast_datetime_from = as.POSIXct(Sys.getenv("FORECAST_DATETIME_FROM"), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+if (Sys.getenv("FORECAST_TIMESTAMP_FROM") != "") {
+  forecast_timestamp_from = as.POSIXct(Sys.getenv("FORECAST_TIMESTAMP_FROM"), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 } else {
-  forecast_datetime_from = current_anomaly_detection_config$forecast_start %||% "7 days" %>% 
+  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% "7 days" %>% 
     parse_date_or_period()  %>% 
     with_tz("UTC")
 }
 
 
-forecast_datetime_to = as.POSIXct(Sys.getenv("FORECAST_DATETIME_TO"), format = "%Y-%m-%d %H:%M:%S") %>% 
+forecast_timestamp_to = as.POSIXct(Sys.getenv("FORECAST_TIMESTAMP_TO"), format = "%Y-%m-%d %H:%M:%S") %>% 
   with_tz("UTC")
-if (is.na(forecast_datetime_to)) forecast_datetime_to = Sys.time() %>% with_tz("UTC")
+if (is.na(forecast_timestamp_to)) forecast_timestamp_to = Sys.time() %>% with_tz("UTC")
 periods_to_forecast = seq(
-  forecast_datetime_from, 
-  forecast_datetime_to, 
+  forecast_timestamp_from, 
+  forecast_timestamp_to, 
   current_anomaly_detection_config$period_length
 )
 
@@ -166,8 +166,8 @@ generate_forecasts = function(periods_to_forecast) {
     furrr::future_imap_dfr(\(current_fc_period, index) {
       # cat(glue("forecasting {index} / {length(periods_to_forecast)}: {current_fc_period}"), fill = T)
       p()
-      dt_current_train = dt_train[datetime < current_fc_period]
-      if (dt_current_train[, .N] < 15) return(data.table(datetime = NA, fc = NA, fc_method = NA))
+      dt_current_train = dt_train[timestamp < current_fc_period]
+      if (dt_current_train[, .N] < 15) return(data.table(timestamp = NA, fc = NA, fc_method = NA))
       names(current_anomaly_detection_config$algorithms) %>% 
         map_dfr(\(current_fc_method) {
           current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
@@ -192,7 +192,7 @@ generate_forecasts = function(periods_to_forecast) {
           fc = max(0, fc)
           
           data.table(
-            datetime = dt_current_train[, max(datetime) + period(
+            timestamp = dt_current_train[, max(timestamp) + period(
               1, units = current_anomaly_detection_config$period_length)], 
             fc = fc,
             fc_method = current_fc_method,
@@ -201,28 +201,28 @@ generate_forecasts = function(periods_to_forecast) {
           )
         })
     }) %>% 
-    .[!is.na(datetime)] %>% 
-    .[order(datetime, fc_method)] %>% 
+    .[!is.na(timestamp)] %>% 
+    .[order(timestamp, fc_method)] %>% 
     unique
 }
 
 dt_forecasts = progressr::with_progress(generate_forecasts(periods_to_forecast), enable = T)
 
 forecast_methods_sql_string = paste0("'", dt_forecasts[, fc_method], "'", collapse = ", ")
-date_sql_string = paste0("TIMESTAMP('", dt_forecasts[, datetime], "')", collapse = ", ")
+date_sql_string = paste0("TIMESTAMP('", dt_forecasts[, timestamp], "')", collapse = ", ")
 forecast_value_sql_string = paste0(dt_forecasts[, fc], collapse = ", ")
 
 forecast_string_sql = dt_forecasts[, glue_data(.SD, "
-('{fc_method}', {low_confidence}, {high_confidence}, TIMESTAMP('{datetime}'), {fc})
+('{fc_method}', {low_confidence}, {high_confidence}, TIMESTAMP('{timestamp}'), {fc})
 ")] %>% paste0(collapse = ", ")
 
 forecast_values_sql_string = glue("
-forecast_method, datetime, value, low_confidence, high_confidence
+forecast_method, timestamp, value, low_confidence, high_confidence
 FROM UNNEST([STRUCT<
   forecast_method STRING, 
   low_confidence FLOAT64, 
   high_confidence FLOAT64, 
-  datetime TIMESTAMP, 
+  timestamp TIMESTAMP, 
   value FLOAT64>
 {forecast_string_sql}
 ])

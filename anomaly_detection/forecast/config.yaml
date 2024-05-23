@@ -2,8 +2,8 @@ anomalies:
   pipe3_stats_daily_raw_positions:
     source_dataset: "pipe_ais_v3_alpha_published"
     source_table: "stats_daily"
-    source_datetime_column: "date"
-    source_datetime_column_sql: "CAST(date AS TIMESTAMP)"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: "CAST(date AS TIMESTAMP)"
     source_forecast_column: "raw_positions"
     source_forecast_column_sql: "MAX(raw_positions)"
     algorithms: 
@@ -18,8 +18,8 @@ anomalies:
   pipe3_stats_daily_num_ssvid:
     source_dataset: "pipe_ais_v3_alpha_published"
     source_table: "stats_daily"
-    source_datetime_column: "date"
-    source_datetime_column_sql: "CAST(date AS TIMESTAMP)"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: "CAST(date AS TIMESTAMP)"
     source_forecast_column: "num_ssvid"
     source_forecast_column_sql: "MAX(num_ssvid)"
     algorithms: 
@@ -40,8 +40,8 @@ anomalies:
   pipe3_stats_daily_num_segs:
     source_dataset: "pipe_ais_v3_alpha_published"
     source_table: "stats_daily"
-    source_datetime_column: "date"
-    source_datetime_column_sql: "CAST(date AS TIMESTAMP)"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: "CAST(date AS TIMESTAMP)"
     source_forecast_column: "num_segs"
     source_forecast_column_sql: "MAX(num_segs)"
     algorithms: 
@@ -56,8 +56,8 @@ anomalies:
   brazil_vms_bugged:
     source_dataset: "tech_great_expectations"
     source_table: "brazil_vms_normalized_anomaly_copy"
-    source_datetime_column: "date"
-    source_datetime_column_sql: "CAST(date AS TIMESTAMP)"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: "CAST(date AS TIMESTAMP)"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     history_start: "2016-01-01"
@@ -73,18 +73,18 @@ anomalies:
   brazil_vms_production_v20211126:
     source_dataset: "pipe_brazil_production_v20211126"
     source_table: "brazil_vms_normalized_"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1"))'
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1"))'
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) AS datetime, 
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) AS timestamp, 
     row_count AS value
     FROM `world-fishing-827.pipe_brazil_production_v20211126.__TABLES__` 
     WHERE table_id LIKE "brazil_vms_normalized_%"
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) IN ({missing_datetimes_sql})
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
     ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1"))
     '
     history_start: "2016-01-01"
@@ -100,18 +100,18 @@ anomalies:
   norway_vms_normalized_20231022:
     source_dataset: "pipe_norway_production_v20220112"
     source_table: "norway_vms_normalized_20231022"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1"))'    
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1"))'    
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) AS datetime, 
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) AS timestamp, 
     row_count AS value
     FROM `world-fishing-827.pipe_norway_production_v20220112.__TABLES__` 
     WHERE table_id LIKE "norway_vms_normalized_%"
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) IN ({missing_datetimes_sql})
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
     ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1"))
     '
     history_start: "2023-10-22"
@@ -127,8 +127,8 @@ anomalies:
   # pipe3_messages:
   #   source_dataset: "pipe_ais_v3_alpha_published"
   #   source_table: "messages"
-  #   source_datetime_column: "date"
-  #   source_datetime_column_sql: "date(timestamp)"
+  #   source_timestamp_column: "date"
+  #   source_timestamp_column_sql: "date(timestamp)"
   #   source_forecast_column: "count"
   #   source_forecast_column_sql: "COUNT(*)"
   #   algorithms: 
@@ -147,18 +147,18 @@ anomalies:
   ais_sources_normalized_spire:
     source_dataset: "pipe_ais_sources_v20220628"
     source_table: "normalized_spire_"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))'
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))'
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) AS datetime, 
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) AS timestamp, 
     row_count AS value
     FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__` 
     WHERE table_id LIKE "normalized_spire_%"
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) IN ({missing_datetimes_sql})
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
     ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))
     '
     history_start: "2017-01-01"
@@ -174,18 +174,18 @@ anomalies:
   ais_sources_normalized_nmea:
     source_dataset: "pipe_ais_sources_v20220628"
     source_table: "pipe_nmea_normalized_"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1"))'
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1"))'
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) AS datetime, 
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) AS timestamp, 
     row_count AS value
     FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__` 
     WHERE table_id LIKE "pipe_nmea_normalized_%"
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) IN ({missing_datetimes_sql})
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
     ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1"))
     '
     history_start: "2022-12-31"
@@ -201,18 +201,18 @@ anomalies:
   ais_sources_normalized_nmea_marinetraffic:
     source_dataset: "pipe_ais_sources_v20220628"
     source_table: "pipe_nmea_marinetraffic_normalized_"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1"))'
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1"))'
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) AS datetime, 
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) AS timestamp, 
     row_count AS value
     FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__` 
     WHERE table_id LIKE "pipe_nmea_marinetraffic_normalized_%"
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) IN ({missing_datetimes_sql})
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) >= "2023-09-30"
     ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1"))
     '
@@ -228,18 +228,18 @@ anomalies:
   pipe3_messages_segmented:
     source_dataset: "pipe_ais_v3_alpha_internal"
     source_table: "messages_segmented_"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1"))'
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1"))'
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) AS datetime, 
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) AS timestamp, 
     row_count AS value
     FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__` 
     WHERE table_id LIKE "messages_segmented_%"
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) IN ({missing_datetimes_sql})
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
     ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1"))
     '
     algorithms: 
@@ -254,8 +254,8 @@ anomalies:
   pipe_nmea_parsed_hourly:
     source_dataset: "pipe_nmea_hourly"
     source_table: "pipe-nmea-parsed-hourly"
-    source_datetime_column: "tagblock_timestamp"
-    source_datetime_column_sql: "TIMESTAMP_TRUNC(tagblock_timestamp, hour)"
+    source_timestamp_column: "tagblock_timestamp"
+    source_timestamp_column_sql: "TIMESTAMP_TRUNC(tagblock_timestamp, hour)"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     period_length: "hour"
@@ -272,8 +272,8 @@ anomalies:
   pipe_nmea_parsed_daily:
     source_dataset: "pipe_nmea_hourly"
     source_table: "pipe-nmea-parsed-hourly"
-    source_datetime_column: "day"
-    source_datetime_column_sql: "TIMESTAMP_TRUNC(tagblock_timestamp, day)"
+    source_timestamp_column: "day"
+    source_timestamp_column_sql: "TIMESTAMP_TRUNC(tagblock_timestamp, day)"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     period_length: "day"
@@ -289,19 +289,19 @@ anomalies:
   pipe_nmea_normalised_hourly:
     source_dataset: "pipe_ais_sources_v20220628"
     source_table: "pipe_nmea_normalized_*"
-    source_datetime_column: "timestamp"
-    source_datetime_column_sql: "TIMESTAMP_TRUNC(timestamp, hour)"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: "TIMESTAMP_TRUNC(timestamp, hour)"
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     source_sql: '
-    TIMESTAMP_TRUNC(timestamp, hour) AS datetime, 
+    TIMESTAMP_TRUNC(timestamp, hour) AS timestamp, 
     COUNT(*) AS value
     FROM `pipe_ais_sources_v20220628.pipe_nmea_normalized_*` 
     WHERE PARSE_TIMESTAMP("%Y%m%d", _TABLE_SUFFIX) BETWEEN "2023-11-01" AND "2099-01-01"
-    AND TIMESTAMP_TRUNC(timestamp, hour) IN ({missing_datetimes_sql})
-    AND TIMESTAMP_TRUNC(timestamp, hour) NOT IN ({existing_datetimes_sql})
-    GROUP BY datetime
-    ORDER BY datetime
+    AND TIMESTAMP_TRUNC(timestamp, hour) IN ({missing_timestamps_sql})
+    AND TIMESTAMP_TRUNC(timestamp, hour) NOT IN ({existing_timestamps_sql})
+    GROUP BY timestamp
+    ORDER BY timestamp
     '
     period_length: "hour"
     history_start: "30 days"
@@ -317,19 +317,19 @@ anomalies:
   vessel_characteristics_by_ssvid_pipe3:
     source_dataset: "pipe_ais_v3_alpha_internal"
     source_table: "vessel_characteristics_by_ssvid_"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1"))'
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1"))'
     source_forecast_column: "count"
     source_forecast_column_sql: "COUNT(*)"
     period_length: "month"
     source_sql: '
-    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) AS datetime, 
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) AS timestamp, 
     row_count AS value
     FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__` 
     WHERE table_id LIKE "vessel_characteristics_by_ssvid_%"
     AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) IN ({missing_datetimes_sql})
-    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) NOT IN ({existing_datetimes_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
     ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1"))
     '
     algorithms: 
@@ -343,8 +343,8 @@ anomalies:
   fishing_hours_monthly_pipe3:
     source_dataset: "tech_great_expectations."
     source_table: "t_fishing_hours"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'CAST(DATE_TRUNC(date, month) AS TIMESTAMP)'
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'CAST(DATE_TRUNC(date, month) AS TIMESTAMP)'
     source_forecast_column: "sad_pipe3_fishing_hours"
     source_forecast_column_sql: "SUM(sad_pipe3_fishing_hours)"
     period_length: "month"
@@ -359,8 +359,8 @@ anomalies:
   fishing_hours_monthly_pipe2_5:
     source_dataset: "tech_great_expectations."
     source_table: "t_fishing_hours"
-    source_datetime_column: "date"
-    source_datetime_column_sql: 'CAST(DATE_TRUNC(date, month) AS TIMESTAMP)'
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'CAST(DATE_TRUNC(date, month) AS TIMESTAMP)'
     source_forecast_column: "sad_pipe2_5_fishing_hours"
     source_forecast_column_sql: "SUM(sad_pipe2_5_fishing_hours)"
     period_length: "month"
@@ -375,8 +375,8 @@ anomalies:
   fishing_effort_pipe3:
     source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public."
     source_table: "fishing_effort_public"
-    source_datetime_column: "timestamp"
-    source_datetime_column_sql: 'timestamp'
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
     source_forecast_column: "value"
     source_forecast_column_sql: "SUM(value)"
     period_length: "day"
@@ -395,17 +395,17 @@ anomalies:
   fishing_effort_pipe3_esp:
     source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public."
     source_table: "fishing_effort_public"
-    source_datetime_column: "timestamp"
-    source_datetime_column_sql: 'timestamp'
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
     source_forecast_column: "value"
     source_forecast_column_sql: "SUM(value)"
     period_length: "day"
     source_sql: '
-    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS datetime
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp
     FROM `skytruth-pelagos-production.ais_global_v3_fishing_effort_public.fishing_effort_public`
     WHERE flag = "ESP"
-    GROUP BY datetime
-    ORDER BY datetime
+    GROUP BY timestamp
+    ORDER BY timestamp
     '
     algorithms:
         mstl: 

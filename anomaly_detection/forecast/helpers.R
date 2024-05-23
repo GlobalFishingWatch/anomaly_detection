@@ -41,19 +41,19 @@ get_anomaly_detection_actuals = function(
     filter(
       source_dataset == !!anomaly_detection_config$source_dataset &&
         source_table == !!anomaly_detection_config$source_table &&
-        source_datetime_column == !!anomaly_detection_config$source_datetime_column &&
+        source_timestamp_column == !!anomaly_detection_config$source_timestamp_column &&
         source_forecast_column == !!anomaly_detection_config$source_forecast_column &&
         source_forecast_column_sql == !!anomaly_detection_config$source_forecast_column_sql &&
         source_sql_hash == source_sql_hash &&
         period_length == !!anomaly_detection_config$period_length
     ) %>% 
-    filter(sql(glue::glue("source_datetime_column_sql = '{anomaly_detection_config$source_datetime_column_sql}'"))) %>% 
-    filter(datetime != '1979-01-01') %>% 
+    filter(sql(glue::glue("source_timestamp_column_sql = '{anomaly_detection_config$source_timestamp_column_sql}'"))) %>% 
+    filter(timestamp != '1979-01-01') %>% 
     safe_query(con = con, allowed_size = allowed_size, verbose = T)
 }
 
 create_scd_statement = function(
-    select_datetime_value_sql,
+    select_timestamp_value_sql,
     current_anomaly_detection_config,
     target_table,
     forecast_column_sql = "",
@@ -70,29 +70,29 @@ USING (
     SELECT 
         '{current_anomaly_detection_config$source_dataset}' source_dataset, 
         '{current_anomaly_detection_config$source_table}' source_table,
-        '{current_anomaly_detection_config$source_datetime_column}' source_datetime_column,
-        '{current_anomaly_detection_config$source_datetime_column_sql}' source_datetime_column_sql,
+        '{current_anomaly_detection_config$source_timestamp_column}' source_timestamp_column,
+        '{current_anomaly_detection_config$source_timestamp_column_sql}' source_timestamp_column_sql,
         '{current_anomaly_detection_config$source_forecast_column}' source_forecast_column,
         '{current_anomaly_detection_config$source_forecast_column_sql}' source_forecast_column_sql,
         '{sql(current_anomaly_detection_config$source_sql)}' source_sql,
         '{source_sql_hash}' source_sql_hash,
         '{current_anomaly_detection_config$period_length}' period_length,
-     {select_datetime_value_sql}
+     {select_timestamp_value_sql}
     ),
   new_actuals_with_key AS (
     SELECT 
       MD5(CONCAT(
         source_dataset,
         source_table,
-        source_datetime_column,
-        source_datetime_column_sql,
+        source_timestamp_column,
+        source_timestamp_column_sql,
         source_forecast_column,
         source_forecast_column_sql,
         source_sql,
         source_sql_hash,
         period_length,
         {forecast_column_sql}
-        datetime)) key,
+        timestamp)) key,
       * 
     FROM new_actuals
   )
@@ -113,15 +113,15 @@ WHEN NOT MATCHED THEN
     key,
     source_dataset,
     source_table,
-    source_datetime_column,
-    source_datetime_column_sql,
+    source_timestamp_column,
+    source_timestamp_column_sql,
     source_forecast_column,
     source_forecast_column_sql,
     source_sql,
     source_sql_hash,
     period_length,
     {forecast_column_sql}
-    datetime,
+    timestamp,
     value,
     '{current_timestamp}',
     '{maximum_valid_to}'
