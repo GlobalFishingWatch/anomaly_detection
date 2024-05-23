@@ -91,11 +91,11 @@ validate_query_size = function(query, allowed_size = 0.1 * BQ_GB) {
 safe_query = function(query, con, allowed_size = 0.1 * BQ_GB, 
                       query_size_exceeded_handling = c("stop", "skip")[1], page_size = NULL,
                       verbose = F) {
-  if (verbose) cat(query, fill = T)
   if("tbl_lazy" %in% class(query)) {
     if(con %>% is.null()) con = query[1]$src$con
     query %<>% sql_render()
   }
+  if (verbose) cat(query, fill = T)
   if (validate_query_size(query = query, allowed_size = allowed_size)) {
     if (page_size %>% is.null()) {
       DBI::dbGetQuery(con, query) %>% setDT()
