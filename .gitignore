@@ -2,3 +2,5 @@ venv
 .ipynb_checkpoints
 __pycache__
 .Rproj.user
+
+sa_api_key.json
