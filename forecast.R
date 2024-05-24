@@ -1,3 +1,8 @@
+if (Sys.getenv("RUNTIME") != "docker") {
+  cat("LOADING DEFAULT ENVIRONMENT VARIABLES")
+  dotenv::load_dot_env()
+}
+
 anomaly_detection_config_name = Sys.getenv("ANOMALY_DETECTION_CONFIG_NAME")
 
 suppressMessages({
@@ -27,8 +32,8 @@ bigrquery::bq_auth(path = "/project/sa_api_key.json")
 con = DBI::dbConnect(drv = bigrquery::bigquery(), project = "world-fishing-827", use_legacy_sql = FALSE)
 
 
-target_table_actuals = Sys.getenv("ACTUALS_TABLE_FQN") %||% "world-fishing-827.tech_great_expectations.anomaly_detection_actuals_timestamp"
-target_table_forecasts = Sys.getenv("FORECASTS_TABLE_FQN") %||% "world-fishing-827.tech_great_expectations.anomaly_detection_forecasts_timestamp"
+target_table_actuals = paste0(Sys.getenv("DATASET_ID"), ".", Sys.getenv("ENVIRONMENT"), "_", Sys.getenv("ACTUALS_TABLE"))
+target_table_forecasts = paste0(Sys.getenv("DATASET_ID"), ".", Sys.getenv("ENVIRONMENT"), "_", Sys.getenv("FORECASTS_TABLE"))
 
 db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 
@@ -137,13 +142,14 @@ dt_train = get_anomaly_detection_actuals(
   .[, .(timestamp, y = value)] %>% 
   .[order(timestamp)]
 
-# By default forecast the last 7 days, unless this is provided by the config or environment
+# By default forecast the last 90 days, unless this is provided by the config or environment
 if (Sys.getenv("FORECAST_TIMESTAMP_FROM") != "") {
   forecast_timestamp_from = as.POSIXct(Sys.getenv("FORECAST_TIMESTAMP_FROM"), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 } else {
-  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% "7 days" %>% 
+  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% "90 days" %>% 
     parse_date_or_period()  %>% 
-    with_tz("UTC")
+    with_tz("UTC") %>% 
+    floor_date(current_anomaly_detection_config$period_length)
 }
 
 
@@ -233,4 +239,3 @@ create_scd_statement(
   forecast_column_sql = "forecast_method, low_confidence, high_confidence,"
 ) %>% 
   safe_query(con = con, allowed_size = allowed_size, verbose = T)
- 
