@@ -27,7 +27,6 @@ COPY sa_api_key.json .
 COPY bq_utils.R .
 COPY helpers.R .
 COPY forecast.R .
-COPY config.yaml .
 
 COPY init.sh .
 RUN chmod +x init.sh
