@@ -33,4 +33,13 @@ for i in "$@"; do
 done
 
 
-sudo docker run -it --env-file .env -e ENVIRONMENT=$ENVIRONMENT --rm -v ~/.config/gcloud:/root/.config/gcloud anomaly_forecast $1
+sudo docker run -it --env-file .env \
+    -e ENVIRONMENT=$ENVIRONMENT \
+    -e ANOMALY_DETECTION_CONFIG_NAME=$ANOMALY_DETECTION_CONFIG_NAME \
+    -e ALLOWED_SIZE=$ALLOWED_SIZE \
+    -e DELTA_LOAD=$DELTA_LOAD \
+    -e FORECAST_TIMESTAMP_FROM="$FORECAST_TIMESTAMP_FROM" \
+    --rm \
+    -v ~/.config/gcloud:/root/.config/gcloud \
+    -v $(pwd)/config.yaml:/project/config.yaml \
+    anomaly_forecast
