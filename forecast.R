@@ -194,7 +194,8 @@ generate_forecasts = function(periods_to_forecast) {
             return()
           }
           
-          fc = max(0, fc)
+          # set fc value to the lowest previously seen value if it's negative
+          fc = max(dt_current_train[, min(y)], fc)
           
           data.table(
             timestamp = current_fc_period, 
