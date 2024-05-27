@@ -38,3 +38,15 @@ models:
 
 vars:
   "dbt_date:time_zone": "UTC"
+
+seeds:
+  monitoring:
+    thresholds_dev:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'dev' }}"
+      alias: t_anomaly_detection_thresholds_dev
+    thresholds_staging:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'staging' }}"
+      alias: t_anomaly_detection_thresholds_staging
+    thresholds_prod:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'prod' }}"
+      alias: t_anomaly_detection_thresholds_prod
