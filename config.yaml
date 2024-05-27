@@ -419,6 +419,61 @@ anomalies:
         median:
             parameters:
               sliding_window: 30
+  fishing_effort_pipe2_5_esp_daily:
+    source_dataset: "skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public"
+    source_table: "ais_global_v20231026_fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp
+    FROM `skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public.ais_global_v20231026_fishing_effort_public`
+    WHERE flag = "ESP"
+    GROUP BY timestamp
+    ORDER BY timestamp
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  fishing_effort_pipe3_esp_set_gillnets_daily:
+    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public"
+    source_table: "fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp
+    FROM `skytruth-pelagos-production.ais_global_v3_fishing_effort_public.fishing_effort_public`
+    WHERE flag = "ESP"
+    AND geartype = "set_gillnets"
+    GROUP BY timestamp
+    ORDER BY timestamp
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
   parser_errors_spire_daily:
     source_dataset: "tech_great_expectations"
     source_table: "pipe_nmea_parsed_errors"
@@ -449,3 +504,32 @@ anomalies:
             thresholds:
               low: .25
               high: .5
+  parser_errors_daily:
+      source_dataset: "tech_great_expectations"
+      source_table: "pipe_nmea_parsed_errors"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'date'
+      source_forecast_column: "count"
+      source_forecast_column_sql: "SUM(count)"
+      period_length: "day"
+      source_sql: '
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp
+      FROM `tech_great_expectations.pipe_nmea_parsed_errors`
+      GROUP BY timestamp
+      ORDER BY timestamp
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+              thresholds:
+                low: .25
+                high: .5

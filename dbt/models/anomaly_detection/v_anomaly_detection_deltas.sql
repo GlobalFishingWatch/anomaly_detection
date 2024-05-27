@@ -5,15 +5,11 @@
 
 WITH latest_fc AS (
       SELECT 
-        *,
+        * EXCEPT(low_confidence, high_confidence),
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column, ".", source_timestamp_column_sql, ".", 
         source_forecast_column_sql, ".", source_sql_hash, ".", period_length) forecast_actuals_join_key,
-        IFNULL(low_confidence, 0.2) low_confidence_upper,
-        IFNULL(-low_confidence, -0.2) low_confidence_lower,
-        IFNULL(high_confidence, 0.5) high_confidence_upper,
-        IFNULL(-high_confidence, -0.5) high_confidence_lower
       FROM `world-fishing-827.tech_great_expectations.{{ env_var('DBT_ENVIRONMENT') }}_anomaly_detection_forecasts`
       WHERE valid_to = '9999-12-31 23:59:59 UTC'
     ),
@@ -41,10 +37,6 @@ WITH latest_fc AS (
     forecasts_actuals AS (
       SELECT 
         forecast_method,
-        low_confidence_upper,
-        low_confidence_lower,
-        high_confidence_upper,
-        high_confidence_lower,
         latest_fc.timestamp as forecast_timestamp, 
         latest_fc.value as forecast_value, 
         latest_ac.timestamp actual_timestamp, 
@@ -59,15 +51,60 @@ WITH latest_fc AS (
       FROM latest_ac
       FULL JOIN latest_fc
       USING(forecast_actuals_join_key, timestamp)
+    ),
+    forecasts_thresholds AS (
+      SELECT *
+      FROM forecasts_actuals
+      LEFT JOIN {{ ref('thresholds_' ~ env_var('DBT_ENVIRONMENT')) }}
+      USING(config_name, forecast_method)
+    ),
+    forecasts_deltas AS (
+      SELECT
+        DISTINCT
+        *,
+        actual_value - forecast_value delta,
+        SAFE_DIVIDE((actual_value - forecast_value), forecast_value) delta_rel,
+        abs(actual_value - forecast_value) abs_delta,
+        abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) abs_delta_rel
+      FROM forecasts_thresholds
+    ),
+    forecasts_delta_rel_winsorised AS (
+      SELECT
+        *,
+        CASE WHEN delta_rel > 1 THEN 1
+          WHEN delta_rel < -1 THEN -1
+          ELSE delta_rel
+        END AS delta_rel_winsorised
+      FROM forecasts_deltas
+    ),
+    forecasts_anomaly_type_lower_higher AS (
+      SELECT 
+        *,
+        CASE WHEN 
+          delta_rel < critical_lower THEN 'critical_lower'
+          WHEN delta_rel < warning_lower THEN 'warning_lower'
+          WHEN delta_rel > critical_higher THEN 'critical_higher'
+          WHEN delta_rel > warning_higher THEN 'warning_higher'
+          ELSE 'normal'
+        END AS anomaly_type_lower_higher
+      FROM forecasts_delta_rel_winsorised
+    ),
+    forecasts_anomaly_type AS (
+      SELECT 
+        *, 
+        CASE 
+          WHEN anomaly_type_lower_higher LIKE '%critical%' THEN 'critical' 
+          WHEN anomaly_type_lower_higher LIKE '%warning%' THEN 'warning' 
+          ELSE 'normal' 
+      END AS anomaly_type
+      FROM forecasts_anomaly_type_lower_higher
+    ),
+    forecasts_anomaly_value AS (
+      SELECT 
+        *,
+        IF(anomaly_type != 'normal', delta_rel, NULL) anomaly_value,
+        IF(anomaly_type != 'normal', delta_rel_winsorised, NULL) anomaly_value_windsorised
+      FROM forecasts_anomaly_type
     )
-    SELECT
-      DISTINCT
-      *,
-      actual_value - forecast_value delta,
-      SAFE_DIVIDE((actual_value - forecast_value), forecast_value) delta_rel,
-      abs(actual_value - forecast_value) abs_delta,
-      abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) abs_delta_rel,
-      low_confidence_lower + abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) distance_from_lower_threshold,
-      high_confidence_lower + abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) distance_from_higher_threshold
-    FROM forecasts_actuals
-  
+
+SELECT * FROM forecasts_anomaly_value
