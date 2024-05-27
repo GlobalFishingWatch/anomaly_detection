@@ -7,9 +7,9 @@ client = bigquery.Client()
 
 def get_query_results(environment, config_name, anomaly_type):
     query = f"""
-    SELECT * FROM `world-fishing-827.tech_great_expectations.v_${environment}_anomaly_detection_deltas`
-    WHERE config_name = '${config_name}'
-    AND anomaly_type = "${anomaly_type}"
+    SELECT * FROM `world-fishing-827.tech_great_expectations.v_{environment}_anomaly_detection_deltas`
+    WHERE config_name = '{config_name}'
+    AND anomaly_type = "{anomaly_type}"
     """
 
     query_job = client.query(query)
