@@ -521,3 +521,30 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
+  parsed_row_count_daily:
+      source_dataset: "tech_great_expectations"
+      source_table: "partition_row_counts"
+      source_timestamp_column: "partition_date"
+      source_timestamp_column_sql: 'TIMESTAMP(partition_date)'
+      source_forecast_column: "total_rows_daily"
+      source_forecast_column_sql: "total_rows_daily"
+      period_length: "day"
+      source_sql: '
+      total_rows_daily AS value, TIMESTAMP(partition_date) AS timestamp
+      FROM `world-fishing-827.tech_great_expectations.partition_row_counts` 
+      WHERE schema_table_name = "pipe_ais_sources_v20201001.pipe-nmea-parsed"
+      AND partition_id IS NOT NULL
+      ORDER BY partition_date
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
