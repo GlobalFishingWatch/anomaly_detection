@@ -28,15 +28,9 @@ anomalies:
               season_length: 
                 - 365.25
                 - 7
-            thresholds:
-              low: .01
-              high: .1
         mean:
             parameters:
               sliding_window: 30
-            thresholds:
-              low: .03
-              high: .15
   pipe3_stats_daily_num_segs:
     source_dataset: "pipe_ais_v3_alpha_published"
     source_table: "stats_daily"
@@ -501,9 +495,6 @@ anomalies:
         median:
             parameters:
               sliding_window: 30
-            thresholds:
-              low: .25
-              high: .5
   parser_errors_daily:
       source_dataset: "tech_great_expectations"
       source_table: "pipe_nmea_parsed_errors"
@@ -530,6 +521,3 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
-              thresholds:
-                low: .25
-                high: .5
