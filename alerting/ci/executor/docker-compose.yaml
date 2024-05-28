@@ -1,0 +1,10 @@
+version: '3'
+services:
+  vertex-download:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    volumes:
+      - '~/.config/gcloud:/root/.config/gcloud'
+      - './main.py:/code/main.py'
