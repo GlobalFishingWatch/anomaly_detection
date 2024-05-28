@@ -7,9 +7,7 @@ WITH latest_fc AS (
       SELECT 
         * EXCEPT(low_confidence, high_confidence),
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
-        CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column,
-        CONCAT(source_dataset, ".", source_table, ".", source_forecast_column, ".", source_timestamp_column_sql, ".", 
-        source_forecast_column_sql, ".", source_sql_hash, ".", period_length) forecast_actuals_join_key,
+        CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column
       FROM `world-fishing-827.tech_great_expectations.{{ env_var('DBT_ENVIRONMENT') }}_anomaly_detection_forecasts`
       WHERE valid_to = '9999-12-31 23:59:59 UTC'
     ),
@@ -28,9 +26,7 @@ WITH latest_fc AS (
           source_sql_hash
         ORDER BY timestamp) AS previous_year_actual_value,
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
-        CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column,
-        CONCAT(source_dataset, ".", source_table, ".", source_forecast_column, ".", source_timestamp_column_sql, ".", 
-        source_forecast_column_sql, ".", source_sql_hash, ".", period_length) forecast_actuals_join_key
+        CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column
       FROM `world-fishing-827.tech_great_expectations.{{ env_var('DBT_ENVIRONMENT') }}_anomaly_detection_actuals`
       WHERE valid_to = '9999-12-31 23:59:59 UTC'
     ),
@@ -50,13 +46,19 @@ WITH latest_fc AS (
         COALESCE(latest_fc.period_length, latest_ac.period_length) period_length,
       FROM latest_ac
       FULL JOIN latest_fc
-      USING(forecast_actuals_join_key, timestamp)
+      USING(config_name, timestamp)
     ),
     forecasts_thresholds AS (
       SELECT *
       FROM forecasts_actuals
       LEFT JOIN {{ ref('thresholds_' ~ env_var('DBT_ENVIRONMENT')) }}
       USING(config_name, forecast_method)
+    ),
+    forecasts_descriptions AS (
+      SELECT *
+      FROM forecasts_thresholds
+      LEFT JOIN {{ ref('config_descriptions_' ~ env_var('DBT_ENVIRONMENT')) }}
+      USING(config_name)
     ),
     forecasts_deltas AS (
       SELECT
@@ -66,7 +68,7 @@ WITH latest_fc AS (
         SAFE_DIVIDE((actual_value - forecast_value), forecast_value) delta_rel,
         abs(actual_value - forecast_value) abs_delta,
         abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) abs_delta_rel
-      FROM forecasts_thresholds
+      FROM forecasts_descriptions
     ),
     forecasts_delta_rel_winsorised AS (
       SELECT
@@ -105,6 +107,10 @@ WITH latest_fc AS (
         IF(anomaly_type != 'normal', delta_rel, NULL) anomaly_value,
         IF(anomaly_type != 'normal', delta_rel_winsorised, NULL) anomaly_value_windsorised
       FROM forecasts_anomaly_type
-    )
+    ),
+  forecasts_remove_missing_latest_actuals AS (
+    SELECT * FROM forecasts_anomaly_value
+    QUALIFY forecast_timestamp IS NULL OR forecast_timestamp <= MAX(actual_timestamp) OVER (PARTITION BY config_name)
+  )
 
-SELECT * FROM forecasts_anomaly_value
+SELECT * FROM forecasts_remove_missing_latest_actuals

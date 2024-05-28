@@ -77,15 +77,6 @@ USING (
     SELECT 
       MD5(CONCAT(
         config_name,
-        source_dataset,
-        source_table,
-        source_timestamp_column,
-        source_timestamp_column_sql,
-        source_forecast_column,
-        source_forecast_column_sql,
-        source_sql,
-        source_sql_hash,
-        period_length,
         {forecast_column_sql}
         timestamp)) key,
       * 
