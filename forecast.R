@@ -48,6 +48,7 @@ history_start = current_anomaly_detection_config$history_start %||% "2012-01-01"
 current_anomaly_detection_config$period_length = current_anomaly_detection_config$period_length %||% "day"
 
 config_fields = c(
+  "dimension_split",
   "source_dataset",
   "source_table",
   "source_timestamp_column",
@@ -107,14 +108,14 @@ if (current_anomaly_detection_config$source_sql != "") {
 } else {
   select_timestamp_value_sql = glue(.null = "", "
     TIMESTAMP_TRUNC({current_anomaly_detection_config$source_timestamp_column_sql}, {current_anomaly_detection_config$period_length}) timestamp, 
-      {current_anomaly_detection_config$source_forecast_column_sql} value
+      {current_anomaly_detection_config$source_forecast_column_sql} value, {current_anomaly_detection_config$dimension_split} dimension_split_value
     FROM `{current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}`
     WHERE {current_anomaly_detection_config$source_timestamp_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
     AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
     AND {current_anomaly_detection_config$source_timestamp_column_sql} NOT IN ({existing_timestamps_sql})
     AND {current_anomaly_detection_config$source_timestamp_column_sql} >= '{history_start}'
-    GROUP BY timestamp
-    ORDER BY timestamp"
+    GROUP BY timestamp, dimension_split_value
+    ORDER BY timestamp, dimension_split_value"
   )  
 }
 
@@ -139,8 +140,9 @@ dt_train = get_anomaly_detection_actuals(
   maximum_valid_to = "9999-12-31 23:59:59 UTC",
   allowed_size = allowed_size
 ) %>% 
-  .[, .(timestamp, y = value)] %>% 
-  .[order(timestamp)]
+  .[, .(timestamp, y = value, dimension_split_value)] %>% 
+  .[dimension_split_value %>% is.na, dimension_split_value := "NA"] %>% 
+  .[order(timestamp, dimension_split_value)]
 
 # By default forecast the last 90 days, unless this is provided by the config or environment
 if (Sys.getenv("FORECAST_TIMESTAMP_FROM") != "") {
@@ -164,19 +166,21 @@ periods_to_forecast = seq(
 
 # if there is no data yet for the last few days there will also be no forecast but instead multiple 
 # forecasts for the most recent date - that's why we apply unique at the end
-generate_forecasts = function(periods_to_forecast) {
+generate_forecasts = function(periods_to_forecast, current_dimension_split_value) {
   p = progressr::progressor(steps = length(periods_to_forecast))
   
-  periods_to_forecast %>% 
+  dt_current_dimension_split = dt_train[dimension_split_value == current_dimension_split_value]
+  cat(glue("forecasting {dt_current_dimension_split[1, dimension_split_value]}"), fill = T)
+  
+  dt_current_forecasts = periods_to_forecast %>% 
     furrr::future_imap_dfr(\(current_fc_period, index) {
       # cat(glue("forecasting {index} / {length(periods_to_forecast)}: {current_fc_period}"), fill = T)
       p()
-      dt_current_train = dt_train[timestamp < current_fc_period]
-      if (dt_current_train[, .N] < 15) return(data.table(timestamp = NA, fc = NA, fc_method = NA))
+      dt_current_train = dt_current_dimension_split[timestamp < current_fc_period]
+      if (dt_current_train[, .N] < 15) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
       names(current_anomaly_detection_config$algorithms) %>% 
         map_dfr(\(current_fc_method) {
           current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
-          current_thresholds = current_algorithm_config$thresholds %||% list(low = .02, high = .2)
           if (current_fc_method == "mstl") {
             fc = dt_current_train[, y] %>% 
               forecast::msts(unlist(current_algorithm_config$parameters$season_length)) %>% 
@@ -198,35 +202,40 @@ generate_forecasts = function(periods_to_forecast) {
           fc = max(dt_current_train[, min(y)], fc)
           
           data.table(
+            dimension_split_value = current_dimension_split_value,
             timestamp = current_fc_period, 
             fc = fc,
-            fc_method = current_fc_method,
-            low_confidence = current_thresholds$low,
-            high_confidence = current_thresholds$high
+            fc_method = current_fc_method
           )
         })
     }) %>% 
     .[!is.na(timestamp)] %>% 
     .[order(timestamp, fc_method)] %>% 
     unique
+  
+  if (dt_current_forecasts[, .N]) return(dt_current_forecasts) else return()
 }
 
-dt_forecasts = progressr::with_progress(generate_forecasts(periods_to_forecast), enable = T)
+dt_forecasts = dt_train[, dimension_split_value %>% unique %>% sort] %>% 
+  map_dfr(\(current_dimension_split_value) {
+    progressr::with_progress(generate_forecasts(periods_to_forecast, current_dimension_split_value), enable = T)
+  })
+
+
 
 forecast_methods_sql_string = paste0("'", dt_forecasts[, fc_method], "'", collapse = ", ")
 date_sql_string = paste0("TIMESTAMP('", dt_forecasts[, timestamp], "')", collapse = ", ")
 forecast_value_sql_string = paste0(dt_forecasts[, fc], collapse = ", ")
 
 forecast_string_sql = dt_forecasts[, glue_data(.SD, "
-('{fc_method}', {low_confidence}, {high_confidence}, TIMESTAMP('{timestamp}'), {fc})
+('{dimension_split_value}', '{fc_method}', TIMESTAMP('{timestamp}'), {fc})
 ")] %>% paste0(collapse = ", ")
 
 forecast_values_sql_string = glue("
-forecast_method, timestamp, value, low_confidence, high_confidence
+dimension_split_value, forecast_method, timestamp, value
 FROM UNNEST([STRUCT<
+  dimension_split_value STRING,
   forecast_method STRING, 
-  low_confidence FLOAT64, 
-  high_confidence FLOAT64, 
   timestamp TIMESTAMP, 
   value FLOAT64>
 {forecast_string_sql}
@@ -237,6 +246,6 @@ create_scd_statement(
   forecast_values_sql_string, 
   current_anomaly_detection_config, 
   target_table_forecasts, 
-  forecast_column_sql = "forecast_method, low_confidence, high_confidence,"
+  forecast_column_sql = "forecast_method,"
 ) %>% 
   safe_query(con = con, allowed_size = allowed_size, verbose = T)

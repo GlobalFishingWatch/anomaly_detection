@@ -5,7 +5,7 @@
 
 WITH latest_fc AS (
       SELECT 
-        * EXCEPT(low_confidence, high_confidence),
+        *,
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column
       FROM `world-fishing-827.tech_great_expectations.{{ env_var('DBT_ENVIRONMENT') }}_anomaly_detection_forecasts`
@@ -16,14 +16,8 @@ WITH latest_fc AS (
         *,
         LAG(value, 365) OVER (
         PARTITION BY 
-          source_dataset,
-          source_table,
-          source_timestamp_column,
-          source_timestamp_column_sql,
-          source_forecast_column,
-          source_forecast_column_sql,
-          source_sql,
-          source_sql_hash
+          config_name,
+          dimension_split_value
         ORDER BY timestamp) AS previous_year_actual_value,
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column
@@ -39,6 +33,7 @@ WITH latest_fc AS (
         IFNULL(latest_ac.value, 0) actual_value,
         COALESCE(latest_fc.timestamp, latest_ac.timestamp) timestamp,
         COALESCE(latest_fc.config_name, latest_ac.config_name) config_name,
+        COALESCE(latest_fc.dimension_split_value, latest_ac.dimension_split_value) dimension_split_value,
         COALESCE(latest_fc.source_sql, latest_ac.source_sql) source_sql,
         COALESCE(latest_fc.source_sql_hash, latest_ac.source_sql_hash) source_sql_hash,
         COALESCE(latest_fc.source_dataset_table, latest_ac.source_dataset_table) source_dataset_table,
@@ -46,7 +41,7 @@ WITH latest_fc AS (
         COALESCE(latest_fc.period_length, latest_ac.period_length) period_length,
       FROM latest_ac
       FULL JOIN latest_fc
-      USING(config_name, timestamp)
+      USING(config_name, dimension_split_value, timestamp)
     ),
     forecasts_thresholds AS (
       SELECT *

@@ -504,10 +504,10 @@ anomalies:
       source_forecast_column_sql: "SUM(count)"
       period_length: "day"
       source_sql: '
-      SUM(count) AS value, TIMESTAMP(date) AS timestamp
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp, "" AS dimension_split_value
       FROM `tech_great_expectations.pipe_nmea_parsed_errors`
-      GROUP BY timestamp
-      ORDER BY timestamp
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
       '
       algorithms:
           mstl: 
@@ -535,6 +535,33 @@ anomalies:
       WHERE schema_table_name = "pipe_ais_sources_v20201001.pipe-nmea-parsed"
       AND partition_id IS NOT NULL
       ORDER BY partition_date
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  parser_errors_daily_source_split:
+      source_dataset: "tech_great_expectations"
+      source_table: "pipe_nmea_parsed_errors"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'date'
+      source_forecast_column: "count"
+      source_forecast_column_sql: "SUM(count)"
+      period_length: "day"
+      dimension_split: "source"
+      source_sql: '
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp, source as dimension_split_value
+      FROM `tech_great_expectations.pipe_nmea_parsed_errors`
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
       '
       algorithms:
           mstl: 
