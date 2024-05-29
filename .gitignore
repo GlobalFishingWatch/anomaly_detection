@@ -9,3 +9,4 @@ sa_api_key.json
 *.tfstate
 *.tfstate.backup
 *.tfstate.backup.bak
+.terraform.lock.hcl
