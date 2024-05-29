@@ -1,6 +1,12 @@
 #!/bin/bash
 ENVIRONMENT=$(git rev-parse --abbrev-ref HEAD)
 
+# set to dev if not in staging or prod
+if [ "$ENVIRONMENT" != "staging" ] && [ "$ENVIRONMENT" != "prod" ]; then
+  ENVIRONMENT="dev"
+fi
+
+
 for i in "$@"; do
   case $i in
     -e=*|--environment=*)
