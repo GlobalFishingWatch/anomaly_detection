@@ -102,13 +102,17 @@ if (delta_load & length(existing_timestamps)) {
   } 
 }
 
+dimension_split_select = if(current_anomaly_detection_config$dimension_split == "") {
+  "''"
+  } else {current_anomaly_detection_config$dimension_split}
+
 if (current_anomaly_detection_config$source_sql != "") {
   select_timestamp_value_sql = glue(current_anomaly_detection_config$source_sql)
   print(select_timestamp_value_sql)
 } else {
   select_timestamp_value_sql = glue(.null = "", "
     TIMESTAMP_TRUNC({current_anomaly_detection_config$source_timestamp_column_sql}, {current_anomaly_detection_config$period_length}) timestamp, 
-      {current_anomaly_detection_config$source_forecast_column_sql} value, {current_anomaly_detection_config$dimension_split} dimension_split_value
+      {current_anomaly_detection_config$source_forecast_column_sql} value, {dimension_split_select} dimension_split_value
     FROM `{current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}`
     WHERE {current_anomaly_detection_config$source_timestamp_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
     AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
