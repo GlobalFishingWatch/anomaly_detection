@@ -47,5 +47,5 @@ sudo docker run -it --env-file .env \
     -e FORECAST_TIMESTAMP_FROM="$FORECAST_TIMESTAMP_FROM" \
     --rm \
     -v ~/.config/gcloud:/root/.config/gcloud \
-    -v $(pwd)/config.yaml:/project/config.yaml \
+    -v $(pwd)/config_$ENVIRONMENT.yaml:/project/config.yaml \
     anomaly_forecast

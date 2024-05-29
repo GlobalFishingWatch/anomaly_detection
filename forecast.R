@@ -37,7 +37,7 @@ target_table_forecasts = paste0(Sys.getenv("DATASET_ID"), ".", Sys.getenv("ENVIR
 
 db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 
-anomaly_detection_config = yaml::read_yaml("config.yaml")
+anomaly_detection_config = yaml::read_yaml(glue('config_{Sys.getenv("ENVIRONMENT")}.yaml'))
 
 current_anomaly_detection_config = anomaly_detection_config$anomalies[[anomaly_detection_config_name]]
 current_anomaly_detection_config$name = anomaly_detection_config_name
@@ -181,7 +181,7 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
         map_dfr(\(current_fc_method) {
           current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
           if (current_fc_method == "mstl") {
-            if (dt_current_train[, .N] < 2 * current_algorithm_config$parameters$season_length) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
+            if (dt_current_train[, .N] < 2 * current_algorithm_config$parameters$season_length[[1]]) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
             fc = dt_current_train[, y] %>% 
               forecast::msts(unlist(current_algorithm_config$parameters$season_length)) %>% 
               forecast::mstl() %>% 
