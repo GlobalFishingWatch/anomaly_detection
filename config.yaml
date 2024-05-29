@@ -711,6 +711,35 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
+  parsed_row_count_hourly:
+      source_dataset: "tech_great_expectations"
+      source_table: "partition_row_counts"
+      source_timestamp_column: "partition_hour"
+      source_timestamp_column_sql: 'TIMESTAMP(partition_hour)'
+      source_forecast_column: "total_rows_daily"
+      source_forecast_column_sql: "total_rows_daily"
+      period_length: "hour"
+      history_start: "30 days"
+      source_sql: '
+      total_rows AS value, TIMESTAMP(partition_hour) AS timestamp, "" AS dimension_split_value
+      FROM `world-fishing-827.tech_great_expectations.partition_row_counts` 
+      WHERE schema_table_name = "pipe_nmea_hourly.pipe-nmea-parsed-hourly"
+      AND partition_id IS NOT NULL
+      QUALIFY ROW_NUMBER() OVER (ORDER BY partition_hour DESC) > 3
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 168
+                  - 24
+          mean:
+              parameters:
+                sliding_window: 72
+          median:
+              parameters:
+                sliding_window: 72
 
 
 
