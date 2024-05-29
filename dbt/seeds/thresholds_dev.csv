@@ -3,3 +3,4 @@ parser_errors_daily,median,-0.5,0.5,-0.3,0.3
 parsed_row_count_daily,mean,-0.2,0.2,-0.1,0.1
 fishing_effort_pipe2_5_flag_daily,mstl,-0.75,0.75,-0.5,0.5
 parsed_row_count_source_daily,mean,-0.2,0.2,-0.1,0.1
+parsed_row_count_hourly,median,-0.15,0.15,-0.10,0.10

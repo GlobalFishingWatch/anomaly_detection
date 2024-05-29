@@ -106,6 +106,29 @@ WITH latest_fc AS (
   forecasts_remove_missing_latest_actuals AS (
     SELECT * FROM forecasts_anomaly_value
     QUALIFY forecast_timestamp IS NULL OR forecast_timestamp <= MAX(actual_timestamp) OVER (PARTITION BY config_name)
+  ),
+  forecast_anomaly_debounced AS (
+    SELECT 
+      *,
+      CASE 
+        WHEN anomaly_type_lower_higher != 'normal' 
+          AND LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method ORDER BY timestamp) = 'normal' 
+          THEN anomaly_type_lower_higher
+        ELSE NULL
+      END anomaly_type_lower_higher_start,
+      CASE 
+        WHEN anomaly_type_lower_higher = 'normal' 
+          AND LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method ORDER BY timestamp) != 'normal' 
+          THEN LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method ORDER BY timestamp)
+        ELSE NULL
+      END anomaly_type_lower_higher_end
+    FROM forecasts_remove_missing_latest_actuals
+  ),
+  forecast_anomaly_debounced_values AS (
+    SELECT
+      *,
+      IF(anomaly_type_lower_higher_start != 'normal', anomaly_value_windsorised, NULL) anomaly_value_windsorised_debounced
+    FROM forecast_anomaly_debounced
   )
 
-SELECT * FROM forecasts_remove_missing_latest_actuals
+SELECT * FROM forecast_anomaly_debounced_values
