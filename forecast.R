@@ -177,11 +177,11 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
       # cat(glue("forecasting {index} / {length(periods_to_forecast)}: {current_fc_period}"), fill = T)
       p()
       dt_current_train = dt_current_dimension_split[timestamp < current_fc_period]
-      if (dt_current_train[, .N] < 15) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
       names(current_anomaly_detection_config$algorithms) %>% 
         map_dfr(\(current_fc_method) {
           current_algorithm_config = current_anomaly_detection_config$algorithms[[current_fc_method]]
           if (current_fc_method == "mstl") {
+            if (dt_current_train[, .N] < 2 * current_algorithm_config$parameters$season_length) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
             fc = dt_current_train[, y] %>% 
               forecast::msts(unlist(current_algorithm_config$parameters$season_length)) %>% 
               forecast::mstl() %>% 
@@ -190,9 +190,11 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
               as.numeric()
           } else if (current_fc_method == "mean") {
             mean_x_last_periods = current_algorithm_config$parameters$sliding_window
+            if (dt_current_train[, .N] < mean_x_last_periods) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
             fc = dt_current_train %>% data.table::last(mean_x_last_periods) %>% .[, y] %>% mean
           } else if (current_fc_method == "median") {
             median_x_last_periods = current_algorithm_config$parameters$sliding_window
+            if (dt_current_train[, .N] < median_x_last_periods) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
             fc = dt_current_train %>% data.table::last(median_x_last_periods) %>% .[, y] %>% median
           } else {
             return()
