@@ -1,14 +1,9 @@
-{{ config(
-  materialized='view',
-  alias='v_' ~ env_var('DBT_ENVIRONMENT') ~'_anomaly_detection_deltas'
-) }}
-
 WITH latest_fc AS (
       SELECT 
         *,
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column
-      FROM `world-fishing-827.tech_great_expectations.{{ env_var('DBT_ENVIRONMENT') }}_anomaly_detection_forecasts`
+      FROM `world-fishing-827.tech_anomaly_detection.t_${ENVIRONMENT}_forecasts`
       WHERE valid_to = '9999-12-31 23:59:59 UTC'
     ),
     latest_ac AS (
@@ -21,7 +16,7 @@ WITH latest_fc AS (
         ORDER BY timestamp) AS previous_year_actual_value,
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column
-      FROM `world-fishing-827.tech_great_expectations.{{ env_var('DBT_ENVIRONMENT') }}_anomaly_detection_actuals`
+      FROM `world-fishing-827.tech_anomaly_detection.t_${ENVIRONMENT}_actuals`
       WHERE valid_to = '9999-12-31 23:59:59 UTC'
     ),
     forecasts_actuals AS (
@@ -46,13 +41,13 @@ WITH latest_fc AS (
     forecasts_thresholds AS (
       SELECT *
       FROM forecasts_actuals
-      LEFT JOIN {{ ref('thresholds_' ~ env_var('DBT_ENVIRONMENT')) }}
+      LEFT JOIN `world-fishing-827.tech_anomaly_detection.t_${ENVIRONMENT}_thresholds`
       USING(config_name, forecast_method)
     ),
     forecasts_descriptions AS (
       SELECT *
       FROM forecasts_thresholds
-      LEFT JOIN {{ ref('config_descriptions_' ~ env_var('DBT_ENVIRONMENT')) }}
+      LEFT JOIN `world-fishing-827.tech_anomaly_detection.t_${ENVIRONMENT}_config_descriptions`
       USING(config_name)
     ),
     forecasts_deltas AS (
