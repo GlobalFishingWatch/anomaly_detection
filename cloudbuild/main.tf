@@ -3,7 +3,7 @@ provider "google" {
 }
 
 resource "google_cloudbuild_trigger" "trigger_branch" {
-  name     = "anomaly-detection-branch"
+  name     = "anomaly-detection-push-any-branch"
   location = "global"
 
   github {
@@ -11,7 +11,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
     owner = "GlobalFishingWatch"
 
     push {
-      branch       = "^main|dev$"
+      branch       = ".*"
       invert_regex = false
     }
 
