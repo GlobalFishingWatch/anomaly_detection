@@ -17,7 +17,7 @@ RUN mkdir -p renv
 COPY renv/activate.R renv/activate.R
 COPY renv/settings.dcf renv/settings.dcf
 RUN mkdir renv/.cache
-RUN --mount=type=cache,target=renv/.cache R -e "renv::restore(prompt = F)"
+RUN R -e "renv::restore(prompt = F)"
 
 COPY bq_utils.R .
 COPY helpers.R .
