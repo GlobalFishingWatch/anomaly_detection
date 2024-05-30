@@ -5,8 +5,8 @@ provider "google" {
 
 locals {
 
-  project_name_dashed = format("qa-gfw-anomaly-detection-alerting-%s", var.environment)
-  project_name_print  = format("QA Anomaly detection alerting (%s)", var.environment)
+  project_name_dashed = format("qa-gfw-anomaly-detection-dataloder-%s", var.environment)
+  project_name_print  = format("QA Anomaly detection data loader (%s)", var.environment)
   sa                  = "qa-anomaly-detection@world-fishing-827.iam.gserviceaccount.com"
   region              = "us-central1"
 }
@@ -20,7 +20,7 @@ resource "google_cloud_run_v2_job" "job" {
     parallelism = 1
     template {
       service_account = local.sa
-      timeout         = "600s" # 10m
+      timeout         = "3600s" # 60m
       max_retries     = 3
 
       containers {
@@ -28,8 +28,8 @@ resource "google_cloud_run_v2_job" "job" {
 
         resources {
           limits = {
-            cpu    = "1"
-            memory = "512Mi"
+            cpu    = "16"
+            memory = "4096Mi"
           }
         }
       }

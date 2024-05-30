@@ -20,7 +20,7 @@ COPY renv.lock .
 # RUN --mount=type=cache,target=renv/.cache R -e "renv::restore(prompt = F)"
 
 ## Copy libraries from local host
-COPY ./renv/ renv
+COPY .renv/ renv
 
 COPY sa_api_key.json .
 
