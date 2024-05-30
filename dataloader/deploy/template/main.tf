@@ -11,13 +11,8 @@ locals {
   region              = "us-central1"
 }
 
-resource "google_bigquery_dataset" "anomaly_detection_dataset" {
-  dataset_id = "tech_anomaly_detection"
-  project    = var.project
-}
-
 resource "google_bigquery_table" "actuals" {
-  dataset_id = google_bigquery_dataset.anomaly_detection_dataset.dataset_id
+  dataset_id = "tech_anomaly_detection"
   table_id   = "t_${var.environment}_actuals"
   project    = var.project
 
@@ -25,7 +20,7 @@ resource "google_bigquery_table" "actuals" {
 }
 
 resource "google_bigquery_table" "forecasts" {
-  dataset_id = google_bigquery_dataset.anomaly_detection_dataset.dataset_id
+  dataset_id = "tech_anomaly_detection"
   table_id   = "t_${var.environment}_forecasts"
   project    = var.project
 
@@ -33,43 +28,36 @@ resource "google_bigquery_table" "forecasts" {
 }
 
 resource "google_bigquery_table" "actuals_forecasts" {
-  dataset_id = google_bigquery_dataset.anomaly_detection_dataset.dataset_id
+  dataset_id = "tech_anomaly_detection"
   table_id   = "v_${var.environment}_anomaly_detection_deltas'"
   project    = var.project
 
   view {
-    query = templatefile("v_anomaly_detection_deltas.sql", {
+    query = templatefile(var.abs_res_path + "/v_anomaly_detection_deltas.sql", {
       ENVIRONMENT = var.environment
     })
   }
 }
+resource "google_storage_bucket_object" "csv_files" {
+  for_each = fileset(var.abs_res_path, "/csv/**/*")
 
-resource "google_storage_bucket" "anomaly_detection_bucket" {
-  name     = "anomaly_detection"
-  project  = var.project
-  location = "us-central1"
-}
-
-resource "google_storage_bucket_object" "lookup_files" {
-  for_each = fileset(var.abs_res_path, "/lookup/**/*")
-
-  bucket = google_storage_bucket.anomaly_detection_bucket.name
+  bucket = "tech_anomaly_detection"
   source = each.value
   name   = each.value
 }
 
-# create table based on each lookup_files csv file
-resource "google_bigquery_table" "lookup" {
-  for_each = google_storage_bucket_object.lookup_files
+# create table based on each csv_files csv file
+resource "google_bigquery_table" "csv" {
+  for_each = google_storage_bucket_object.csv_files
 
-  dataset_id = google_bigquery_dataset.anomaly_detection_dataset.dataset_id
+  dataset_id = "tech_anomaly_detection"
   table_id   = "t_${var.environment}_${each.value.id}"
   project    = var.project
 
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
-    source_uris   = ["gs://${google_storage_bucket.anomaly_detection_bucket.name}/${each.value.id}"]
+    source_uris   = ["gs://tech_anomaly_detection/${each.value.id}"]
   }
 }
 
