@@ -2,7 +2,7 @@ provider "google" {
   project = "world-fishing-827"
 }
 
-module "anomaly_dataloader_dev" {
+module "anomaly_alerting_dev" {
   source       = "../../template"
   project      = var.project
   environment  = "dev"
