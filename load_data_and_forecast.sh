@@ -1,9 +1,11 @@
 #!/bin/bash
 ENVIRONMENT=$(git rev-parse --abbrev-ref HEAD)
 
-# set to dev if not in staging or prod
-if [ "$ENVIRONMENT" != "staging" ] && [ "$ENVIRONMENT" != "prod" ]; then
+# set to dev if not main, otherwise to staging
+if [ "$ENVIRONMENT" != "main" ]; then
   ENVIRONMENT="dev"
+else
+  ENVIRONMENT="staging"
 fi
 
 
