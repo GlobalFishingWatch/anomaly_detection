@@ -23,7 +23,4 @@ COPY bq_utils.R .
 COPY helpers.R .
 COPY forecast.R .
 
-COPY actuals_schema.json .
-COPY forecasts_schema.json .
-
 ENTRYPOINT ["Rscript", "/project/forecast.R"]
