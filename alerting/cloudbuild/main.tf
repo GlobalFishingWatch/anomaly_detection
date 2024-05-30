@@ -2,9 +2,16 @@ provider "google" {
   project = "world-fishing-827"
 }
 
+locals {
+  subproject_name_dashed_short = "alerting"
+  subproject_name_dashed = "anomaly-detection-alerting"
+}
+
 resource "google_cloudbuild_trigger" "trigger_branch" {
-  name     = "anomaly-detection-push-any-branch"
+  name     = "${local.subproject_name_dashed}-any-branch"
   location = "global"
+
+  included_files = [ "**/${local.subproject_name_dashed_short}/**" ]
 
   github {
     name  = "anomaly_detection"
@@ -25,10 +32,10 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       args = [
         "build",
         "-f",
-        "./alerting/ci/executor/Dockerfile",
+        "./ci/executor/Dockerfile",
         "-t",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA",
-        "./alerting/ci/executor",
+        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
+        "./ci/executor",
       ]
 
     }
@@ -37,8 +44,8 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       name = "gcr.io/cloud-builders/docker"
       args = [
         "tag",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$BRANCH_NAME-latest",
+        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
+        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest",
       ]
 
     }
@@ -47,7 +54,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       name = "gcr.io/cloud-builders/docker"
       args = [
         "push",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA"
+        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA"
       ]
 
     }
@@ -104,11 +111,11 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
             echo "******* At environment: $${env} ********"
             echo "*************************************************"
             if [ $${env} = "dev" ]; then
-              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA" || exit 1
+              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
             elif [ $${env} = "staging" ]; then
-              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA" || exit 1
+              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
             elif [ $${env} = "release" ]; then
-              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA" || exit 1
+              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
             fi
             cd ../../../
           done
@@ -129,9 +136,9 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
           echo "******* At environment: $BRANCH_NAME ********"
           echo "*************************************************"
           if [ $BRANCH_NAME = "dev" ]; then
-            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA" || exit 1
+            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
           elif [ $BRANCH_NAME = "main" ]; then
-            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA" || exit 1
+            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
           fi
         else
           echo "***************************** SKIPPING APPLYING *******************************"
@@ -143,7 +150,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
     }
 
     artifacts {
-      images = ["gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$BRANCH_NAME-latest", "gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA"]
+      images = ["gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest", "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA"]
     }
     options {
       logging = "CLOUD_LOGGING_ONLY"
@@ -153,8 +160,10 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
 
 
 resource "google_cloudbuild_trigger" "trigger_tag" {
-  name     = "anomaly-detection-tag"
+  name     = "${local.subproject_name_dashed}-tag"
   location = "global"
+
+  included_files = [ "**/${local.subproject_name_dashed_short}/**" ]
 
   github {
     name  = "anomaly_detection"
@@ -175,10 +184,10 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
       args = [
         "build",
         "-f",
-        "./alerting/ci/executor/Dockerfile",
+        "./ci/executor/Dockerfile",
         "-t",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$TAG_NAME",
-        "./alerting/ci/executor",
+        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME",
+        "./ci/executor",
       ]
 
     }
@@ -188,7 +197,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
       name = "gcr.io/cloud-builders/docker"
       args = [
         "push",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$TAG_NAME"
+        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME"
       ]
 
     }
@@ -238,7 +247,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
           echo "*************** TERRAFOM PLAN ******************"
           echo "******* At environment: release ********"
           echo "*************************************************"
-          terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$TAG_NAME" || exit 1
+          terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME" || exit 1
           cd ../../../
         EOF
       ]
@@ -256,13 +265,13 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
           echo "******* At environment: release ********"
           echo "*************************************************"
 
-          terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$TAG_NAME" || exit 1
+          terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME" || exit 1
         EOF
       ]
     }
 
     artifacts {
-      images = ["gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$TAG_NAME"]
+      images = ["gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME"]
     }
     options {
       logging = "CLOUD_LOGGING_ONLY"
