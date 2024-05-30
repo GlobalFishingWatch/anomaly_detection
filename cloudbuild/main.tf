@@ -129,7 +129,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
           echo "******* At environment: $BRANCH_NAME ********"
           echo "*************************************************"
           if [ $BRANCH_NAME = "dev" ]; then
-            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:583b5fc237325f63e6d9c8dbfd8a63cb5f802185" || exit 1
+            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA" || exit 1
           elif [ $BRANCH_NAME = "main" ]; then
             terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/anomaly-detection:$COMMIT_SHA" || exit 1
           fi
