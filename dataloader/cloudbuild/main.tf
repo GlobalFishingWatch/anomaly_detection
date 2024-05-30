@@ -42,7 +42,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       id = "setup-renv"
       name = "r-lib/actions/setup-renv@v2"
     }
-    
+
     
     step {
       id   = "docker build"
@@ -97,7 +97,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       args = [
         "-c",
         <<-EOF
-          for dir in deploy/environments/*/
+          for dir in ${subproject_name_dashed_short}/deploy/environments/*/
           do
             cd $${dir}
             env=$${dir%*/}
@@ -119,7 +119,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       args = [
         "-c",
         <<-EOF
-          for dir in deploy/environments/*/
+          for dir in ${subproject_name_dashed_short}/deploy/environments/*/
           do
             cd $${dir}
             env=$${dir%*/}
@@ -147,8 +147,8 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       args = [
         "-c",
         <<-EOF
-        if [ -d ./deploy/environments/$BRANCH_NAME ]; then
-          cd ./deploy/environments/$BRANCH_NAME
+        if [ -d ./${subproject_name_dashed_short}/deploy/environments/$BRANCH_NAME ]; then
+          cd ./${subproject_name_dashed_short}/deploy/environments/$BRANCH_NAME
           echo ""
           echo "*************** TERRAFOM APPLY ******************"
           echo "******* At environment: $BRANCH_NAME ********"
@@ -241,7 +241,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
         "-c",
         <<-EOF
 
-          cd ./deploy/environments/release
+          cd ./${subproject_name_dashed_short}/deploy/environments/release
           echo ""
           echo "*************** TERRAFORM INIT ******************"
           echo "******* At environment: release ********"
@@ -260,7 +260,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
         "-c",
         <<-EOF
 
-          cd ./deploy/environments/release
+          cd ./${subproject_name_dashed_short}/deploy/environments/release
           echo ""
           echo "*************** TERRAFOM PLAN ******************"
           echo "******* At environment: release ********"
@@ -277,7 +277,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
       args = [
         "-c",
         <<-EOF
-          cd ./deploy/environments/release
+          cd ./${subproject_name_dashed_short}/deploy/environments/release
           echo ""
           echo "*************** TERRAFOM APPLY ******************"
           echo "******* At environment: release ********"
