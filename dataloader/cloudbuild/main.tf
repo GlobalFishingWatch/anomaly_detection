@@ -32,10 +32,10 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       args = [
         "build",
         "-f",
-        "./ci/executor/Dockerfile",
+        "../ci/executor/Dockerfile",
         "-t",
         "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
-        "./ci/executor",
+        "../ci/executor",
       ]
 
     }
@@ -184,10 +184,10 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
       args = [
         "build",
         "-f",
-        "./ci/executor/Dockerfile",
+        "../ci/executor/Dockerfile",
         "-t",
         "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME",
-        "./ci/executor",
+        "../ci/executor",
       ]
 
     }
