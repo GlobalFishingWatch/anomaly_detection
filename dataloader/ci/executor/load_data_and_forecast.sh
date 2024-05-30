@@ -40,14 +40,30 @@ for i in "$@"; do
   esac
 done
 
+# set the above environment variables to the default from the .env file if not provided
+if [ -z "$ANOMALY_DETECTION_CONFIG_NAME" ]; then
+  ANOMALY_DETECTION_CONFIG_NAME=$(grep ANOMALY_DETECTION_CONFIG_NAME .env | cut -d '=' -f2)
+fi
 
-sudo docker run -it --env-file .env \
-    -e ENVIRONMENT=$ENVIRONMENT \
-    -e ANOMALY_DETECTION_CONFIG_NAME=$ANOMALY_DETECTION_CONFIG_NAME \
-    -e ALLOWED_SIZE=$ALLOWED_SIZE \
-    -e DELTA_LOAD=$DELTA_LOAD \
-    -e FORECAST_TIMESTAMP_FROM="$FORECAST_TIMESTAMP_FROM" \
+if [ -z "$ALLOWED_SIZE" ]; then
+  ALLOWED_SIZE=$(grep ALLOWED_SIZE .env | cut -d '=' -f2)
+fi
+
+if [ -z "$DELTA_LOAD" ]; then
+  DELTA_LOAD=$(grep DELTA_LOAD .env | cut -d '=' -f2)
+fi
+
+if [ -z "$FORECAST_TIMESTAMP_FROM" ]; then
+  FORECAST_TIMESTAMP_FROM=$(grep FORECAST_TIMESTAMP_FROM .env | cut -d '=' -f2)
+fi
+
+sudo docker run -it \
     --rm \
     -v ~/.config/gcloud:/root/.config/gcloud \
     -v $(pwd)/config_$ENVIRONMENT.yaml:/project/config_$ENVIRONMENT.yaml \
-    anomaly_forecast
+    anomaly_forecast \
+    --environment $ENVIRONMENT \
+    --anomaly_detection_config_name $ANOMALY_DETECTION_CONFIG_NAME \
+    --allowed_size $ALLOWED_SIZE \
+    --delta_load $DELTA_LOAD \
+    --forecast_timestamp_from "$FORECAST_TIMESTAMP_FROM"
