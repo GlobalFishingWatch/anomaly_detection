@@ -26,24 +26,6 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
   service_account = "projects/world-fishing-827/serviceAccounts/terraform-deployer@world-fishing-827.iam.gserviceaccount.com"
   build {
     
-    # experimental: try caching renv packages as described here:
-    # https://rstudio.github.io/renv/articles/ci.html#using-r-libactionssetup-renv
-    step {
-      id = "checkout"
-      name = "actions/checkout@v3"
-    }
-
-    step {
-      id = "setup-r"
-      name = "r-lib/actions/setup-r@v2"
-    }
-
-    step {
-      id = "setup-renv"
-      name = "r-lib/actions/setup-renv@v2"
-    }
-
-
     step {
       id   = "docker build"
       name = "gcr.io/cloud-builders/docker"
