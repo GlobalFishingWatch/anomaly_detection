@@ -35,12 +35,10 @@ get_anomaly_detection_actuals = function(
     maximum_valid_to = "9999-12-31 23:59:59 UTC",
     allowed_size = NULL
 ) {
-  source_sql_hash = digest::digest(anomaly_detection_config$source_sql, algo = "md5")
   db_anomaly_detection_actuals %>% 
     filter(valid_to == maximum_valid_to) %>% 
-    filter(
-      config_name == !!anomaly_detection_config$name
-    ) %>% 
+    filter(config_name == !!anomaly_detection_config$name) %>% 
+    filter(dimension_split == !!anomaly_detection_config$dimension_split) %>% 
     filter(timestamp != '1979-01-01') %>% 
     safe_query(con = con, allowed_size = allowed_size, verbose = T)
 }
@@ -62,6 +60,7 @@ USING (
   new_actuals AS (
     SELECT 
       '{current_anomaly_detection_config$name}' config_name,
+      '{current_anomaly_detection_config$dimension_split}' dimension_split,
         '{current_anomaly_detection_config$source_dataset}' source_dataset, 
         '{current_anomaly_detection_config$source_table}' source_table,
         '{current_anomaly_detection_config$source_timestamp_column}' source_timestamp_column,
@@ -77,6 +76,8 @@ USING (
     SELECT 
       MD5(CONCAT(
         config_name,
+        dimension_split,
+        dimension_split_value,
         {forecast_column_sql}
         timestamp)) key,
       * 
@@ -111,7 +112,9 @@ WHEN NOT MATCHED THEN
     value,
     '{current_timestamp}',
     '{maximum_valid_to}',
-    config_name
+    config_name,
+    dimension_split,
+    dimension_split_value
   )
 ")
 }

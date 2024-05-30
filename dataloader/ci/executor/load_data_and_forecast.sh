@@ -1,6 +1,14 @@
 #!/bin/bash
 ENVIRONMENT=$(git rev-parse --abbrev-ref HEAD)
 
+# set to dev if not main, otherwise to staging
+if [ "$ENVIRONMENT" != "main" ]; then
+  ENVIRONMENT="dev"
+else
+  ENVIRONMENT="staging"
+fi
+
+
 for i in "$@"; do
   case $i in
     -e=*|--environment=*)
@@ -41,5 +49,5 @@ sudo docker run -it --env-file .env \
     -e FORECAST_TIMESTAMP_FROM="$FORECAST_TIMESTAMP_FROM" \
     --rm \
     -v ~/.config/gcloud:/root/.config/gcloud \
-    -v $(pwd)/config.yaml:/project/config.yaml \
+    -v $(pwd)/config_$ENVIRONMENT.yaml:/project/config_$ENVIRONMENT.yaml \
     anomaly_forecast

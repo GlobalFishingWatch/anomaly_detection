@@ -50,3 +50,12 @@ seeds:
     thresholds_prod:
       enabled: "{{ env_var('DBT_ENVIRONMENT') == 'prod' }}"
       alias: t_anomaly_detection_thresholds_prod
+    config_descriptions_dev:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'dev' }}"
+      alias: t_anomaly_detection_config_descriptions_dev
+    config_descriptions_staging:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'staging' }}"
+      alias: t_anomaly_detection_config_descriptions_staging
+    config_descriptions_prod:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'prod' }}"
+      alias: t_anomaly_detection_config_descriptions_prod
