@@ -1,9 +1,49 @@
+library(optparse)
+
+option_list = list(
+  make_option(c("-e", "--environment"), type = "character", default = NULL, 
+              help = "Environment"),
+  make_option(c("-c", "--anomaly_detection_config_name"), type = "character", default = NULL,
+              help = "Anomaly detection config name"),
+  make_option(c("-p", "--project_id"), type = "character", default = "world-fishing-827",
+              help = "Project ID"),
+  make_option(c("-d", "--dataset_id"), type = "character", default = "tech_anomaly_detection",
+              help = "Dataset ID"),
+  make_option(c("-a", "--actuals_table"), type = "character", default = "actuals",
+              help = "Actuals table"),
+  make_option(c("-f", "--forecasts_table"), type = "character", default = "forecasts",
+              help = "Forecasts table"),
+  make_option(c("-l", "--delta_load"), type = "character", default = "T",
+              help = "Delta load"),
+  make_option(c("-s", "--allowed_size"), type = "character", default = "64424509440",
+              help = "Allowed size"),
+  make_option(c("-t", "--forecast_timestamp_from"), type = "character", default = "90 days",
+              help = "Forecast timestamp from"),
+  make_option(c("-u", "--forecast_timestamp_to"), type = "character", default = "",
+              help = "Forecast timestamp to")
+)
+
+parser = OptionParser(option_list = option_list)
+args = parse_args(parser)
+
 if (Sys.getenv("RUNTIME") != "docker") {
-  cat("LOADING DEFAULT ENVIRONMENT VARIABLES")
-  dotenv::load_dot_env()
+  args$environment = "dev"
+  args$anomaly_detection_config_name = "parser_errors_daily"
+  cat("INTERACTIVE SESSION - USING DEFAULT ARGUMENTS\n")
 }
 
-anomaly_detection_config_name = Sys.getenv("ANOMALY_DETECTION_CONFIG_NAME")
+print(args)
+
+anomaly_detection_config_name = args$anomaly_detection_config_name
+allowed_size = as.numeric(args$allowed_size)
+delta_load = as.logical(args$delta_load)
+environment = args$environment
+project_id = args$project_id
+dataset_id = args$dataset_id
+actuals_table = args$actuals_table
+forecasts_table = args$forecasts_table
+forecast_timestamp_from = args$forecast_timestamp_from
+forecast_timestamp_to = args$forecast_timestamp_to
 
 suppressMessages({
   library(magrittr)
@@ -26,18 +66,28 @@ cat(glue("Using {no_cores} cores"))
 
 map_fun = map_fun %>% compose(progressr::with_progress, .dir = "forward")
 
-allowed_size = as.numeric(Sys.getenv("ALLOWED_SIZE"))
-
-bigrquery::bq_auth(path = "/project/sa_api_key.json")
 con = DBI::dbConnect(drv = bigrquery::bigquery(), project = "world-fishing-827", use_legacy_sql = FALSE)
 
+target_table_actuals = paste0(dataset_id, ".", environment, "_", actuals_table)
+target_table_forecasts = paste0(dataset_id, ".", environment, "_", forecasts_table)
 
-target_table_actuals = paste0(Sys.getenv("DATASET_ID"), ".", Sys.getenv("ENVIRONMENT"), "_", Sys.getenv("ACTUALS_TABLE"))
-target_table_forecasts = paste0(Sys.getenv("DATASET_ID"), ".", Sys.getenv("ENVIRONMENT"), "_", Sys.getenv("FORECASTS_TABLE"))
+# check if actuals table exists
+if (!DBI::dbExistsTable(con, target_table_actuals)) {
+  # run bash script
+  actuals_table_env = paste0(environment, "_", actuals_table)
+  sys.call("bq mk --table --project_id={project_id} --dataset_id={dataset_id} --schema=/project/actuals_schema.json {target_table_actuals}")
+}
+
+# check if forecasts table exists
+if (!DBI::dbExistsTable(con, target_table_forecasts)) {
+  # run bash script
+  forecasts_table_env = paste0(environment, "_", forecasts_table)
+  sys.call("bq mk --table --project_id={project_id} --dataset_id={dataset_id} --schema=/project/forecasts_schema.json {target_table_forecasts}")
+}
 
 db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 
-anomaly_detection_config = yaml::read_yaml(glue('config_{Sys.getenv("ENVIRONMENT")}.yaml'))
+anomaly_detection_config = yaml::read_yaml(glue('config_{environment}.yaml'))
 
 current_anomaly_detection_config = anomaly_detection_config$anomalies[[anomaly_detection_config_name]]
 current_anomaly_detection_config$name = anomaly_detection_config_name
@@ -88,9 +138,6 @@ missing_timestamps = all_historic_timestamps %>% setdiff(existing_timestamps) %>
 # set date sql filters so they always evaluate to true by default
 existing_timestamps_sql = "'1979-01-01 00:00:00'" # timestamp is never in this dummy value
 missing_timestamps_sql = current_anomaly_detection_config$source_timestamp_column_sql # date is always in date
-
-delta_load = Sys.getenv("DELTA_LOAD") %>% as.logical()
-delta_load
 
 # if we're doing a delta load and there are existing dates
 if (delta_load & length(existing_timestamps)) {
@@ -149,8 +196,8 @@ dt_train = get_anomaly_detection_actuals(
   .[order(timestamp, dimension_split_value)]
 
 # By default forecast the last 90 days, unless this is provided by the config or environment
-if (Sys.getenv("FORECAST_TIMESTAMP_FROM") != "") {
-  forecast_timestamp_from = as.POSIXct(Sys.getenv("FORECAST_TIMESTAMP_FROM"), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+if (forecast_timestamp_from != "") {
+  forecast_timestamp_from = as.POSIXct(forecast_timestamp_from, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 } else {
   forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% "90 days" %>% 
     parse_date_or_period()  %>% 
@@ -159,7 +206,7 @@ if (Sys.getenv("FORECAST_TIMESTAMP_FROM") != "") {
 }
 
 
-forecast_timestamp_to = as.POSIXct(Sys.getenv("FORECAST_TIMESTAMP_TO"), format = "%Y-%m-%d %H:%M:%S") %>% 
+forecast_timestamp_to = as.POSIXct(forecast_timestamp_to, format = "%Y-%m-%d %H:%M:%S") %>% 
   with_tz("UTC")
 if (is.na(forecast_timestamp_to)) forecast_timestamp_to = Sys.time() %>% with_tz("UTC")
 periods_to_forecast = seq(
@@ -226,8 +273,6 @@ dt_forecasts = dt_train[, dimension_split_value %>% unique %>% sort] %>%
   map_dfr(\(current_dimension_split_value) {
     progressr::with_progress(generate_forecasts(periods_to_forecast, current_dimension_split_value), enable = T)
   })
-
-
 
 forecast_methods_sql_string = paste0("'", dt_forecasts[, fc_method], "'", collapse = ", ")
 date_sql_string = paste0("TIMESTAMP('", dt_forecasts[, timestamp], "')", collapse = ", ")

@@ -4,3 +4,11 @@ __pycache__
 .Rproj.user
 
 sa_api_key.json
+
+.terraform
+*.tfstate
+*.tfstate.backup
+*.tfstate.backup.bak
+.terraform.lock.hcl
+
+.Rhistory

@@ -1,0 +1,739 @@
+anomalies:
+  pipe3_stats_daily_raw_positions:
+    source_dataset: "pipe_ais_v3_alpha_published"
+    source_table: "stats_daily"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: "CAST(date AS TIMESTAMP)"
+    source_forecast_column: "raw_positions"
+    source_forecast_column_sql: "MAX(raw_positions)"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe3_stats_daily_num_ssvid:
+    source_dataset: "pipe_ais_v3_alpha_published"
+    source_table: "stats_daily"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: "CAST(date AS TIMESTAMP)"
+    source_forecast_column: "num_ssvid"
+    source_forecast_column_sql: "MAX(num_ssvid)"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe3_stats_daily_num_segs:
+    source_dataset: "pipe_ais_v3_alpha_published"
+    source_table: "stats_daily"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: "CAST(date AS TIMESTAMP)"
+    source_forecast_column: "num_segs"
+    source_forecast_column_sql: "MAX(num_segs)"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  brazil_vms_bugged:
+    source_dataset: "tech_great_expectations"
+    source_table: "brazil_vms_normalized_anomaly_copy"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: "CAST(date AS TIMESTAMP)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    history_start: "2016-01-01"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  brazil_vms_production_v20211126:
+    source_dataset: "pipe_brazil_production_v20211126"
+    source_table: "brazil_vms_normalized_"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1"))'
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) AS timestamp, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_brazil_production_v20211126.__TABLES__` 
+    WHERE table_id LIKE "brazil_vms_normalized_%"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "brazil_vms_normalized_(.*)", "\\1"))
+    '
+    history_start: "2016-01-01"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  norway_vms_normalized_20231022:
+    source_dataset: "pipe_norway_production_v20220112"
+    source_table: "norway_vms_normalized_20231022"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1"))'    
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) AS timestamp, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_norway_production_v20220112.__TABLES__` 
+    WHERE table_id LIKE "norway_vms_normalized_%"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "norway_vms_normalized_(.*)", "\\1"))
+    '
+    history_start: "2023-10-22"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  # pipe3_messages:
+  #   source_dataset: "pipe_ais_v3_alpha_published"
+  #   source_table: "messages"
+  #   source_timestamp_column: "date"
+  #   source_timestamp_column_sql: "date(timestamp)"
+  #   source_forecast_column: "count"
+  #   source_forecast_column_sql: "COUNT(*)"
+  #   algorithms: 
+  #       mstl: 
+  #           parameters: 
+  #             season_length: 
+  #               - 365.25
+  #               - 7
+  #           train_start: "Inf"
+  #           train_end: "Today"
+  #           forecast_periods: 1
+  #           forecast_error: 0.05
+  #       mean:
+  #           parameters:
+  #             sliding_window: 30
+  ais_sources_normalized_spire:
+    source_dataset: "pipe_ais_sources_v20220628"
+    source_table: "normalized_spire_"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))'
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) AS timestamp, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__` 
+    WHERE table_id LIKE "normalized_spire_%"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "normalized_spire_(.*)", "\\1"))
+    '
+    history_start: "2017-01-01"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  ais_sources_normalized_nmea:
+    source_dataset: "pipe_ais_sources_v20220628"
+    source_table: "pipe_nmea_normalized_"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1"))'
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) AS timestamp, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__` 
+    WHERE table_id LIKE "pipe_nmea_normalized_%"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_normalized_(.*)", "\\1"))
+    '
+    history_start: "2022-12-31"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  ais_sources_normalized_nmea_marinetraffic:
+    source_dataset: "pipe_ais_sources_v20220628"
+    source_table: "pipe_nmea_marinetraffic_normalized_"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1"))'
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) AS timestamp, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_ais_sources_v20220628.__TABLES__` 
+    WHERE table_id LIKE "pipe_nmea_marinetraffic_normalized_%"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1")) >= "2023-09-30"
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "pipe_nmea_marinetraffic_normalized_(.*)", "\\1"))
+    '
+    history_start: "2023-09-30"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe3_messages_segmented:
+    source_dataset: "pipe_ais_v3_alpha_internal"
+    source_table: "messages_segmented_"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1"))'
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) AS timestamp, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__` 
+    WHERE table_id LIKE "messages_segmented_%"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "messages_segmented_(.*)", "\\1"))
+    '
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe_nmea_parsed_hourly:
+    source_dataset: "pipe_nmea_hourly"
+    source_table: "pipe-nmea-parsed-hourly"
+    source_timestamp_column: "tagblock_timestamp"
+    source_timestamp_column_sql: "TIMESTAMP_TRUNC(tagblock_timestamp, hour)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    period_length: "hour"
+    history_start: "30 days"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 24
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe_nmea_parsed_daily:
+    source_dataset: "pipe_nmea_hourly"
+    source_table: "pipe-nmea-parsed-hourly"
+    source_timestamp_column: "day"
+    source_timestamp_column_sql: "TIMESTAMP_TRUNC(tagblock_timestamp, day)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    period_length: "day"
+    history_start: "90 days"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length:
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  pipe_nmea_normalised_hourly:
+    source_dataset: "pipe_ais_sources_v20220628"
+    source_table: "pipe_nmea_normalized_*"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: "TIMESTAMP_TRUNC(timestamp, hour)"
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    source_sql: '
+    TIMESTAMP_TRUNC(timestamp, hour) AS timestamp, 
+    COUNT(*) AS value
+    FROM `pipe_ais_sources_v20220628.pipe_nmea_normalized_*` 
+    WHERE PARSE_TIMESTAMP("%Y%m%d", _TABLE_SUFFIX) BETWEEN "2023-11-01" AND "2099-01-01"
+    AND TIMESTAMP_TRUNC(timestamp, hour) IN ({missing_timestamps_sql})
+    AND TIMESTAMP_TRUNC(timestamp, hour) NOT IN ({existing_timestamps_sql})
+    GROUP BY timestamp
+    ORDER BY timestamp
+    '
+    period_length: "hour"
+    history_start: "30 days"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 24
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+  vessel_characteristics_by_ssvid_pipe3:
+    source_dataset: "pipe_ais_v3_alpha_internal"
+    source_table: "vessel_characteristics_by_ssvid_"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1"))'
+    source_forecast_column: "count"
+    source_forecast_column_sql: "COUNT(*)"
+    period_length: "month"
+    source_sql: '
+    PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) AS timestamp, 
+    row_count AS value
+    FROM `world-fishing-827.pipe_ais_v3_alpha_internal.__TABLES__` 
+    WHERE table_id LIKE "vessel_characteristics_by_ssvid_%"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) BETWEEN "1979-01-01" AND "2099-01-01"
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) IN ({missing_timestamps_sql})
+    AND PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1")) NOT IN ({existing_timestamps_sql})
+    ORDER BY PARSE_TIMESTAMP("%Y%m%d", REGEXP_REPLACE(table_id, "vessel_characteristics_by_ssvid_(.*)", "\\1"))
+    '
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 12
+        mean:
+            parameters:
+              sliding_window: 6
+  fishing_hours_monthly_pipe3:
+    source_dataset: "tech_great_expectations"
+    source_table: "t_fishing_hours"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'CAST(DATE_TRUNC(date, month) AS TIMESTAMP)'
+    source_forecast_column: "sad_pipe3_fishing_hours"
+    source_forecast_column_sql: "SUM(sad_pipe3_fishing_hours)"
+    period_length: "month"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 12
+        mean:
+            parameters:
+              sliding_window: 6
+  fishing_hours_monthly_pipe2_5:
+    source_dataset: "tech_great_expectations"
+    source_table: "t_fishing_hours"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'CAST(DATE_TRUNC(date, month) AS TIMESTAMP)'
+    source_forecast_column: "sad_pipe2_5_fishing_hours"
+    source_forecast_column_sql: "SUM(sad_pipe2_5_fishing_hours)"
+    period_length: "month"
+    algorithms: 
+        mstl: 
+            parameters: 
+              season_length: 
+                - 12
+        mean:
+            parameters:
+              sliding_window: 6
+  fishing_effort_pipe3:
+    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public"
+    source_table: "fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  fishing_effort_pipe3_esp_daily:
+    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public"
+    source_table: "fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, "" AS dimension_split_value
+    FROM `skytruth-pelagos-production.ais_global_v3_fishing_effort_public.fishing_effort_public`
+    WHERE flag = "ESP"
+    GROUP BY timestamp, dimension_split_value
+    ORDER BY timestamp, dimension_split_value
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  fishing_effort_pipe2_5_esp_daily:
+    source_dataset: "skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public"
+    source_table: "ais_global_v20231026_fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, "" AS dimension_split_value
+    FROM `skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public.ais_global_v20231026_fishing_effort_public`
+    WHERE flag = "ESP"
+    GROUP BY timestamp, dimension_split_value
+    ORDER BY timestamp, dimension_split_value
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  fishing_effort_pipe3_esp_set_gillnets_daily:
+    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public"
+    source_table: "fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp
+    FROM `skytruth-pelagos-production.ais_global_v3_fishing_effort_public.fishing_effort_public`
+    WHERE flag = "ESP"
+    AND geartype = "set_gillnets"
+    GROUP BY timestamp
+    ORDER BY timestamp
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  parser_errors_spire_daily:
+    source_dataset: "tech_great_expectations"
+    source_table: "pipe_nmea_parsed_errors"
+    source_timestamp_column: "date"
+    source_timestamp_column_sql: 'date'
+    source_forecast_column: "count"
+    source_forecast_column_sql: "SUM(count)"
+    period_length: "day"
+    source_sql: '
+    SUM(count) AS value, TIMESTAMP(date) AS timestamp
+    FROM `tech_great_expectations.pipe_nmea_parsed_errors`
+    WHERE source = "spire"
+    GROUP BY timestamp
+    ORDER BY timestamp
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  parser_errors_daily:
+      source_dataset: "tech_great_expectations"
+      source_table: "pipe_nmea_parsed_errors"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'TIMESTAMP(date)'
+      source_forecast_column: "count"
+      source_forecast_column_sql: "SUM(count)"
+      period_length: "day"
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  parsed_row_count_daily:
+      source_dataset: "tech_great_expectations"
+      source_table: "partition_row_counts"
+      source_timestamp_column: "partition_date"
+      source_timestamp_column_sql: 'TIMESTAMP(partition_date)'
+      source_forecast_column: "total_rows_daily"
+      source_forecast_column_sql: "total_rows_daily"
+      period_length: "day"
+      source_sql: '
+      total_rows_daily AS value, TIMESTAMP(partition_date) AS timestamp, "" AS dimension_split_value
+      FROM `world-fishing-827.tech_great_expectations.partition_row_counts` 
+      WHERE schema_table_name = "pipe_ais_sources_v20201001.pipe-nmea-parsed"
+      AND partition_id IS NOT NULL
+      ORDER BY partition_date, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  parser_errors_daily_source_split:
+      source_dataset: "tech_great_expectations"
+      source_table: "pipe_nmea_parsed_errors"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'date'
+      source_forecast_column: "count"
+      source_forecast_column_sql: "SUM(count)"
+      period_length: "day"
+      dimension_split: "source"
+      source_sql: '
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp, source as dimension_split_value
+      FROM `tech_great_expectations.pipe_nmea_parsed_errors`
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  published_fishing_effort_pipe3:
+      source_dataset: "tech_great_expectations"
+      source_table: "snapshot_published_fishing_effort_v3_0_0_vs_v2_5_1"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'date'
+      source_forecast_column: "v3_value"
+      source_forecast_column_sql: "SUM(v3_value)"
+      period_length: "day"
+      source_sql: '
+      SUM(v3_value) value, TIMESTAMP(date) timestamp, "" dimension_split_value 
+      FROM `world-fishing-827.tech_great_expectations.snapshot_published_fishing_effort_v3_0_0_vs_v2_5_1`
+      WHERE dbt_valid_to IS NULL
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  published_fishing_effort_deltas_esp_daily:
+      source_dataset: "tech_great_expectations"
+      source_table: "snapshot_published_fishing_effort_v3_0_0_vs_v2_5_1"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'date'
+      source_forecast_column: "delta"
+      source_forecast_column_sql: "SUM(ABS(delta))"
+      period_length: "day"
+      source_sql: '
+      SUM(ABS(delta)) value, TIMESTAMP(date) timestamp, "" dimension_split_value 
+      FROM `world-fishing-827.tech_great_expectations.snapshot_published_fishing_effort_v3_0_0_vs_v2_5_1`
+      WHERE dbt_valid_to IS NULL
+      AND flag = "ESP"
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  published_fishing_effort_deltas_daily:
+      source_dataset: "tech_great_expectations"
+      source_table: "snapshot_published_fishing_effort_v3_0_0_vs_v2_5_1"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'date'
+      source_forecast_column: "delta"
+      source_forecast_column_sql: "SUM(ABS(delta))"
+      period_length: "day"
+      source_sql: '
+      SUM(ABS(delta)) value, TIMESTAMP(date) timestamp, "" dimension_split_value 
+      FROM `world-fishing-827.tech_great_expectations.snapshot_published_fishing_effort_v3_0_0_vs_v2_5_1`
+      WHERE dbt_valid_to IS NULL
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  fishing_effort_pipe2_5_flag_daily:
+    source_dataset: "skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public"
+    source_table: "ais_global_v20231026_fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, flag AS dimension_split_value
+    FROM `skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public.ais_global_v20231026_fishing_effort_public`
+    WHERE flag IN ("ESP", "FRA", "GBR", "ITA", "MAR", "PRT", "TUR", "BRA", "NOR", "CHN", "IDN", "JPN", "KOR", "PHL", "RUS", "THA", "USA", "VNM")
+    GROUP BY timestamp, dimension_split_value
+    ORDER BY timestamp, dimension_split_value
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  parsed_row_count_source_daily:
+      source_dataset: "tech_great_expectations"
+      source_table: "t_facts_pipe_nmea_parsed_stats_daily"
+      source_timestamp_column: "partition_date"
+      source_timestamp_column_sql: 'TIMESTAMP(partition_date)'
+      source_forecast_column: "total_rows_daily"
+      source_forecast_column_sql: "total_rows_daily"
+      period_length: "day"
+      source_sql: '
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value 
+      FROM `world-fishing-827.tech_great_expectations.t_facts_pipe_nmea_parsed_stats_daily`
+      WHERE variable = "source"
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  parsed_row_count_hourly:
+      source_dataset: "tech_great_expectations"
+      source_table: "partition_row_counts"
+      source_timestamp_column: "partition_hour"
+      source_timestamp_column_sql: 'TIMESTAMP(partition_hour)'
+      source_forecast_column: "total_rows_daily"
+      source_forecast_column_sql: "total_rows_daily"
+      period_length: "hour"
+      history_start: "30 days"
+      source_sql: '
+      total_rows AS value, TIMESTAMP(partition_hour) AS timestamp, "" AS dimension_split_value
+      FROM `world-fishing-827.tech_great_expectations.partition_row_counts` 
+      WHERE schema_table_name = "pipe_nmea_hourly.pipe-nmea-parsed-hourly"
+      AND partition_id IS NOT NULL
+      QUALIFY ROW_NUMBER() OVER (ORDER BY partition_hour DESC) > 3
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 168
+                  - 24
+          mean:
+              parameters:
+                sliding_window: 72
+          median:
+              parameters:
+                sliding_window: 72
+
+
+
