@@ -178,9 +178,13 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
   service_account = "projects/world-fishing-827/serviceAccounts/terraform-deployer@world-fishing-827.iam.gserviceaccount.com"
   build {
 
+    timeout = "3600s"
+
     step {
       id   = "docker build"
       name = "gcr.io/cloud-builders/docker"
+      timeout = "3600s"
+
       args = [
         "build",
         "-f",
