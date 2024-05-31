@@ -15,6 +15,13 @@ resource "google_bigquery_table" "actuals" {
   dataset_id = "tech_anomaly_detection"
   table_id   = "t_${var.environment}_actuals"
   project    = var.project
+  
+  time_partitioning {
+    type = "DAY"
+    field = "timestamp"
+  }
+
+  clustering = [ "config_name", "dimension_split", "key" ]
 
   schema = file("actuals_schema.json")
 }
@@ -23,6 +30,13 @@ resource "google_bigquery_table" "forecasts" {
   dataset_id = "tech_anomaly_detection"
   table_id   = "t_${var.environment}_forecasts"
   project    = var.project
+  
+  time_partitioning {
+    type = "DAY"
+    field = "timestamp"
+  }
+
+  clustering = [ "config_name", "dimension_split", "key" ]
 
   schema = file("forecasts_schema.json")
 }
@@ -33,7 +47,7 @@ resource "google_bigquery_table" "actuals_forecasts" {
   project    = var.project
 
   view {
-    query = templatefile(var.abs_res_path + "/v_anomaly_detection_deltas.sql", {
+    query = templatefile("${var.abs_res_path}/v_anomaly_detection_deltas.sql", {
       ENVIRONMENT = var.environment
     })
   }
