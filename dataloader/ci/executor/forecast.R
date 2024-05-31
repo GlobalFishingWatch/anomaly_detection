@@ -1,4 +1,16 @@
-library(optparse)
+suppressMessages({
+  library(magrittr)
+  library(data.table)
+  library(purrr)
+  library(dplyr)
+  library(dbplyr)
+  library(glue)
+  library(lubridate)
+  library(optparse)
+})
+
+source("bq_utils.R")
+source("helpers.R")
 
 option_list = list(
   make_option(c("-e", "--environment"), type = "character", default = NULL, 
@@ -44,20 +56,6 @@ actuals_table = args$actuals_table
 forecasts_table = args$forecasts_table
 forecast_timestamp_from = args$forecast_timestamp_from
 forecast_timestamp_to = args$forecast_timestamp_to
-
-suppressMessages({
-  library(magrittr)
-  library(data.table)
-  library(purrr)
-  library(dplyr)
-  library(dbplyr)
-  library(glue)
-  library(lubridate)
-})
-
-# safe_query is required
-source("bq_utils.R")
-source("helpers.R")
 
 no_cores = future::availableCores() - 2
 future::plan(future::multicore(), workers = no_cores)
