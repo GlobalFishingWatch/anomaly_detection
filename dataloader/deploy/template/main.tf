@@ -97,32 +97,65 @@ resource "google_bigquery_table" "actuals_forecasts" {
 
   depends_on = [ google_bigquery_table.actuals, google_bigquery_table.forecasts, google_bigquery_table.csv ]
 }
-resource "google_storage_bucket_object" "csv_files" {
-  for_each = fileset("${var.cwd}/res/csv", "**/*")
 
+resource "google_storage_bucket_object" "thresholds" {
   bucket = "tech_anomaly_detection"
-  source = "${var.cwd}/res/csv/${each.value}"
-  name   = "${var.environment}/res/csv/${each.value}"
+  source = "${var.cwd}/res/csv/thresholds.csv"
+  name   = "${var.environment}/res/thresholds.csv"
 }
 
-resource "google_bigquery_table" "csv" {
-  for_each = fileset("${var.cwd}/res/csv", "**/*")
-
+resource "google_bigquery_table" "thresholds" {
   dataset_id = "tech_anomaly_detection"
-  table_id   = "t_${var.environment}_${replace(each.value, ".csv", "")}"
+  table_id   = "t_${var.environment}_thresholds"
   project    = var.project
+
+  schema = <<EOF
+[
+    {"name": "config_name", "type": "STRING"},
+    {"name": "dimension_split", "type": "STRING"},
+    {"name": "threshold", "type": "FLOAT"}
+  ]
+EOF
 
   deletion_protection = false
 
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
-    source_uris  = ["gs://tech_anomaly_detection/${var.environment}/res/csv/${each.value}"]
+    source_uris  = [google_storage_bucket_object.thresholds.source_uris[0]]
   }
-  
-  depends_on = [google_storage_bucket_object.csv_files]
+
+
+    depends_on = [google_storage_bucket_object.thresholds]
 }
 
+resource "google_storage_bucket_object" "config_descriptions" {
+  bucket = "tech_anomaly_detection"
+  source = "${var.cwd}/res/csv/config_descriptions.csv"
+  name   = "${var.environment}/res/config_descriptions.csv"
+}
+
+resource "google_bigquery_table" "config_descriptions" {
+  dataset_id = "tech_anomaly_detection"
+  table_id   = "t_${var.environment}_config_descriptions"
+  project    = var.project
+
+  schema = <<EOF
+[
+    {"name": "config_name", "type": "STRING"},
+    {"name": "description", "type": "STRING"}
+  ]
+EOF
+
+  deletion_protection = false
+  external_data_configuration {
+    source_format = "CSV"
+    autodetect    = true
+    source_uris  = [google_storage_bucket_object.config_descriptions.source_uris[0]]
+  }
+
+    depends_on = [google_storage_bucket_object.config_descriptions]
+}
 
 
 resource "google_cloud_run_v2_job" "job" {
