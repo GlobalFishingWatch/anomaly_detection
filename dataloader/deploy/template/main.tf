@@ -23,7 +23,8 @@ resource "google_bigquery_table" "actuals" {
 
   clustering = [ "config_name", "dimension_split", "key" ]
 
-  schema = [
+  schema = <<EOF
+[
     {"name": "key", "type": "BYTES"},
     {"name": "source_dataset", "type": "STRING"},
     {"name": "source_table", "type": "STRING"},
@@ -40,6 +41,7 @@ resource "google_bigquery_table" "actuals" {
     {"name": "valid_to", "type": "TIMESTAMP"},
     {"name": "config_name", "type": "STRING"}
   ]
+EOF
 }
 
 resource "google_bigquery_table" "forecasts" {
@@ -54,7 +56,8 @@ resource "google_bigquery_table" "forecasts" {
 
   clustering = [ "config_name", "dimension_split", "key" ]
 
-  schema = [
+  schema = <<EOF
+[
     {"name": "key", "type": "BYTES"},
     {"name": "source_dataset", "type": "STRING"},
     {"name": "source_table", "type": "STRING"},
@@ -72,6 +75,8 @@ resource "google_bigquery_table" "forecasts" {
     {"name": "valid_to", "type": "TIMESTAMP"},
     {"name": "config_name", "type": "STRING"}
   ]
+EOF
+
 }
 
 resource "google_bigquery_table" "actuals_forecasts" {
