@@ -134,9 +134,6 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
       ]
     }
 
-    artifacts {
-      images = ["gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest", "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA"]
-    }
     options {
       logging = "CLOUD_LOGGING_ONLY"
     }
@@ -249,9 +246,6 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
       ]
     }
 
-    artifacts {
-      images = ["gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME"]
-    }
     options {
       logging = "CLOUD_LOGGING_ONLY"
     }
