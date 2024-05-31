@@ -5,5 +5,3 @@ variable "docker_image" {
 }
 variable "environment" {
 }
-
-variable "cwd" {}
