@@ -99,7 +99,7 @@ resource "google_storage_bucket_object" "csv_files" {
 
   bucket = "tech_anomaly_detection"
   source = "${var.cwd}/res/csv/${each.value}"
-  name   = each.value
+  name   = "res/csv/${var.environment}_${each.value}"
 }
 
 # create table based on each csv_files csv file
@@ -107,13 +107,13 @@ resource "google_bigquery_table" "csv" {
   for_each = google_storage_bucket_object.csv_files
 
   dataset_id = "tech_anomaly_detection"
-  table_id   = "t_${var.environment}_${each.value.id}"
+  table_id   = "t_${replace(each.value.id, ".csv", "")}"
   project    = var.project
 
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
-    source_uris   = ["gs://tech_anomaly_detection/${each.value.id}"]
+    source_uris   = ["gs://tech_anomaly_detection/res/csv/${each.value.id}"]
   }
 }
 
