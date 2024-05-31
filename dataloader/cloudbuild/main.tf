@@ -11,7 +11,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
   name     = "${local.subproject_name_dashed}-any-branch"
   location = "global"
 
-  included_files = [ "**/${local.subproject_name_dashed_short}/**" ]
+  included_files = [ "${local.subproject_name_dashed_short}/**" ]
 
   github {
     name  = "anomaly_detection"
@@ -165,7 +165,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
   name     = "${local.subproject_name_dashed}-tag"
   location = "global"
 
-  included_files = [ "**/${local.subproject_name_dashed_short}/**" ]
+  included_files = [ "${local.subproject_name_dashed_short}/**" ]
 
   github {
     name  = "anomaly_detection"
