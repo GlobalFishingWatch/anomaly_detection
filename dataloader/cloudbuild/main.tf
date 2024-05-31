@@ -29,15 +29,14 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
     
     step {
       id   = "docker build"
-      name = "gcr.io/cloud-builders/docker"
+      name = "gcr.io/kaniko-project/executor:latest"
       timeout = "3600s"
       args = [
-        "build",
-        "-f",
-        "./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
-        "-t",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
-        "./${local.subproject_name_dashed_short}/ci/executor",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
+        "--cache=true",
+        "--cache-ttl=48h",
+        "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
+        "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
       ]
 
     }
