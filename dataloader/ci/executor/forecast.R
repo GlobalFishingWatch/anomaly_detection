@@ -68,8 +68,8 @@ map_fun = map_fun %>% compose(progressr::with_progress, .dir = "forward")
 
 con = DBI::dbConnect(drv = bigrquery::bigquery(), project = "world-fishing-827", use_legacy_sql = FALSE)
 
-target_table_actuals = paste0(dataset_id, ".", environment, "_", actuals_table)
-target_table_forecasts = paste0(dataset_id, ".", environment, "_", forecasts_table)
+target_table_actuals = paste0(dataset_id, ".t_", environment, "_", actuals_table)
+target_table_forecasts = paste0(dataset_id, ".t_", environment, "_", forecasts_table)
 
 db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 
