@@ -23,4 +23,6 @@ COPY bq_utils.R .
 COPY helpers.R .
 COPY forecast.R .
 
+COPY config_*.yaml .
+
 ENTRYPOINT ["Rscript", "/project/forecast.R"]
