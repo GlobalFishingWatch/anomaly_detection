@@ -7,4 +7,6 @@ module "anomaly_dataloader_dev" {
   project      = var.project
   environment  = "dev"
   docker_image = var.docker_image
+
+  cwd = path.cwd
 }

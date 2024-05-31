@@ -89,13 +89,13 @@ resource "google_bigquery_table" "actuals_forecasts" {
   project    = var.project
 
   view {
-    query = templatefile("${path.module}res/sql/v_anomaly_detection_deltas.sql", {
+    query = templatefile("${path.module}/res/sql/v_anomaly_detection_deltas.sql", {
       ENVIRONMENT = var.environment
     })
   }
 }
 resource "google_storage_bucket_object" "csv_files" {
-  for_each = fileset("./res/csv/**/*")
+  for_each = fileset("${var.cwd}/res/csv", "**/*")
 
   bucket = "tech_anomaly_detection"
   source = each.value
