@@ -12,6 +12,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
   location = "global"
 
   included_files = [ "${local.subproject_name_dashed_short}/**" ]
+  ignored_files = [ "${local.subproject_name_dashed_short}/cloudbuild/**" ]
 
   github {
     name  = "anomaly_detection"
@@ -37,6 +38,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
         "--cache-ttl=48h",
         "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
         "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
+        "--context=./${local.subproject_name_dashed_short}/ci/executor",
       ]
 
     }

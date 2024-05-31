@@ -12,6 +12,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
   location = "global"
 
   included_files = [ "${local.subproject_name_dashed_short}/**" ]
+  ignored_files = [ "${local.subproject_name_dashed_short}/cloudbuild/**" ]
 
   github {
     name  = "anomaly_detection"
