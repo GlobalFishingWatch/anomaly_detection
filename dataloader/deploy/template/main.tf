@@ -23,7 +23,23 @@ resource "google_bigquery_table" "actuals" {
 
   clustering = [ "config_name", "dimension_split", "key" ]
 
-  schema = file("actuals_schema.json")
+  schema = [
+    {"name": "key", "type": "BYTES"},
+    {"name": "source_dataset", "type": "STRING"},
+    {"name": "source_table", "type": "STRING"},
+    {"name": "source_timestamp_column", "type": "STRING"},
+    {"name": "source_timestamp_column_sql", "type": "STRING"},
+    {"name": "source_forecast_column", "type": "STRING"},
+    {"name": "source_forecast_column_sql", "type": "STRING"},
+    {"name": "source_sql", "type": "STRING"},
+    {"name": "source_sql_hash", "type": "STRING"},
+    {"name": "period_length", "type": "STRING"},
+    {"name": "timestamp", "type": "TIMESTAMP"},
+    {"name": "value", "type": "FLOAT"},
+    {"name": "valid_from", "type": "TIMESTAMP"},
+    {"name": "valid_to", "type": "TIMESTAMP"},
+    {"name": "config_name", "type": "STRING"}
+  ]
 }
 
 resource "google_bigquery_table" "forecasts" {
@@ -38,7 +54,24 @@ resource "google_bigquery_table" "forecasts" {
 
   clustering = [ "config_name", "dimension_split", "key" ]
 
-  schema = file("forecasts_schema.json")
+  schema = [
+    {"name": "key", "type": "BYTES"},
+    {"name": "source_dataset", "type": "STRING"},
+    {"name": "source_table", "type": "STRING"},
+    {"name": "source_timestamp_column", "type": "STRING"},
+    {"name": "source_timestamp_column_sql", "type": "STRING"},
+    {"name": "source_forecast_column", "type": "STRING"},
+    {"name": "source_forecast_column_sql", "type": "STRING"},
+    {"name": "source_sql", "type": "STRING"},
+    {"name": "source_sql_hash", "type": "STRING"},
+    {"name": "period_length", "type": "STRING"},
+    {"name": "forecast_method", "type": "STRING"},
+    {"name": "timestamp", "type": "TIMESTAMP"},
+    {"name": "value", "type": "FLOAT"},
+    {"name": "valid_from", "type": "TIMESTAMP"},
+    {"name": "valid_to", "type": "TIMESTAMP"},
+    {"name": "config_name", "type": "STRING"}
+  ]
 }
 
 resource "google_bigquery_table" "actuals_forecasts" {
