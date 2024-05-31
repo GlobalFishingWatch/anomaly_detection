@@ -116,7 +116,6 @@ resource "google_bigquery_table" "csv" {
     source_format = "CSV"
     autodetect    = true
     source_uris  = ["gs://tech_anomaly_detection/${var.environment}/res/csv/${each.value}"]
-    metadata_cache_mode = "AUTOMATIC"
   }
   
   depends_on = [google_storage_bucket_object.csv_files]
