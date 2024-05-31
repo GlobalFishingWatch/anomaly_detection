@@ -25,17 +25,19 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
   }
   service_account = "projects/world-fishing-827/serviceAccounts/terraform-deployer@world-fishing-827.iam.gserviceaccount.com"
   build {
+    timeout = "3600s"
     
     step {
       id   = "docker build"
       name = "gcr.io/cloud-builders/docker"
+      timeout = "3600s"
       args = [
         "build",
         "-f",
-        "./ci/executor/Dockerfile",
+        "./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
         "-t",
         "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
-        "./ci/executor",
+        "./${local.subproject_name_dashed_short}/ci/executor",
       ]
 
     }
@@ -178,16 +180,20 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
   service_account = "projects/world-fishing-827/serviceAccounts/terraform-deployer@world-fishing-827.iam.gserviceaccount.com"
   build {
 
+    timeout = "3600s"
+
     step {
       id   = "docker build"
       name = "gcr.io/cloud-builders/docker"
+      timeout = "3600s"
+
       args = [
         "build",
         "-f",
-        "./ci/executor/Dockerfile",
+        "./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
         "-t",
         "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME",
-        "./ci/executor",
+        "./${local.subproject_name_dashed_short}/ci/executor",
       ]
 
     }
