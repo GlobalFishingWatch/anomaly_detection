@@ -71,20 +71,6 @@ con = DBI::dbConnect(drv = bigrquery::bigquery(), project = "world-fishing-827",
 target_table_actuals = paste0(dataset_id, ".", environment, "_", actuals_table)
 target_table_forecasts = paste0(dataset_id, ".", environment, "_", forecasts_table)
 
-# check if actuals table exists
-if (!DBI::dbExistsTable(con, target_table_actuals)) {
-  # run bash script
-  actuals_table_env = paste0(environment, "_", actuals_table)
-  sys.call("bq mk --table --project_id={project_id} --dataset_id={dataset_id} --schema=/project/actuals_schema.json {target_table_actuals}")
-}
-
-# check if forecasts table exists
-if (!DBI::dbExistsTable(con, target_table_forecasts)) {
-  # run bash script
-  forecasts_table_env = paste0(environment, "_", forecasts_table)
-  sys.call("bq mk --table --project_id={project_id} --dataset_id={dataset_id} --schema=/project/forecasts_schema.json {target_table_forecasts}")
-}
-
 db_anomaly_detection_actuals = tbl(con, target_table_actuals)
 
 anomaly_detection_config = yaml::read_yaml(glue('config_{environment}.yaml'))
