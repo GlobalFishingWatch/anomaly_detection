@@ -92,6 +92,7 @@ resource "google_bigquery_table" "actuals_forecasts" {
     query = templatefile("${path.module}/res/sql/v_anomaly_detection_deltas.sql", {
       ENVIRONMENT = var.environment
     })
+    use_legacy_sql = false
   }
 }
 resource "google_storage_bucket_object" "csv_files" {
@@ -102,12 +103,11 @@ resource "google_storage_bucket_object" "csv_files" {
   name   = "${var.environment}/res/csv/${each.value}"
 }
 
-# create table based on each csv_files csv file
 resource "google_bigquery_table" "csv" {
   for_each = fileset("${var.cwd}/res/csv", "**/*")
 
   dataset_id = "tech_anomaly_detection"
-  table_id   = "t_${replace(each.value, ".csv", "")}"
+  table_id   = "t_${var.environment}_${replace(each.value, ".csv", "")}"
   project    = var.project
 
   external_data_configuration {
