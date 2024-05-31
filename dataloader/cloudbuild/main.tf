@@ -12,6 +12,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
   location = "global"
 
   included_files = [ "${local.subproject_name_dashed_short}/**" ]
+  ignored_files = [ "${local.subproject_name_dashed_short}/cloudbuild/**" ]
 
   github {
     name  = "anomaly_detection"
@@ -29,37 +30,20 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
     
     step {
       id   = "docker build"
-      name = "gcr.io/cloud-builders/docker"
+      name = "gcr.io/kaniko-project/executor:latest"
       timeout = "3600s"
       args = [
-        "build",
-        "-f",
-        "./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
-        "-t",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
-        "./${local.subproject_name_dashed_short}/ci/executor",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest",
+        "--cache=true",
+        "--cache-ttl=48h",
+        "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
+        "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
+        "--context=./${local.subproject_name_dashed_short}/ci/executor",
       ]
 
     }
-    step {
-      id   = "docker tag"
-      name = "gcr.io/cloud-builders/docker"
-      args = [
-        "tag",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest",
-      ]
-
-    }
-    step {
-      id   = "docker push"
-      name = "gcr.io/cloud-builders/docker"
-      args = [
-        "push",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA"
-      ]
-
-    }
+    
     step {
       id         = "branch name"
       name       = "hashicorp/terraform:1.1.5"
@@ -182,31 +166,24 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
 
     timeout = "3600s"
 
+    
+    
     step {
       id   = "docker build"
-      name = "gcr.io/cloud-builders/docker"
+      name = "gcr.io/kaniko-project/executor:latest"
       timeout = "3600s"
-
       args = [
-        "build",
-        "-f",
-        "./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
-        "-t",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME",
-        "./${local.subproject_name_dashed_short}/ci/executor",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest",
+        "--cache=true",
+        "--cache-ttl=48h",
+        "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
+        "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
+        "--context=./${local.subproject_name_dashed_short}/ci/executor",
       ]
 
     }
-
-    step {
-      id   = "docker push"
-      name = "gcr.io/cloud-builders/docker"
-      args = [
-        "push",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME"
-      ]
-
-    }
+    
     step {
       id         = "tag name"
       name       = "hashicorp/terraform:1.1.5"
