@@ -107,7 +107,7 @@ resource "google_bigquery_table" "csv" {
   for_each = fileset("${var.cwd}/res/csv", "**/*")
 
   dataset_id = "tech_anomaly_detection"
-  table_id   = "t_${replace(each.value.id, ".csv", "")}"
+  table_id   = "t_${replace(each.value, ".csv", "")}"
   project    = var.project
 
   external_data_configuration {
