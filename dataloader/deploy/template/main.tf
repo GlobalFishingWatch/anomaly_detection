@@ -39,7 +39,9 @@ resource "google_bigquery_table" "actuals" {
     {"name": "value", "type": "FLOAT"},
     {"name": "valid_from", "type": "TIMESTAMP"},
     {"name": "valid_to", "type": "TIMESTAMP"},
-    {"name": "config_name", "type": "STRING"}
+    {"name": "config_name", "type": "STRING"},
+    {"name": "dimension_split", "type": "STRING"},
+    {"name": "dimension_split_value", "type": "STRING"}
   ]
 EOF
 }
@@ -73,7 +75,9 @@ resource "google_bigquery_table" "forecasts" {
     {"name": "value", "type": "FLOAT"},
     {"name": "valid_from", "type": "TIMESTAMP"},
     {"name": "valid_to", "type": "TIMESTAMP"},
-    {"name": "config_name", "type": "STRING"}
+    {"name": "config_name", "type": "STRING"},
+    {"name": "dimension_split", "type": "STRING"},
+    {"name": "dimension_split_value", "type": "STRING"}
   ]
 EOF
 
@@ -81,17 +85,17 @@ EOF
 
 resource "google_bigquery_table" "actuals_forecasts" {
   dataset_id = "tech_anomaly_detection"
-  table_id   = "v_${var.environment}_anomaly_detection_deltas'"
+  table_id   = "v_${var.environment}_anomaly_detection_deltas"
   project    = var.project
 
   view {
-    query = templatefile("../../template/res/sql/v_anomaly_detection_deltas.sql", {
+    query = templatefile("${path.module}res/sql/v_anomaly_detection_deltas.sql", {
       ENVIRONMENT = var.environment
     })
   }
 }
 resource "google_storage_bucket_object" "csv_files" {
-  for_each = fileset(var.abs_res_path, "/csv/**/*")
+  for_each = fileset("./res/csv/**/*")
 
   bucket = "tech_anomaly_detection"
   source = each.value
@@ -132,7 +136,7 @@ resource "google_cloud_run_v2_job" "job" {
 
         resources {
           limits = {
-            cpu    = "16"
+            cpu    = "8"
             memory = "4096Mi"
           }
         }
