@@ -29,36 +29,18 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
 
     step {
       id   = "docker build"
-      name = "gcr.io/cloud-builders/docker"
+      name = "gcr.io/kaniko-project/executor:latest"
       args = [
-        "build",
-        "-f",
-        "./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
-        "-t",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
-        "./${local.subproject_name_dashed_short}/ci/executor",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest",
+        "--cache=true",
+        "--cache-ttl=365d",
+        "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
+        "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
+        "--context=./${local.subproject_name_dashed_short}/ci/executor",
       ]
-
     }
-    step {
-      id   = "docker tag"
-      name = "gcr.io/cloud-builders/docker"
-      args = [
-        "tag",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest",
-      ]
 
-    }
-    step {
-      id   = "docker push"
-      name = "gcr.io/cloud-builders/docker"
-      args = [
-        "push",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA"
-      ]
-
-    }
     step {
       id         = "branch name"
       name       = "hashicorp/terraform:1.1.5"
@@ -112,11 +94,11 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
             echo "******* At environment: $${env} ********"
             echo "*************************************************"
             if [ $${env} = "dev" ]; then
-              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
+              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
             elif [ $${env} = "staging" ]; then
-              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
+              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
             elif [ $${env} = "release" ]; then
-              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
+              terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
             fi
             cd ../../../
           done
@@ -137,9 +119,9 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
           echo "******* At environment: $BRANCH_NAME ********"
           echo "*************************************************"
           if [ $BRANCH_NAME = "dev" ]; then
-            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
+            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
           elif [ $BRANCH_NAME = "main" ]; then
-            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" || exit 1
+            terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
           fi
         else
           echo "***************************** SKIPPING APPLYING *******************************"
@@ -181,41 +163,18 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
 
     step {
       id   = "docker build"
-      name = "gcr.io/cloud-builders/docker"
+      name = "gcr.io/kaniko-project/executor:latest"
       args = [
-        "build",
-        "-f",
-        "./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
-        "-t",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME",
-        "./${local.subproject_name_dashed_short}/ci/executor",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
+        "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME",
+        "--cache=true",
+        "--cache-ttl=365d",
+        "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
+        "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
+        "--context=./${local.subproject_name_dashed_short}/ci/executor",
       ]
-
     }
 
-    step {
-      id   = "docker push"
-      name = "gcr.io/cloud-builders/docker"
-      args = [
-        "push",
-        "gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME"
-      ]
-
-    }
-    step {
-      id         = "tag name"
-      name       = "hashicorp/terraform:1.1.5"
-      entrypoint = "sh"
-      args = [
-        "-c",
-        <<-EOF
-          echo "***********************"
-          echo "$TAG_NAME"
-          echo "***********************"
-        EOF
-      ]
-
-    }
     step {
       id         = "tf init"
       name       = "hashicorp/terraform:1.1.5"
