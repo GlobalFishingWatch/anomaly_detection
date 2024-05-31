@@ -110,6 +110,8 @@ resource "google_bigquery_table" "csv" {
   table_id   = "t_${var.environment}_${replace(each.value, ".csv", "")}"
   project    = var.project
 
+  deletion_protection = false
+
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
