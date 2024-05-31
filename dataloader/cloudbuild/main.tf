@@ -12,7 +12,6 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
   location = "global"
 
   included_files = [ "${local.subproject_name_dashed_short}/**" ]
-  ignored_files = [ "${local.subproject_name_dashed_short}/cloudbuild/**" ]
 
   github {
     name  = "anomaly_detection"
@@ -36,7 +35,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
         "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
         "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$BRANCH_NAME-latest",
         "--cache=true",
-        "--cache-ttl=365d",
+        "--cache-ttl=8760h",
         "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
         "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
         "--context=./${local.subproject_name_dashed_short}/ci/executor",
@@ -174,7 +173,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
         "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA",
         "--destination=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME",
         "--cache=true",
-        "--cache-ttl=365d",
+        "--cache-ttl=8760h",
         "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
         "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
         "--context=./${local.subproject_name_dashed_short}/ci/executor",
