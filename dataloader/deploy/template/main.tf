@@ -85,7 +85,7 @@ resource "google_bigquery_table" "actuals_forecasts" {
   project    = var.project
 
   view {
-    query = templatefile("${var.abs_res_path}/v_anomaly_detection_deltas.sql", {
+    query = templatefile("./res/v_anomaly_detection_deltas.sql", {
       ENVIRONMENT = var.environment
     })
   }
