@@ -94,6 +94,8 @@ resource "google_bigquery_table" "actuals_forecasts" {
     })
     use_legacy_sql = false
   }
+
+  depends_on = [ google_bigquery_table.actuals, google_bigquery_table.forecasts, google_bigquery_table.csv ]
 }
 resource "google_storage_bucket_object" "csv_files" {
   for_each = fileset("${var.cwd}/res/csv", "**/*")
