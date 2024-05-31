@@ -21,7 +21,7 @@ resource "google_bigquery_table" "actuals" {
     field = "timestamp"
   }
 
-  clustering = [ "config_name", "dimension_split", "key" ]
+  clustering = [ "config_name", "dimension_split" ]
 
   schema = <<EOF
 [
@@ -56,7 +56,7 @@ resource "google_bigquery_table" "forecasts" {
     field = "timestamp"
   }
 
-  clustering = [ "config_name", "dimension_split", "key" ]
+  clustering = [ "config_name", "dimension_split" ]
 
   schema = <<EOF
 [
@@ -113,8 +113,10 @@ resource "google_bigquery_table" "csv" {
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
-    source_uris   = ["gs://tech_anomaly_detection/${var.environment}/res/csv/${each.value}"]
+    source_uris  = ["gs://tech_anomaly_detection/${var.environment}/res/csv/${each.value}"]
   }
+  
+  depends_on = [google_storage_bucket_object.csv_files]
 }
 
 
