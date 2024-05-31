@@ -85,7 +85,7 @@ EOF
 
 resource "google_bigquery_table" "actuals_forecasts" {
   dataset_id = "tech_anomaly_detection"
-  table_id   = "v_${var.environment}_anomaly_detection_deltas"
+  table_id   = "v_${var.environment}_deltas"
   project    = var.project
 
   view {
@@ -99,12 +99,12 @@ resource "google_storage_bucket_object" "csv_files" {
 
   bucket = "tech_anomaly_detection"
   source = "${var.cwd}/res/csv/${each.value}"
-  name   = "res/csv/${var.environment}_${each.value}"
+  name   = "${var.environment}/res/csv/${each.value}"
 }
 
 # create table based on each csv_files csv file
 resource "google_bigquery_table" "csv" {
-  for_each = google_storage_bucket_object.csv_files
+  for_each = fileset("${var.cwd}/res/csv", "**/*")
 
   dataset_id = "tech_anomaly_detection"
   table_id   = "t_${replace(each.value.id, ".csv", "")}"
@@ -113,7 +113,7 @@ resource "google_bigquery_table" "csv" {
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
-    source_uris   = ["gs://tech_anomaly_detection/res/csv/${each.value.id}"]
+    source_uris   = ["gs://tech_anomaly_detection/${var.environment}/res/csv/${each.value}"]
   }
 }
 
