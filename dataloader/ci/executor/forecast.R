@@ -38,12 +38,6 @@ option_list = list(
 parser = OptionParser(option_list = option_list)
 args = parse_args(parser)
 
-if (Sys.getenv("RUNTIME") != "docker") {
-  args$environment = "dev"
-  args$anomaly_detection_config_name = "parser_errors_daily"
-  cat("INTERACTIVE SESSION - USING DEFAULT ARGUMENTS\n")
-}
-
 print(args)
 
 anomaly_detection_config_name = args$anomaly_detection_config_name
