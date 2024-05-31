@@ -98,7 +98,7 @@ resource "google_storage_bucket_object" "csv_files" {
   for_each = fileset("${var.cwd}/res/csv", "**/*")
 
   bucket = "tech_anomaly_detection"
-  source = each.value
+  source = "${var.cwd}/res/csv/${each.value}"
   name   = each.value
 }
 
