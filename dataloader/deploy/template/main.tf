@@ -108,6 +108,15 @@ resource "google_cloud_run_v2_job" "job" {
       }
     }
   }
+
+    labels = {
+    environment      = var.environment
+    resource_creator = "data"
+    project          = "anomaly_detection"
+    version          = ""
+    step             = ""
+    stage            = "prototype"
+  }  
 }
 
 data "google_iam_policy" "cloud_run_invoker" {
