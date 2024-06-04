@@ -169,13 +169,13 @@ resource "google_cloud_scheduler_job" "job" {
       scope                 = "https://www.googleapis.com/auth/cloud-platform"
     }
 
-    body = jsonencode({
+    body = base64encode(jsonencode({
       arguments = [
         "--environment=${var.environment}",
         "--anomaly_detection_config_name=${each.value}",
         "--forecast_timestamp_from='7 days'",
       ]
-    })
+    }))
 
   }
 }
