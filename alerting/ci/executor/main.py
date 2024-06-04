@@ -45,7 +45,7 @@ def create_anomaly_alert_slack_message(
     msg_text=f"""
     {alert_emoji} 
     *Anomaly*: {anomaly_config_name}. 
-    *URL*: {url}
+    *URL*: <{url}|Anomaly Detection Dashboard>
     *Anomaly level*: {anomaly_type}
     *Timestamp*: {anomaly_timestamp}
     *Forecast value*: {forecast_value}
@@ -122,7 +122,7 @@ if __name__ == '__main__':
         '--looker-dashboard-url',
         help='Looker dashboard URL',
         dest='looker_dashboard_url',
-        default='https://lookerstudio.google.com/u/0/reporting/1f9b8d37-a87b-4177-a108-3b3e87ce5804/page/p_ufk1l0slhd?s=sMwwKK9Ni_4&params=%7B%22df34%22:%22include%25EE%2580%25800%25EE%2580%2580IN%25EE%2580%2580{ANOMALY_CONFIG_NAME}%22,%22df18%22:%22include%25EE%2580%25800%25EE%2580%2580IN%25EE%2580%2580{FC_METHOD}%22%7D'
+        default='https://lookerstudio.google.com/u/0/reporting/1f9b8d37-a87b-4177-a108-3b3e87ce5804/page/p_ufk1l0slhd?s=sMwwKK9Ni_4&params=%7B%22df34%22:%22include%25EE%2580%25800%25EE%2580%2580IN%25EE%2580%2580{ANOMALY_CONFIG_NAME}%22,%22df18%22:%22include%25EE%2580%25800%25EE%2580%2580IN%25EE%2580%2580{FC_METHOD}%22%7D',
         required=False
     )
   
