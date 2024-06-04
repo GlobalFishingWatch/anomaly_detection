@@ -30,6 +30,7 @@ WITH latest_fc AS (
         latest_fc.timestamp as forecast_timestamp, 
         latest_fc.value as forecast_value, 
         latest_ac.timestamp actual_timestamp, 
+        latest_ac.valid_from delta_valid_from,
         IFNULL(latest_ac.value, 0) actual_value,
         COALESCE(latest_fc.timestamp, latest_ac.timestamp) timestamp,
         COALESCE(latest_fc.config_name, latest_ac.config_name) config_name,

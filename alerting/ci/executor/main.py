@@ -10,11 +10,15 @@ webhook = WebhookClient(SLACK_WEBHOOK_URL)
 
 client = bigquery.Client()
 
-def get_query_results(environment):
+def get_query_results(
+    environment, 
+    interval_from = 'TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR)', 
+    interval_to = 'TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 0 HOUR)'
+):
     query = f"""
     SELECT * FROM `world-fishing-827.tech_anomaly_detection.v_{environment}_deltas`
     WHERE anomaly_type != 'normal'
-    AND timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 HOUR) AND TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR) -- get anomalies from previous hour
+    AND delta_valid_from BETWEEN {interval_from} AND {interval_to} -- get anomalies from previous hour
     """
 
     query_job = client.query(query)
@@ -44,8 +48,8 @@ def create_anomaly_alert_slack_message(anomaly_config_name, description, anomaly
     return message
 
 
-def run(environment):
-    results = get_query_results(environment)
+def run(environment, interval_from, interval_to):
+    results = get_query_results(environment, interval_from, interval_to)
 
     for row in results:
         logging.info(row)
@@ -79,10 +83,26 @@ if __name__ == '__main__':
       dest='environment',
       required=True
   )
+  parser.add_argument(
+      '--interval-from',
+      help='Interval from',
+      dest='interval_from',
+      default='TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR)',
+      required=False
+  )
+  parser.add_argument(
+      '--interfal-to',
+        help='Interval to',
+        dest='interval_to',
+        default='TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 0 HOUR)',
+        required=False
+  )
   
   known_args, _ = parser.parse_known_args()
   
   run(
-     known_args.environment, 
+        known_args.environment, 
+        known_args.interval_from,
+        known_args.interval_to
      ) 
      
