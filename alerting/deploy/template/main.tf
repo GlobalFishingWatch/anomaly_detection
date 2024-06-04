@@ -74,8 +74,7 @@ resource "google_cloud_run_v2_job_iam_policy" "policy" {
 
 resource "google_cloud_scheduler_job" "job" {
   name             = format("%s_scheduler", local.project_name_dashed)
-  schedule         = "0 9 * *  1"
-  time_zone        = "Europe/Madrid"
+  schedule         = "0 * * * *"
   attempt_deadline = "320s"
   region           = "us-central1"
   retry_config {
