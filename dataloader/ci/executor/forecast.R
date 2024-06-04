@@ -174,14 +174,14 @@ dt_train = get_anomaly_detection_actuals(
   .[order(timestamp, dimension_split_value)]
 
 # By default forecast the last 90 days, unless this is provided by the config or environment
-if (forecast_timestamp_from != "") {
-  forecast_timestamp_from = as.POSIXct(forecast_timestamp_from, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
-} else {
-  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% "90 days" %>% 
+if (forecast_timestamp_from == "") {
+  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% "90 days"
+}
+
+forecast_timestamp_from %<>% 
     parse_date_or_period()  %>% 
     with_tz("UTC") %>% 
     floor_date(current_anomaly_detection_config$period_length)
-}
 
 
 forecast_timestamp_to = as.POSIXct(forecast_timestamp_to, format = "%Y-%m-%d %H:%M:%S") %>% 
@@ -192,6 +192,8 @@ periods_to_forecast = seq(
   forecast_timestamp_to, 
   current_anomaly_detection_config$period_length
 )
+
+statistical_methods = c("mean", "median", "max", "min", "sum")
 
 # if there is no data yet for the last few days there will also be no forecast but instead multiple 
 # forecasts for the most recent date - that's why we apply unique at the end
@@ -217,20 +219,22 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
               predict(h = 1) %>% 
               .[["mean"]] %>% 
               as.numeric()
-          } else if (current_fc_method == "mean") {
-            mean_x_last_periods = current_algorithm_config$parameters$sliding_window
-            if (dt_current_train[, .N] < mean_x_last_periods) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
-            fc = dt_current_train %>% data.table::last(mean_x_last_periods) %>% .[, y] %>% mean
-          } else if (current_fc_method == "median") {
-            median_x_last_periods = current_algorithm_config$parameters$sliding_window
-            if (dt_current_train[, .N] < median_x_last_periods) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
-            fc = dt_current_train %>% data.table::last(median_x_last_periods) %>% .[, y] %>% median
+          } else if (current_fc_method %in% statistical_methods) {
+            x_last_periods = current_algorithm_config$parameters$sliding_window
+            if (dt_current_train[, .N] < x_last_periods) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
+            fc = dt_current_train %>% data.table::last(x_last_periods) %>% .[, y] %>% get(current_fc_method)
           } else {
             return()
           }
           
-          # set fc value to the lowest previously seen value if it's negative
-          fc = max(dt_current_train[, min(y)], fc)
+          if (fc < 0 && "replace_negative_forecasts_by" %in% current_algorithm_config$parameters) {
+            if (current_algorithm_config$parameters$replace_negative_forecasts_by == "zero") {
+              fc = 0
+            } else if (current_algorithm_config$parameters$replace_negative_forecasts_by %in% statistical_methods) {
+              fc = dt_current_train[, get(current_algorithm_config$parameters$replace_negative_forecasts_by)]
+            }
+          }
+          
           
           data.table(
             dimension_split_value = current_dimension_split_value,

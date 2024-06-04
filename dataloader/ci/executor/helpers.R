@@ -9,7 +9,8 @@
 #' @examples parse_date_or_period("2021-01-01")
 #' @examples parse_date_or_period("1 week")
 parse_date_or_period = function(date_or_period_expression, reference_date = Sys.time()) {
-  if (is.na(ymd(date_or_period_expression, quiet = T))) {
+  if (is.na(ymd(date_or_period_expression, quiet = T)) && 
+      is.na(lubridate::ymd_hms(date_or_period_expression, quiet = T))) {
     return(reference_date - period(date_or_period_expression))
   } else {
     return(date_or_period_expression)
