@@ -18,7 +18,7 @@ def get_query_results(
     query=f"""
     SELECT * FROM `world-fishing-827.tech_anomaly_detection.v_{environment}_deltas`
     WHERE anomaly_type != 'normal'
-    AND delta_valid_from BETWEEN {interval_from} AND {interval_to} -- get anomalies from previous hour
+    AND delta_valid_from BETWEEN {interval_from} AND {interval_to}
     """
 
     query_job=client.query(query)
@@ -82,8 +82,16 @@ def run(environment, interval_from, interval_to, looker_dashboard_url):
 
         if SLACK_WEBHOOK_URL is not None:
             response=webhook.send(
-                text=rendered_message,
-                mrkdwn=True
+                text="fallback",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": rendered_message
+                        }
+                    }
+                ]
             )
             logging.info(response.status_code)
             logging.info(response.body)
