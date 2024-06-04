@@ -42,7 +42,7 @@ def create_anomaly_alert_slack_message(
     alert_emoji=":red_circle:" if anomaly_type == 'critical' else ":large_yellow_circle:"
     description=description if description else "No description available"
     url=looker_dashboard_url.format(ANOMALY_CONFIG_NAME=anomaly_config_name, FC_METHOD=forecast_method)
-    msg_text=f"""
+    message=f"""
     {alert_emoji} 
     *Anomaly*: {anomaly_config_name}. 
     *URL*: <{url}|Anomaly Detection Dashboard>
@@ -58,10 +58,6 @@ def create_anomaly_alert_slack_message(
     {query}
     ```
     """
-    message={
-        'text': msg_text,
-        'type': 'mrkdwn'
-    }
     return message
 
 
@@ -86,7 +82,8 @@ def run(environment, interval_from, interval_to, looker_dashboard_url):
 
         if SLACK_WEBHOOK_URL is not None:
             response=webhook.send(
-                text=rendered_message['text']
+                text=rendered_message,
+                mrkdwn=True
             )
             logging.info(response.status_code)
             logging.info(response.body)
