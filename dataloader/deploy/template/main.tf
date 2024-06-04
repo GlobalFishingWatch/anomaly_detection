@@ -146,7 +146,7 @@ resource "google_cloud_run_v2_job_iam_policy" "policy" {
 }
 
 resource "google_cloud_scheduler_job" "job" {
-  for_each = keys(yamldecode(file(var.config_path))["anomalies"])
+  for_each = toset(keys(yamldecode(file(var.config_path))["anomalies"]))
 
   name             = format("%s_scheduler_%c", local.project_name_dashed, each.key)
   schedule         = "0 9 * *  1"
