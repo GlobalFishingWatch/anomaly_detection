@@ -24,13 +24,14 @@ def get_query_results(environment, config_name, anomaly_type):
 
 def create_anomaly_alert_slack_message(anomaly_config_name, description, anomaly_type, anomaly_timestamp, forecast_value, actual_value, query):
     alert_emoji = ":red_circle:" if anomaly_type == 'critical' else ":large_yellow_circle:"
+    description = description if description else "No description available"
     msg_text = f"""
     :{alert_emoji}: Anomaly {anomaly_config_name}. 
     *Anomaly level*: {anomaly_type}
     *Timestamp*: {anomaly_timestamp}
     *Forecast value*: {forecast_value}
     *Actual value*: {actual_value}
-    {*Description*: {description} if description else "No description available"}
+    *Description*: {description}
     *Query*: 
     ```
     {query}
