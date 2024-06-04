@@ -80,16 +80,7 @@ def run(environment, interval_from, interval_to, looker_dashboard_url):
 
         if SLACK_WEBHOOK_URL is not None:
             response=webhook.send(
-                text="fallback",
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": rendered_message
-                        }
-                    }
-                ]
+                text=rendered_message
             )
             logging.info(response.status_code)
             logging.info(response.body)
