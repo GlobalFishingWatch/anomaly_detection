@@ -149,7 +149,7 @@ resource "google_cloud_scheduler_job" "job" {
   for_each = toset(keys(yamldecode(file(var.config_path))["anomalies"]))
 
   name             = format("%s_scheduler_%s", local.project_name_dashed, each.key)
-  schedule         = "0 9 * *  1"
+  schedule         = "10 9 * * *"
   time_zone        = "Europe/Madrid"
   attempt_deadline = "320s"
   region           = "us-central1"
