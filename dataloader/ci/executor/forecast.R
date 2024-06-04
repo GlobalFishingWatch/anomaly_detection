@@ -222,7 +222,7 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
           } else if (current_fc_method %in% statistical_methods) {
             x_last_periods = current_algorithm_config$parameters$sliding_window
             if (dt_current_train[, .N] < x_last_periods) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
-            fc = dt_current_train %>% data.table::last(x_last_periods) %>% .[, y] %>% get(current_fc_method)
+            fc = get(current_fc_method)(dt_current_train %>% data.table::last(x_last_periods) %>% .[, y])
           } else {
             return()
           }
@@ -231,7 +231,7 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
             if (current_algorithm_config$parameters$replace_negative_forecasts_by == "zero") {
               fc = 0
             } else if (current_algorithm_config$parameters$replace_negative_forecasts_by %in% statistical_methods) {
-              fc = dt_current_train[, get(current_algorithm_config$parameters$replace_negative_forecasts_by)]
+              fc = dt_current_train[, get(current_algorithm_config$parameters$replace_negative_forecasts_by)(y)]
             }
           }
           
