@@ -15,13 +15,13 @@ resource "google_bigquery_table" "actuals" {
   dataset_id = "tech_anomaly_detection"
   table_id   = "t_${var.environment}_actuals"
   project    = var.project
-  
+
   time_partitioning {
-    type = "DAY"
+    type  = "DAY"
     field = "timestamp"
   }
 
-  clustering = [ "config_name", "dimension_split" ]
+  clustering = ["config_name", "dimension_split"]
 
   schema = <<EOF
 [
@@ -50,13 +50,13 @@ resource "google_bigquery_table" "forecasts" {
   dataset_id = "tech_anomaly_detection"
   table_id   = "t_${var.environment}_forecasts"
   project    = var.project
-  
+
   time_partitioning {
-    type = "DAY"
+    type  = "DAY"
     field = "timestamp"
   }
 
-  clustering = [ "config_name", "dimension_split" ]
+  clustering = ["config_name", "dimension_split"]
 
   schema = <<EOF
 [
@@ -109,14 +109,14 @@ resource "google_cloud_run_v2_job" "job" {
     }
   }
 
-    labels = {
+  labels = {
     environment      = var.environment
     resource_creator = "data"
     project          = "anomaly_detection"
     version          = ""
     step             = ""
     stage            = "prototype"
-  }  
+  }
 }
 
 data "google_iam_policy" "cloud_run_invoker" {
@@ -169,11 +169,15 @@ resource "google_cloud_scheduler_job" "job" {
     }
 
     body = base64encode(jsonencode({
-      arguments = [
-        "--environment=${var.environment}",
-        "--anomaly_detection_config_name=${each.value}",
-        "--forecast_timestamp_from='7 days'",
-      ]
+      overrides = {
+        containerOverrides = [{
+          args = [
+            "--environment=${var.environment}",
+            "--anomaly_detection_config_name=${each.value}",
+            "--forecast_timestamp_from='7 days'",
+          ]
+        }]
+      }
     }))
 
   }
