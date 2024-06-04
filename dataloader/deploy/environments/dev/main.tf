@@ -7,4 +7,6 @@ module "anomaly_dataloader_dev" {
   project      = var.project
   environment  = "dev"
   docker_image = var.docker_image
+
+  config_path = "../../../ci/executor/config_{$var.environment}.yaml"
 }

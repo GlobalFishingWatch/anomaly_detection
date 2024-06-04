@@ -146,7 +146,9 @@ resource "google_cloud_run_v2_job_iam_policy" "policy" {
 }
 
 resource "google_cloud_scheduler_job" "job" {
-  name             = format("%s_scheduler", local.project_name_dashed)
+  for_each = yamldecode(file(var.config_path))["anomalies"]
+
+  name             = format("%s_scheduler_%c", local.project_name_dashed, each.key)
   schedule         = "0 9 * *  1"
   time_zone        = "Europe/Madrid"
   attempt_deadline = "320s"
@@ -166,6 +168,14 @@ resource "google_cloud_scheduler_job" "job" {
       service_account_email = local.sa
       scope                 = "https://www.googleapis.com/auth/cloud-platform"
     }
+
+    body = jsonencode({
+      arguments = [
+        "--environment=${var.environment}",
+        "--anomaly_detection_config_name=${each.value["config_name"]}",
+        "--forecast_timestamp_from='7 days'",
+      ]
+    })
 
   }
 }

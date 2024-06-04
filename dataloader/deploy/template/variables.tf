@@ -5,3 +5,4 @@ variable "docker_image" {
 }
 variable "environment" {
 }
+variable "config_path" {}
