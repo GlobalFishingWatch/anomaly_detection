@@ -32,6 +32,16 @@ resource "google_cloud_run_v2_job" "job" {
             memory = "512Mi"
           }
         }
+
+        env {
+          name = "SLACK_WEBHOOK_URL"
+          value_source {
+            secret_key_ref {
+              secret  = "projects/386173530526/secrets/QA_WEBHOOK_URL"
+              version = "latest"
+            }
+          }
+        }
       }
     }
   }
