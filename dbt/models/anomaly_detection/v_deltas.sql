@@ -84,7 +84,14 @@ WITH latest_fc AS (
           WHEN delta_rel > critical_higher THEN 'critical_higher'
           WHEN delta_rel > warning_higher THEN 'warning_higher'
           ELSE 'normal'
-        END AS anomaly_type_lower_higher
+        END AS anomaly_type_lower_higher,
+        CASE WHEN 
+          delta_rel < critical_lower THEN critical_lower
+          WHEN delta_rel < warning_lower THEN warning_lower
+          WHEN delta_rel > critical_higher THEN critical_higher
+          WHEN delta_rel > warning_higher THEN warning_higher
+          ELSE 0
+        END AS exceeded_threshold_lower_higher
       FROM forecasts_delta_rel_winsorised
     ),
     forecasts_anomaly_type AS (
