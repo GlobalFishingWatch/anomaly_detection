@@ -10,7 +10,7 @@ webhook = WebhookClient(SLACK_WEBHOOK_URL)
 
 client = bigquery.Client()
 
-def get_query_results(environment, config_name, anomaly_type):
+def get_query_results(environment):
     query = f"""
     SELECT * FROM `world-fishing-827.tech_anomaly_detection.v_{environment}_deltas`
     WHERE anomaly_type != 'normal'
@@ -44,8 +44,8 @@ def create_anomaly_alert_slack_message(anomaly_config_name, description, anomaly
     return message
 
 
-def run(environment, config_name, anomaly_type):
-    results = get_query_results(environment, config_name, anomaly_type)
+def run(environment):
+    results = get_query_results(environment)
 
     for row in results:
         logging.info(row)
@@ -59,12 +59,14 @@ def run(environment, config_name, anomaly_type):
             row['source_sql']
         )
 
-        response = webhook.send(
-            text=rendered_message['text']
-        )
-
-        logging.info(response.status_code)
-        logging.info(response.body)
+        if SLACK_WEBHOOK_URL is not None:
+            response = webhook.send(
+                text=rendered_message['text']
+            )
+            logging.info(response.status_code)
+            logging.info(response.body)
+        else:
+            logging.info("No SLACK_WEBHOOK_URL provided. Skipping sending message to slack.")
         
 
 if __name__ == '__main__':
@@ -82,7 +84,5 @@ if __name__ == '__main__':
   
   run(
      known_args.environment, 
-     known_args.config_name, 
-     known_args.anomaly_type
      ) 
      
