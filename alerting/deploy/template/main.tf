@@ -103,5 +103,15 @@ resource "google_cloud_scheduler_job" "job" {
       scope                 = "https://www.googleapis.com/auth/cloud-platform"
     }
 
+    body = base64encode(jsonencode({
+      overrides = {
+        containerOverrides = [{
+          args = [
+            "--environment=${var.environment}"
+          ]
+        }]
+      }
+    }))
+
   }
 }
