@@ -115,3 +115,16 @@ resource "google_cloud_scheduler_job" "job" {
 
   }
 }
+
+resource "google_firestore_index" "alerting_deduplication_index" {
+  collection = format("%s_deduplication-index", local.project_name_dashed)
+  fields {
+    field_path = "processed_at"
+    order      = "ASCENDING"
+  }
+
+  fields {
+    field_path = "event_hash"
+    order      = "ASCENDING"
+  }
+}
