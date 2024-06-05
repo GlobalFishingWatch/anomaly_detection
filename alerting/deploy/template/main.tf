@@ -46,14 +46,14 @@ resource "google_cloud_run_v2_job" "job" {
     }
   }
 
-    labels = {
+  labels = {
     environment      = var.environment
     resource_creator = "data"
     project          = "anomaly_detection"
     version          = ""
     step             = ""
     stage            = "prototype"
-  }  
+  }
 }
 
 data "google_iam_policy" "cloud_run_invoker" {
@@ -116,7 +116,14 @@ resource "google_cloud_scheduler_job" "job" {
   }
 }
 
+resource "google_firestore_database" "alerting_deduplication_db" {
+  name        = format("%s_deduplicate-db", local.project_name_dashed)
+  type        = "FIRESTORE_NATIVE"
+  location_id = "us-central1"
+}
+
 resource "google_firestore_index" "alerting_deduplication_index" {
+  database = google_firestore_database.alerting_deduplication_db.name
   collection = format("%s_deduplication-index", local.project_name_dashed)
   fields {
     field_path = "processed_at"
