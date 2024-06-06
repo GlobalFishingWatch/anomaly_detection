@@ -116,14 +116,7 @@ resource "google_cloud_scheduler_job" "job" {
   }
 }
 
-resource "google_firestore_database" "alerting_deduplication_db" {
-  name        = format("%s_deduplicate-db", local.project_name_dashed)
-  type        = "FIRESTORE_NATIVE"
-  location_id = "us-central1"
-}
-
 resource "google_firestore_index" "alerting_deduplication_index" {
-  database = google_firestore_database.alerting_deduplication_db.name
   collection = format("%s_deduplication-index", local.project_name_dashed)
   fields {
     field_path = "processed_at"
