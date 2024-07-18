@@ -118,6 +118,7 @@ resource "google_cloud_scheduler_job" "job" {
 
 resource "google_firestore_index" "alerting_deduplication_index" {
   collection = format("%s_deduplication-index", local.project_name_dashed)
+  api_scope = "DATASTORE_MODE_API"
   fields {
     field_path = "processed_at"
     order      = "ASCENDING"
