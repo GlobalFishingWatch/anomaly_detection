@@ -67,3 +67,57 @@ anomalies:
         median:
             parameters:
               sliding_window: 30
+  fishing_effort_pipe2_5_flag_daily:
+    source_dataset: "skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public"
+    source_table: "ais_global_v20231026_fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, flag AS dimension_split_value
+    FROM `skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public.ais_global_v20231026_fishing_effort_public`
+    WHERE flag IN ("ESP", "FRA", "GBR", "ITA", "MAR", "PRT", "TUR", "BRA", "NOR", "CHN", "IDN", "JPN", "KOR", "PHL", "RUS", "THA", "USA", "VNM")
+    GROUP BY timestamp, dimension_split_value
+    ORDER BY timestamp, dimension_split_value
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+  parsed_row_count_source_daily:
+      source_dataset: "tech_great_expectations"
+      source_table: "t_facts_pipe_nmea_parsed_stats_daily"
+      source_timestamp_column: "partition_date"
+      source_timestamp_column_sql: 'TIMESTAMP(partition_date)'
+      source_forecast_column: "total_rows_daily"
+      source_forecast_column_sql: "total_rows_daily"
+      period_length: "day"
+      source_sql: '
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value 
+      FROM `world-fishing-827.tech_great_expectations.t_facts_pipe_nmea_parsed_stats_daily`
+      WHERE variable = "source"
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
