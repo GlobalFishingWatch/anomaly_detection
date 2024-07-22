@@ -54,6 +54,7 @@ anomalies:
     source_forecast_column: "value"
     source_forecast_column_sql: "SUM(value)"
     period_length: "day"
+    history_start: "3650 days"
     algorithms:
         mstl: 
             parameters: 
