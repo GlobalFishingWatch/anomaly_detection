@@ -21,7 +21,7 @@ resource "google_bigquery_table" "actuals" {
     field = "timestamp"
   }
 
-  clustering = ["config_name", "dimension_split"]
+  clustering = ["config_name", "dimension_split", "valid_to"]
 
   schema = <<EOF
 [
@@ -56,7 +56,7 @@ resource "google_bigquery_table" "forecasts" {
     field = "timestamp"
   }
 
-  clustering = ["config_name", "dimension_split"]
+  clustering = ["config_name", "dimension_split", "valid_to"]
 
   schema = <<EOF
 [
