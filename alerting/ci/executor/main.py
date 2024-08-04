@@ -3,6 +3,10 @@ import argparse
 from google.cloud import bigquery
 import os
 from slack_sdk.webhook import WebhookClient
+import datetime
+import json
+import hashlib
+import urllib.parse
 
 SLACK_WEBHOOK_URL=os.getenv('SLACK_WEBHOOK_URL')
 
@@ -10,16 +14,47 @@ webhook=WebhookClient(SLACK_WEBHOOK_URL)
 
 client=bigquery.Client()
 
+def make_looker_studio_url(report_id, page_id, config_name, fc, dimension):
+    params_json={'PARAM_CONFIG_NAME': config_name, 'PARAM_FC': fc, 'PARAM_DIMENSION': dimension}
+    encoded_params=urllib.parse.quote(json.dumps(params_json))
+    url_with_params=f"https://lookerstudio.google.com/reporting/{report_id}/page/{page_id}?params={encoded_params}"
+    logging.info(f"Looker Studio URL: {url_with_params}")
+    return url_with_params
+
+# same as above but we're using bigquery in case firestore is not available
+# convert the function above to use bigquery and apart from that be identical
+def write_event_to_bigquery(event_hash, environment, deduplication_window=30*24*60*60):
+    query = f"""
+    SELECT * FROM `world-fishing-827.tech_anomaly_detection.qa-gfw-anomaly-detection-alerting-{environment}_deduplication-index`
+    WHERE event_hash = '{event_hash}'
+    """
+    query_job = client.query(query)
+    results = query_job.result()
+
+    results = list(results)
+    processing_timestamp = datetime.datetime.now(datetime.timezone.utc)
+    if results:
+        print(f"Event already processed at {results[0].get('processed_at')}.")
+        if (processing_timestamp - results[0].get('processed_at')).total_seconds() < deduplication_window:
+            print(f"Event is within deduplication window. Skipping.")
+            return False
+        else:
+            print(f"Event is outside deduplication window. Processing.")
+    
+    query = f"""
+    INSERT INTO `world-fishing-827.tech_anomaly_detection.qa-gfw-anomaly-detection-alerting-{environment}_deduplication-index`
+    VALUES ('{event_hash}', '{processing_timestamp}')
+    """
+    query_job = client.query(query)
+    results = query_job.result()
+    print(f"Event written to BigQuery.")
+    return True
+
 def get_query_results(
     environment, 
-    interval_from='TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR)', 
-    interval_to='TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 0 HOUR)'
+    query_template
 ):
-    query=f"""
-    SELECT * FROM `world-fishing-827.tech_anomaly_detection.v_{environment}_deltas`
-    WHERE anomaly_type != 'normal'
-    AND delta_valid_from BETWEEN {interval_from} AND {interval_to}
-    """
+    query=query_template.format(environment=environment)
 
     query_job=client.query(query)
     results=query_job.result()
@@ -28,6 +63,7 @@ def get_query_results(
 
 def create_anomaly_alert_slack_message(
     anomaly_config_name, 
+    dimension_split_value,
     description, 
     anomaly_type, 
     anomaly_timestamp, 
@@ -41,31 +77,34 @@ def create_anomaly_alert_slack_message(
 ):
     alert_emoji=":red_circle:" if anomaly_type == 'critical' else ":large_yellow_circle:"
     description=description if description else "No description available"
-    url=looker_dashboard_url.format(ANOMALY_CONFIG_NAME=anomaly_config_name, FC_METHOD=forecast_method)
+    dimension=f'\n*Dimension*: {dimension_split_value}' if dimension_split_value != '' else ""
     message=f"""{alert_emoji}
-*Anomaly*: {anomaly_config_name}. 
-*URL*: <{url}|Anomaly Detection Dashboard>
+*Anomaly*: {anomaly_config_name}{dimension}
+*URL*: <{looker_dashboard_url}|Anomaly Detection Dashboard>
 *Anomaly level*: {anomaly_type}
 *Timestamp*: {anomaly_timestamp}
 *Forecast value*: {forecast_value}
+*Forecast method*: {forecast_method}
 *Actual value*: {actual_value}
 *Relative delta*: {delta_rel}
 *Threshold*: {threshold}
 *Description*: {description}
 *Query*: 
 ```
-{query}
+SELECT{query}
 ```"""
     return message
 
 
-def run(environment, interval_from, interval_to, looker_dashboard_url):
-    results=get_query_results(environment, interval_from, interval_to)
+def run(environment, query_template, report_id, page_id, deduplication_window):
+    results=get_query_results(environment, query_template)
 
     for row in results:
         logging.info(row)
+        looker_dashboard_url=make_looker_studio_url(report_id, page_id, row['config_name'], row['forecast_method'], row['dimension_split_value'])
         rendered_message=create_anomaly_alert_slack_message(
             anomaly_config_name=row['config_name'],
+            dimension_split_value=row['dimension_split_value'],
             description=row['description'],
             anomaly_type=row['anomaly_type'],
             anomaly_timestamp=row['timestamp'],
@@ -78,18 +117,26 @@ def run(environment, interval_from, interval_to, looker_dashboard_url):
             looker_dashboard_url=looker_dashboard_url
         )
 
+        logging.info(rendered_message)
+
+        event_hash = hashlib.sha256(str(row).encode()).hexdigest()
+
+        logging.info(event_hash)
+
         if SLACK_WEBHOOK_URL is not None:
-            response=webhook.send(
-                text=rendered_message
-            )
-            logging.info(response.status_code)
-            logging.info(response.body)
+            if write_event_to_bigquery(event_hash=event_hash, environment=environment, deduplication_window=deduplication_window):
+                response=webhook.send(text=rendered_message)
+                logging.info(response.status_code)
+                logging.info(response.body)
+            else:
+                logging.info("Event already processed. Skipping sending message to slack.")
         else:
-            logging.info("No SLACK_WEBHOOK_URL provided. Skipping sending message to slack.")
+            logging.warning("No SLACK_WEBHOOK_URL provided. Skipping sending message to slack.")
         
 
 if __name__ == '__main__':
-  logging.getLogger().setLevel(logging.INFO)
+  log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+  logging.basicConfig(level=log_level)
   
   parser=argparse.ArgumentParser()
   parser.add_argument(
@@ -99,24 +146,36 @@ if __name__ == '__main__':
       required=True
   )
   parser.add_argument(
-      '--interval-from',
-      help='Interval from',
-      dest='interval_from',
-      default='TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR)',
-      required=False
+    '--query-template',
+    help='SQL anomaly query template',
+    dest='query_template',
+    required=False,
+    default='''
+    SELECT * FROM `world-fishing-827.tech_anomaly_detection.v_{environment}_deltas`
+    WHERE anomaly_type != 'normal'
+    AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30*24 HOUR)
+    ORDER BY timestamp DESC
+    '''
   )
   parser.add_argument(
-      '--interfal-to',
-        help='Interval to',
-        dest='interval_to',
-        default='TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 0 HOUR)',
+        '--looker-report-id',
+        help='Looker report id',
+        dest='report_id',
+        default='1f9b8d37-a87b-4177-a108-3b3e87ce5804',
         required=False
-  )
+    )
   parser.add_argument(
-        '--looker-dashboard-url',
-        help='Looker dashboard URL',
-        dest='looker_dashboard_url',
-        default='https://lookerstudio.google.com/u/0/reporting/1f9b8d37-a87b-4177-a108-3b3e87ce5804/page/p_ufk1l0slhd?s=sMwwKK9Ni_4&params=%7B%22df34%22:%22include%25EE%2580%25800%25EE%2580%2580IN%25EE%2580%2580{ANOMALY_CONFIG_NAME}%22,%22df18%22:%22include%25EE%2580%25800%25EE%2580%2580IN%25EE%2580%2580{FC_METHOD}%22%7D',
+        '--looker-page-id',
+        help='Looker page id',
+        dest='page_id',
+        default='p_ufk1l0slhd',
+        required=False
+    )
+  parser.add_argument(
+        '--deduplication-window',
+        help='Deduplication window in seconds',
+        dest='deduplication_window',
+        default=30*24*60*60,
         required=False
     )
   
@@ -124,8 +183,9 @@ if __name__ == '__main__':
   
   run(
         known_args.environment, 
-        known_args.interval_from,
-        known_args.interval_to,
-        known_args.looker_dashboard_url
+        known_args.query_template,
+        known_args.report_id,
+        known_args.page_id,
+        known_args.deduplication_window
      ) 
      
