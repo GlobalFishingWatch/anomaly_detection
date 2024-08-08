@@ -121,3 +121,23 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
+  pipe3_gaps:
+      source_dataset: pipe_ais_v3_published
+      source_table: product_events_ais_disabling
+      source_timestamp_column: event_end
+      source_timestamp_column_sql: TIMESTAMP_TRUNC(event_end, DAY)
+      source_forecast_column: count
+      source_forecast_column_sql: COUNT(*)
+      period_length: day
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
