@@ -21,9 +21,7 @@ def make_looker_studio_url(report_id, page_id, config_name, fc, dimension):
     logging.info(f"Looker Studio URL: {url_with_params}")
     return url_with_params
 
-# same as above but we're using bigquery in case firestore is not available
-# convert the function above to use bigquery and apart from that be identical
-def write_event_to_bigquery(event_hash, environment, deduplication_window=30*24*60*60):
+def write_event_to_bigquery(event_hash, rendered_message, environment, deduplication_window=30*24*60*60):
     query = f"""
     SELECT * FROM `world-fishing-827.tech_anomaly_detection.qa-gfw-anomaly-detection-alerting-{environment}_deduplication-index`
     WHERE event_hash = '{event_hash}'
@@ -43,7 +41,7 @@ def write_event_to_bigquery(event_hash, environment, deduplication_window=30*24*
     
     query = f"""
     INSERT INTO `world-fishing-827.tech_anomaly_detection.qa-gfw-anomaly-detection-alerting-{environment}_deduplication-index`
-    VALUES ('{event_hash}', '{processing_timestamp}')
+    VALUES ('{event_hash}', '{processing_timestamp}, '{rendered_message}')
     """
     query_job = client.query(query)
     results = query_job.result()
@@ -56,7 +54,7 @@ def get_query_results(
 ):
     query=query_template.format(environment=environment)
 
-    query_job=client.query(query)
+    query_job=client.query(query, job_config=bigquery.QueryJobConfig(use_query_cache=False))
     results=query_job.result()
 
     return results
@@ -124,7 +122,7 @@ def run(environment, query_template, report_id, page_id, deduplication_window):
         logging.info(event_hash)
 
         if SLACK_WEBHOOK_URL is not None:
-            if write_event_to_bigquery(event_hash=event_hash, environment=environment, deduplication_window=deduplication_window):
+            if write_event_to_bigquery(event_hash=event_hash, rendered_message=rendered_message, environment=environment, deduplication_window=deduplication_window):
                 response=webhook.send(text=rendered_message)
                 logging.info(response.status_code)
                 logging.info(response.body)
