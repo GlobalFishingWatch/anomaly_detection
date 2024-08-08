@@ -45,7 +45,7 @@ resource "google_cloud_run_v2_job" "job" {
 
         env {
           name = "LOG_LEVEL"
-          value = "warning"
+          value = "info"
         }
       }
     }
