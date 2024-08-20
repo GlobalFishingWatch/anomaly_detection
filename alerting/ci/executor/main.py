@@ -41,7 +41,7 @@ def write_event_to_bigquery(event_hash, rendered_message, environment, deduplica
     
     query = f"""
     INSERT INTO `world-fishing-827.tech_anomaly_detection.qa-gfw-anomaly-detection-alerting-{environment}_deduplication-index`
-    VALUES ('@event_hash', '@processing_timestamp', '@rendered_message')
+    VALUES (@event_hash, @processing_timestamp, @rendered_message)
     """
     job_config = bigquery.QueryJobConfig(
         query_parameters=[
