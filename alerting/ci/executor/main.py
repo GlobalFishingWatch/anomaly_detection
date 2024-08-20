@@ -124,7 +124,22 @@ def run(environment, query_template, report_id, page_id, deduplication_window):
 
         logging.info(rendered_message)
 
-        event_hash = hashlib.sha256(str(row).encode()).hexdigest()
+        # Calculate the hash based on the columns used in rendered_message
+        columns_used = [
+            row['config_name'],
+            row['dimension_split_value'],
+            row['description'],
+            row['anomaly_type'],
+            row['timestamp'],
+            row['forecast_value'],
+            row['forecast_method'],
+            row['actual_value'],
+            row['exceeded_threshold_lower_higher'],
+            row['delta_rel'],
+            row['source_sql']
+        ]
+        
+        event_hash = hashlib.sha256(str(columns_used).encode()).hexdigest()
 
         logging.info(event_hash)
 
