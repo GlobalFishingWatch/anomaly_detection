@@ -41,9 +41,16 @@ def write_event_to_bigquery(event_hash, rendered_message, environment, deduplica
     
     query = f"""
     INSERT INTO `world-fishing-827.tech_anomaly_detection.qa-gfw-anomaly-detection-alerting-{environment}_deduplication-index`
-    VALUES ('{event_hash}', '{processing_timestamp}', '{rendered_message}')
+    VALUES ('@event_hash', '@processing_timestamp', '@rendered_message')
     """
-    query_job = client.query(query)
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("event_hash", "STRING", event_hash),
+            bigquery.ScalarQueryParameter("processing_timestamp", "TIMESTAMP", processing_timestamp),
+            bigquery.ScalarQueryParameter("rendered_message", "STRING", rendered_message)
+        ]
+    )
+    query_job = client.query(query, job_config=job_config)
     results = query_job.result()
     print(f"Event written to BigQuery.")
     return True
