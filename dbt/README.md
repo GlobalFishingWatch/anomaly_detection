@@ -1,15 +1,14 @@
-Welcome to your new dbt project!
+# Anomaly detection - DBT
 
-### Using the starter project
+## Description
+We use dbt to maintain several hard coded configurations in dbt seeds:
+ - thresholds_{environment}: these tables contain anomaly alert thresholds, based upon which alerts with different criticality levels are triggered and visualised in Looker dashboards
+ - config_descriptions_{environmnet}: these tables contain anomaly configuration descriptions which can be included in anomaly alerts as well as Looker dashboards to provide details about anomalies
 
-Try running the following commands:
-- dbt run
-- dbt test
+ We also include views that calculate whether anomaly thresholds are exceeded and aggregate data for alerting and the Looker dashboard:
+  - v_deltas: this view combines forecasts with actuals, as well as thresholds and descriptions. It also applies debouncing, so anomaly alerts are only send out the first time an anomaly starts and not on subsequent periods
 
+## Workflow
+We maintain the lookup files for each environment independently.
 
-### Resources:
-- Learn more about dbt [in the docs](https://docs.getdbt.com/docs/introduction)
-- Check out [Discourse](https://discourse.getdbt.com/) for commonly asked questions and answers
-- Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
-- Find [dbt events](https://events.getdbt.com) near you
-- Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+Currently, there's no automation of DBT, so you need to run `dbt run` and `dbt seed` from the command line.
