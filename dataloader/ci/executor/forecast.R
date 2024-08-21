@@ -93,6 +93,10 @@ current_anomaly_detection_config[config_fields] = config_fields %>%
 
 print(current_anomaly_detection_config)
 
+if ("allowed_size" %in% names(current_anomaly_detection_config)) {
+  allowed_size = as.numeric(current_anomaly_detection_config$allowed_size)
+}
+
 # get the existing timestamps in actuals table so we can either filter by excluding existing or including 
 # missing timestamps
 existing_timestamps = get_anomaly_detection_actuals(

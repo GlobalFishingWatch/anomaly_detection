@@ -121,6 +121,7 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
+      allowed_size: 85899345920
   pipe3_gaps:
       source_dataset: pipe_ais_v3_published
       source_table: product_events_ais_disabling
