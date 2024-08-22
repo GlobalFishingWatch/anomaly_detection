@@ -39,6 +39,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
         "--cache-repo=gcr.io/world-fishing-827/github.com/globalfishingwatch/kaniko-cache",
         "--dockerfile=./${local.subproject_name_dashed_short}/ci/executor/Dockerfile",
         "--context=./${local.subproject_name_dashed_short}/ci/executor",
+        "--progress plain"
       ]
 
     }
