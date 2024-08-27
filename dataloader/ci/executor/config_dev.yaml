@@ -1,7 +1,7 @@
 anomalies:
   parser_errors_daily:
-      source_dataset: "tech_great_expectations"
-      source_table: "pipe_nmea_parsed_errors"
+      source_dataset: "tech_dq_monitoring"
+      source_table: "t_pipe_nmea_parsed_errors"
       source_timestamp_column: "date"
       source_timestamp_column_sql: 'TIMESTAMP(date)'
       source_forecast_column: "count"
@@ -95,7 +95,7 @@ anomalies:
             parameters:
               sliding_window: 30
   parsed_row_count_source_daily:
-      source_dataset: "tech_great_expectations"
+      source_dataset: "tech_dq_monitoring"
       source_table: "t_facts_pipe_nmea_parsed_stats_daily"
       source_timestamp_column: "partition_date"
       source_timestamp_column_sql: 'TIMESTAMP(partition_date)'
@@ -104,7 +104,7 @@ anomalies:
       period_length: "day"
       source_sql: '
       SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value 
-      FROM `world-fishing-827.tech_great_expectations.t_facts_pipe_nmea_parsed_stats_daily`
+      FROM `world-fishing-827.tech_dq_monitoring.t_facts_pipe_nmea_parsed_stats_daily`
       WHERE variable = "source"
       GROUP BY timestamp, dimension_split_value
       ORDER BY timestamp, dimension_split_value
@@ -121,8 +121,35 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
-      allowed_size: 85899345920
-  pipe3_gaps:
+      allowed_size: "100"
+  fishing_effort_pipe3_flag_daily:
+    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public"
+    source_table: "fishing_effort_public"
+    source_timestamp_column: "timestamp"
+    source_timestamp_column_sql: 'timestamp'
+    source_forecast_column: "value"
+    source_forecast_column_sql: "SUM(value)"
+    period_length: "day"
+    source_sql: '
+    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, flag AS dimension_split_value
+    FROM `skytruth-pelagos-production.ais_global_v3_fishing_effort_public.fishing_effort_public`
+    WHERE flag IN ("ESP", "FRA", "GBR", "MAR", "PRT", "TUR", "BRA", "NOR", "IDN", "JPN", "KOR", "RUS", "THA", "USA")
+    GROUP BY timestamp, dimension_split_value
+    ORDER BY timestamp, dimension_split_value
+    '
+    algorithms:
+        mstl: 
+            parameters: 
+              season_length: 
+                - 365.25
+                - 7
+        mean:
+            parameters:
+              sliding_window: 30
+        median:
+            parameters:
+              sliding_window: 30
+pipe3_gaps:
       source_dataset: pipe_ais_v3_published
       source_table: product_events_ais_disabling
       source_timestamp_column: event_end

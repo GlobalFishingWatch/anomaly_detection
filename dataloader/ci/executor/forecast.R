@@ -27,7 +27,7 @@ option_list = list(
               help = "Forecasts table"),
   make_option(c("-l", "--delta_load"), type = "character", default = "T",
               help = "Delta load"),
-  make_option(c("-s", "--allowed_size"), type = "character", default = "64424509440",
+  make_option(c("-s", "--allowed_size"), type = "character", default = "60",
               help = "Allowed size"),
   make_option(c("-t", "--forecast_timestamp_from"), type = "character", default = "90 days",
               help = "Forecast timestamp from"),
@@ -41,7 +41,7 @@ args = parse_args(parser)
 print(args)
 
 anomaly_detection_config_name = args$anomaly_detection_config_name
-allowed_size = as.numeric(args$allowed_size)
+allowed_size = as.numeric(args$allowed_size) * BQ_GB
 delta_load = as.logical(args$delta_load)
 environment = args$environment
 project_id = args$project_id
@@ -94,7 +94,7 @@ current_anomaly_detection_config[config_fields] = config_fields %>%
 print(current_anomaly_detection_config)
 
 if ("allowed_size" %in% names(current_anomaly_detection_config)) {
-  allowed_size = as.numeric(current_anomaly_detection_config$allowed_size)
+  allowed_size = as.numeric(current_anomaly_detection_config$allowed_size) * BQ_GB
 }
 
 # get the existing timestamps in actuals table so we can either filter by excluding existing or including 
