@@ -17,7 +17,7 @@ resource "google_bigquery_table" "actuals" {
   project    = var.project
 
   time_partitioning {
-    type  = "DAY"
+    type  = "MONTH"
     field = "timestamp"
   }
 
@@ -52,8 +52,9 @@ resource "google_bigquery_table" "forecasts" {
   project    = var.project
 
   time_partitioning {
-    type  = "DAY"
+    type  = "MONTH"
     field = "timestamp"
+
   }
 
   clustering = ["config_name", "dimension_split", "valid_to"]
