@@ -14,11 +14,6 @@ WITH latest_fc AS (
     latest_ac AS (
       SELECT 
         *,
-        LAG(value, 365) OVER (
-        PARTITION BY 
-          config_name,
-          dimension_split_value
-        ORDER BY timestamp) AS previous_year_actual_value,
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column
       FROM `world-fishing-827.tech_anomaly_detection.t_{{ env_var('DBT_ENVIRONMENT') }}_actuals`
@@ -28,10 +23,10 @@ WITH latest_fc AS (
       SELECT 
         forecast_method,
         latest_fc.timestamp as forecast_timestamp, 
-        latest_fc.value as forecast_value, 
+        ROUND(latest_fc.value, 6) as forecast_value, 
         latest_ac.timestamp actual_timestamp, 
         latest_ac.valid_from delta_valid_from,
-        IFNULL(latest_ac.value, 0) actual_value,
+        ROUND(IFNULL(latest_ac.value, 0), 6) actual_value,
         COALESCE(latest_fc.timestamp, latest_ac.timestamp) timestamp,
         COALESCE(latest_fc.config_name, latest_ac.config_name) config_name,
         COALESCE(latest_fc.dimension_split_value, latest_ac.dimension_split_value) dimension_split_value,
@@ -60,10 +55,10 @@ WITH latest_fc AS (
       SELECT
         DISTINCT
         *,
-        actual_value - forecast_value delta,
-        SAFE_DIVIDE((actual_value - forecast_value), forecast_value) delta_rel,
-        abs(actual_value - forecast_value) abs_delta,
-        abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)) abs_delta_rel
+        ROUND(actual_value - forecast_value, 6) delta,
+        ROUND(SAFE_DIVIDE((actual_value - forecast_value), forecast_value), 6) delta_rel,
+        ROUND(abs(actual_value - forecast_value), 6) abs_delta,
+        ROUND(abs(SAFE_DIVIDE((actual_value - forecast_value), forecast_value)), 6) abs_delta_rel
       FROM forecasts_descriptions
     ),
     forecasts_delta_rel_winsorised AS (
