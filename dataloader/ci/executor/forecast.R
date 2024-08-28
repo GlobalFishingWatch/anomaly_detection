@@ -286,3 +286,6 @@ create_scd_statement(
   forecast_column_sql = "forecast_method,"
 ) %>% 
   safe_query(con = con, allowed_size = allowed_size, verbose = T)
+
+
+refresh_deltas_table(con, project_id, dataset_id, environment)

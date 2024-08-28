@@ -119,3 +119,12 @@ WHEN NOT MATCHED THEN
   )
 ")
 }
+
+refresh_deltas_table = function(con, project, dataset, environment) {
+  # read and interpolate "sql/t_deltas.sql" file
+  sql = readr::read_file("sql/t_deltas.sql") %>% 
+    glue(PROJECT = project, DATASET = dataset, ENVIRONMENT = environment)
+
+  sql %>%
+    safe_query(con = con, verbose = T, allowed_size = 10 * BQ_GB) 
+}

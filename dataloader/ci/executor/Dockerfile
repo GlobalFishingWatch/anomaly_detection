@@ -19,6 +19,7 @@ COPY renv/settings.dcf renv/settings.dcf
 RUN mkdir renv/.cache
 RUN R -e "renv::restore(prompt = F)"
 
+COPY sql/ sql/
 COPY bq_utils.R .
 COPY helpers.R .
 COPY forecast.R .
