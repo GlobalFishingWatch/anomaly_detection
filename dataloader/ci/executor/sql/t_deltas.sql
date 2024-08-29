@@ -114,14 +114,14 @@ WITH latest_fc AS (
       *,
       CASE 
         WHEN anomaly_type_lower_higher != 'normal' 
-          AND LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method ORDER BY timestamp) = 'normal' 
+          AND LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method, dimension_split_value ORDER BY timestamp) = 'normal' 
           THEN anomaly_type_lower_higher
         ELSE NULL
       END anomaly_type_lower_higher_start,
       CASE 
         WHEN anomaly_type_lower_higher = 'normal' 
-          AND LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method ORDER BY timestamp) != 'normal' 
-          THEN LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method ORDER BY timestamp)
+          AND LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method, dimension_split_value ORDER BY timestamp) != 'normal' 
+          THEN LAG(anomaly_type_lower_higher) OVER(PARTITION BY config_name, forecast_method, dimension_split_value ORDER BY timestamp)
         ELSE NULL
       END anomaly_type_lower_higher_end
     FROM forecasts_remove_missing_latest_actuals
