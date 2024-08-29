@@ -97,15 +97,19 @@ anomalies:
   parsed_row_count_source_daily:
       source_dataset: "tech_dq_monitoring"
       source_table: "t_facts_pipe_nmea_parsed_stats_daily"
-      source_timestamp_column: "partition_date"
-      source_timestamp_column_sql: 'TIMESTAMP(partition_date)'
-      source_forecast_column: "total_rows_daily"
-      source_forecast_column_sql: "total_rows_daily"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'TIMESTAMP(date)'
+      source_forecast_column: "count"
+      source_forecast_column_sql: "count"
       period_length: "day"
+      history_start: "2022-08-23"
       source_sql: '
       SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value 
       FROM `world-fishing-827.tech_dq_monitoring.t_facts_pipe_nmea_parsed_stats_daily`
       WHERE variable = "source"
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} NOT IN ({existing_timestamps_sql})
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} >= "{history_start}"
       GROUP BY timestamp, dimension_split_value
       ORDER BY timestamp, dimension_split_value
       '
@@ -121,7 +125,6 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
-      allowed_size: "100"
   fishing_effort_pipe3_flag_daily:
     source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public"
     source_table: "fishing_effort_public"
@@ -149,7 +152,7 @@ anomalies:
         median:
             parameters:
               sliding_window: 30
-pipe3_gaps:
+  pipe3_gaps:
       source_dataset: pipe_ais_v3_published
       source_table: product_events_ais_disabling
       source_timestamp_column: event_end
@@ -169,3 +172,211 @@ pipe3_gaps:
           median:
               parameters:
                 sliding_window: 30
+  parsed_row_count_receiver_type_daily:
+      source_dataset: "tech_dq_monitoring"
+      source_table: "t_facts_pipe_nmea_parsed_stats_daily"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'TIMESTAMP(date)'
+      source_forecast_column: "count"
+      source_forecast_column_sql: "count"
+      period_length: "day"
+      history_start: "2022-08-23"
+      source_sql: '
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value 
+      FROM `world-fishing-827.tech_dq_monitoring.t_facts_pipe_nmea_parsed_stats_daily`
+      WHERE variable = "receiver_type"
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} NOT IN ({existing_timestamps_sql})
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} >= "{history_start}"
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  parsed_row_count_type_daily:
+      source_dataset: "tech_dq_monitoring"
+      source_table: "t_facts_pipe_nmea_parsed_stats_daily"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'TIMESTAMP(date)'
+      source_forecast_column: "count"
+      source_forecast_column_sql: "count"
+      period_length: "day"
+      history_start: "2022-08-23"
+      source_sql: '
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value 
+      FROM `world-fishing-827.tech_dq_monitoring.t_facts_pipe_nmea_parsed_stats_daily`
+      WHERE variable = "type"
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} NOT IN ({existing_timestamps_sql})
+      AND {current_anomaly_detection_config$source_timestamp_column_sql} >= "{history_start}"
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  pipe3_vs_pipe2_5_published_fishing_effort_deltas:
+      source_dataset: tech_dq_monitoring
+      source_table: v_published_fishing_effort_v3_0_0_vs_v2_5_1
+      source_timestamp_column: date
+      source_timestamp_column_sql: TIMESTAMP(date)
+      source_forecast_column: delta
+      source_forecast_column_sql: SAFE_DIVIDE(SUM(delta), SUM(v20231026_value))
+      source_filter_sql: is_latest
+      period_length: day
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  pipe3_vs_pipe2_5_published_fishing_events_deltas:
+      source_dataset: tech_dq_monitoring
+      source_table: v_published_fishing_events_v3_0_0_vs_v2_5_1
+      source_timestamp_column: date
+      source_timestamp_column_sql: TIMESTAMP(date)
+      source_forecast_column: delta_count_rel
+      source_forecast_column_sql: SUM(delta_count_rel)
+      source_filter_sql: is_latest
+      period_length: day
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  pipe3_vs_pipe2_5_published_fishing_events_duration_deltas:
+      source_dataset: tech_dq_monitoring
+      source_table: v_published_fishing_events_v3_0_0_vs_v2_5_1
+      source_timestamp_column: date
+      source_timestamp_column_sql: TIMESTAMP(date)
+      source_forecast_column: delta_event_duration_rel
+      source_forecast_column_sql: SUM(delta_event_duration_rel)
+      source_filter_sql: is_latest
+      period_length: day
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+  t_world_fishing_827_queries_billed:
+      source_dataset: tech_dq_monitoring
+      source_table: t_world_fishing_827_queries
+      source_timestamp_column: date
+      source_timestamp_column_sql: TIMESTAMP(date)
+      source_forecast_column: total_tb_billed
+      source_forecast_column_sql: SUM(total_tb_billed)
+      period_length: day
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+          constant_value:
+              parameters:
+                value: 300
+          max:
+              parameters:
+                sliding_window: 30
+  v_world_fishing_827_queries_billed_by_sa_non_sa:
+      source_dataset: tech_dq_monitoring
+      source_table: v_world_fishing_827_queries
+      source_timestamp_column: date
+      source_timestamp_column_sql: TIMESTAMP(date)
+      source_forecast_column: total_tb_billed
+      source_forecast_column_sql: SUM(total_tb_billed)
+      period_length: day
+      dimension_split: service_account
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
+          constant_value:
+              parameters:
+                value: 300
+          max:
+              parameters:
+                sliding_window: 30
+  parsed_row_count_hourly:
+      source_dataset: tech_dq_monitoring
+      source_table: v_partition_row_counts
+      source_timestamp_column: partition_hour
+      source_timestamp_column_sql: TIMESTAMP(partition_hour)
+      source_forecast_column: total_rows
+      source_forecast_column_sql: total_rows
+      period_length: hour
+      history_start: "30 days"
+      source_sql: '
+      total_rows AS value, TIMESTAMP(partition_hour) AS timestamp, "" AS dimension_split_value
+      FROM `world-fishing-827.tech_dq_monitoring.v_partition_row_counts` 
+      WHERE schema_table_name = "pipe_nmea_hourly.pipe-nmea-parsed-hourly"
+      AND partition_id IS NOT NULL
+      QUALIFY ROW_NUMBER() OVER (ORDER BY partition_hour DESC) > 3 --the last 3 hours might not be final yet
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 168
+                  - 24
+          mean:
+              parameters:
+                sliding_window: 72
+          median:
+              parameters:
+                sliding_window: 72
+

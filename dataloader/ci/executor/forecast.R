@@ -83,7 +83,8 @@ config_fields = c(
   "source_timestamp_column_sql",
   "source_forecast_column",
   "source_forecast_column_sql",
-  "source_sql"
+  "source_sql",
+  "source_filter_sql"
 )
 
 # replace config fields by empty string if they don't exist, otherwise SQL string would be NULL
@@ -135,6 +136,10 @@ dimension_split_select = if(current_anomaly_detection_config$dimension_split == 
   "''"
   } else {current_anomaly_detection_config$dimension_split}
 
+source_filter_sql = if(current_anomaly_detection_config$source_filter_sql == "") {
+  ""
+  } else {glue("AND {current_anomaly_detection_config$source_filter_sql}")}
+
 if (current_anomaly_detection_config$source_sql != "") {
   select_timestamp_value_sql = glue(current_anomaly_detection_config$source_sql)
   print(select_timestamp_value_sql)
@@ -147,6 +152,7 @@ if (current_anomaly_detection_config$source_sql != "") {
     AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
     AND {current_anomaly_detection_config$source_timestamp_column_sql} NOT IN ({existing_timestamps_sql})
     AND {current_anomaly_detection_config$source_timestamp_column_sql} >= '{history_start}'
+    {source_filter_sql}
     GROUP BY timestamp, dimension_split_value
     ORDER BY timestamp, dimension_split_value"
   )  
@@ -227,6 +233,8 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
             x_last_periods = current_algorithm_config$parameters$sliding_window
             if (dt_current_train[, .N] < x_last_periods) return(data.table(dimension_split_value = NA, timestamp = NA, fc = NA, fc_method = NA))
             fc = get(current_fc_method)(dt_current_train %>% data.table::last(x_last_periods) %>% .[, y])
+          } else if (current_fc_method == "constant_value") {
+            fc = current_algorithm_config$parameters$value
           } else {
             return()
           }
@@ -260,9 +268,6 @@ dt_forecasts = dt_train[, dimension_split_value %>% unique %>% sort] %>%
     progressr::with_progress(generate_forecasts(periods_to_forecast, current_dimension_split_value), enable = T)
   })
 
-forecast_methods_sql_string = paste0("'", dt_forecasts[, fc_method], "'", collapse = ", ")
-date_sql_string = paste0("TIMESTAMP('", dt_forecasts[, timestamp], "')", collapse = ", ")
-forecast_value_sql_string = paste0(dt_forecasts[, fc], collapse = ", ")
 
 forecast_string_sql = dt_forecasts[, glue_data(.SD, "
 ('{dimension_split_value}', '{fc_method}', TIMESTAMP('{timestamp}'), {fc})

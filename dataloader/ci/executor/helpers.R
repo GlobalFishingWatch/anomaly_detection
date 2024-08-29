@@ -41,6 +41,7 @@ get_anomaly_detection_actuals = function(
     filter(config_name == !!anomaly_detection_config$name) %>% 
     filter(dimension_split == !!anomaly_detection_config$dimension_split) %>% 
     filter(timestamp != '1979-01-01') %>% 
+    filter(!is.na(value)) %>%
     safe_query(con = con, allowed_size = allowed_size, verbose = T)
 }
 
