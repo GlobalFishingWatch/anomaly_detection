@@ -3,6 +3,11 @@
 1. Generate forecast for latest day.
 2. If delta between actual vs forecast exceeds preset threshold an alert is raised.
 
+# Costs
+The anomaly detection dataloader module is not intended to run directly on large tables (anything in the range of hundreds of GB and more). That is because the module is currently a prototype and the data load mechanism might change over time. Therefore, you cannot expect tables generated from the dataloader to exist for a long time and always have to expect data to be corrupted or truncated due to ongoing development. It is therefore important to develop anomaly configurations in a way that backfills are not prohibitively expensive.
+
+The best way to generate smaller intermediate tables that are more stable is to use the monitoring module from the [monitoring repo](https://github.com/GlobalFishingWatch/monitoring). These are automatically refreshed daily and receive better support than the data that is loaded through the anomaly detection dataloader module.
+
 # Generating Forecasts
 
 ## Usage
