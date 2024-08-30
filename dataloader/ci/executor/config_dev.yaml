@@ -185,6 +185,7 @@ anomalies:
       SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value 
       FROM `world-fishing-827.tech_dq_monitoring.t_facts_pipe_nmea_parsed_stats_daily`
       WHERE variable = "receiver_type"
+      AND value != "unknown"
       AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
       AND {current_anomaly_detection_config$source_timestamp_column_sql} NOT IN ({existing_timestamps_sql})
       AND {current_anomaly_detection_config$source_timestamp_column_sql} >= "{history_start}"
