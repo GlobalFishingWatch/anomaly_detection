@@ -44,9 +44,22 @@ WITH latest_fc AS (
       LEFT JOIN `{PROJECT}.{DATASET}.t_thresholds_{ENVIRONMENT}`
       USING(config_name, forecast_method)
     ),
+    forecasts_trehsolds_boundaries AS (
+      SELECT 
+        *, 
+        forecast_value * (1 + critical_lower) critical_lower_value, 
+        forecast_value * (1 + warning_lower) warning_lower_value, 
+        forecast_value * (1 + warning_higher) warning_higher_value, 
+        forecast_value * (1 + critical_higher) critical_higher_value,
+        forecast_value * critical_lower critical_lower_delta_threshold, 
+        forecast_value * warning_lower warning_lower_delta_threshold, 
+        forecast_value * warning_higher warning_higher_delta_threshold, 
+        forecast_value * critical_higher critical_higher_delta_threshold
+      FROM forecasts_thresholds
+    ),
     forecasts_descriptions AS (
       SELECT *
-      FROM forecasts_thresholds
+      FROM forecasts_trehsolds_boundaries
       LEFT JOIN `{PROJECT}.{DATASET}.t_config_descriptions_{ENVIRONMENT}`
       USING(config_name)
     ),
