@@ -116,7 +116,7 @@ WHEN NOT MATCHED THEN
     '{maximum_valid_to}',
     config_name,
     dimension_split,
-    dimension_split_value
+    CAST(dimension_split_value AS STRING)
   )
 ")
 }
