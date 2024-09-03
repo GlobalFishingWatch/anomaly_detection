@@ -27,6 +27,7 @@ WITH latest_fc AS (
         latest_ac.valid_from delta_valid_from,
         ROUND(IFNULL(latest_ac.value, 0), 6) actual_value,
         COALESCE(latest_fc.timestamp, latest_ac.timestamp) timestamp,
+        DATE(COALESCE(latest_fc.timestamp, latest_ac.timestamp)) date,
         COALESCE(latest_fc.config_name, latest_ac.config_name) config_name,
         COALESCE(latest_fc.dimension_split_value, latest_ac.dimension_split_value) dimension_split_value,
         COALESCE(latest_fc.source_sql, latest_ac.source_sql) source_sql,
@@ -142,7 +143,9 @@ WITH latest_fc AS (
   forecast_anomaly_debounced_values AS (
     SELECT
       *,
-      IF(anomaly_type_lower_higher_start != 'normal', anomaly_value_windsorised, NULL) anomaly_value_windsorised_debounced
+      IF(anomaly_type_lower_higher_start != 'normal', anomaly_value_windsorised, NULL) anomaly_value_windsorised_debounced,
+      IF(anomaly_type_lower_higher_start != 'normal', anomaly_value, NULL) anomaly_value_debounced,
+      IF(anomaly_type_lower_higher_start != 'normal', actual_value, NULL) actual_value_debounced
     FROM forecast_anomaly_debounced
   )
 
