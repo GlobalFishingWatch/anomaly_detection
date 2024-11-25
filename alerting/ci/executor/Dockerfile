@@ -1,6 +1,6 @@
 FROM python:3.10
 
-RUN apt update -y && apt install libcurl4-openssl-dev libssl-dev curl gpg -y
+RUN apt update -y && apt-get upgrade -y && apt install libcurl4-openssl-dev libssl-dev curl gpg -y
 
 # install gcloud so we can google.cloud import bigquery
 RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
