@@ -99,7 +99,7 @@ anomalies:
     source_sql: '
     SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, flag AS dimension_split_value
     FROM `skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public.ais_global_v20231026_fishing_effort_public`
-    WHERE flag IN ("ESP", "FRA", "GBR", "ITA", "MAR", "PRT", "TUR", "BRA", "NOR", "CHN", "IDN", "JPN", "KOR", "PHL", "RUS", "THA", "USA", "VNM")
+    WHERE flag IN ("ESP", "FRA", "GBR", "MAR", "PRT", "TUR", "BRA", "NOR", "IDN", "JPN", "RUS", "THA", "USA")
     GROUP BY timestamp, dimension_split_value
     ORDER BY timestamp, dimension_split_value
     '
@@ -157,7 +157,7 @@ anomalies:
     source_sql: '
     SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, flag AS dimension_split_value
     FROM `skytruth-pelagos-production.ais_global_v3_fishing_effort_public.fishing_effort_public`
-    WHERE flag IN ("ESP", "FRA", "GBR", "MAR", "PRT", "TUR", "BRA", "NOR", "IDN", "JPN", "KOR", "RUS", "THA", "USA")
+    WHERE flag IN ("ESP", "FRA", "GBR", "MAR", "PRT", "TUR", "BRA", "NOR", "IDN", "JPN", "RUS", "THA", "USA")
     GROUP BY timestamp, dimension_split_value
     ORDER BY timestamp, dimension_split_value
     '
