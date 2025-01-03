@@ -407,7 +407,7 @@ anomalies:
                 sliding_window: 30
   parsed_row_count_hourly:
       source_dataset: tech_dq_monitoring
-      source_table: v_partition_row_counts
+      source_table: v_all_partitions_latest
       source_timestamp_column: partition_hour
       source_timestamp_column_sql: TIMESTAMP(partition_hour)
       source_forecast_column: total_rows
@@ -416,7 +416,7 @@ anomalies:
       history_start: "30 days"
       source_sql: '
       total_rows AS value, TIMESTAMP(partition_hour) AS timestamp, "" AS dimension_split_value
-      FROM `world-fishing-827.tech_dq_monitoring.v_partition_row_counts` 
+      FROM `world-fishing-827.tech_dq_monitoring.v_all_partitions_latest` 
       WHERE schema_table_name = "pipe_nmea_hourly.pipe-nmea-parsed-hourly"
       AND partition_id IS NOT NULL
       QUALIFY ROW_NUMBER() OVER (ORDER BY partition_hour DESC) > 3 --the last 3 hours might not be final yet
