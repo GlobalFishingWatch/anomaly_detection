@@ -21,7 +21,7 @@ resource "google_bigquery_table" "actuals" {
     field = "timestamp"
   }
 
-  clustering = ["config_name", "dimension_split", "valid_to"]
+  clustering = ["is_latest", "config_name", "dimension_split", "valid_to"]
 
   schema = <<EOF
 [
@@ -41,7 +41,8 @@ resource "google_bigquery_table" "actuals" {
     {"name": "valid_to", "type": "TIMESTAMP"},
     {"name": "config_name", "type": "STRING"},
     {"name": "dimension_split", "type": "STRING"},
-    {"name": "dimension_split_value", "type": "STRING"}
+    {"name": "dimension_split_value", "type": "STRING"},
+    {"name": "is_latest", "type": "BOOLEAN"}
   ]
 EOF
 }
@@ -57,7 +58,7 @@ resource "google_bigquery_table" "forecasts" {
 
   }
 
-  clustering = ["config_name", "dimension_split", "valid_to"]
+  clustering = ["is_latest", "config_name", "dimension_split", "valid_to"]
 
   schema = <<EOF
 [
@@ -78,7 +79,8 @@ resource "google_bigquery_table" "forecasts" {
     {"name": "valid_to", "type": "TIMESTAMP"},
     {"name": "config_name", "type": "STRING"},
     {"name": "dimension_split", "type": "STRING"},
-    {"name": "dimension_split_value", "type": "STRING"}
+    {"name": "dimension_split_value", "type": "STRING"},
+    {"name": "is_latest", "type": "BOOLEAN"}
   ]
 EOF
 

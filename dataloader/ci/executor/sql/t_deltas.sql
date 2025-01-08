@@ -16,7 +16,7 @@ WITH latest_fc AS (
         CONCAT(source_dataset, ".", source_table) source_dataset_table,
         CONCAT(source_dataset, ".", source_table, ".", source_forecast_column) source_dataset_table_column
       FROM `{PROJECT}.{DATASET}.t_{ENVIRONMENT}_actuals`
-      WHERE valid_to = '9999-12-31 23:59:59 UTC'
+      WHERE is_latest
     ),
     forecasts_actuals AS (
       SELECT 

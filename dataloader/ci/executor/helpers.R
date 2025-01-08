@@ -37,7 +37,7 @@ get_anomaly_detection_actuals = function(
     allowed_size = NULL
 ) {
   db_anomaly_detection_actuals %>% 
-    filter(valid_to == maximum_valid_to) %>% 
+    filter(is_latest == TRUE) %>% 
     filter(config_name == !!anomaly_detection_config$name) %>% 
     filter(dimension_split == !!anomaly_detection_config$dimension_split) %>% 
     filter(timestamp != '1979-01-01') %>% 
@@ -91,12 +91,13 @@ USING (
   JOIN target_table
   ON   new_actuals_with_key.key = target_table.key
   AND  new_actuals_with_key.value != target_table.value
-  AND target_table.valid_to = '{maximum_valid_to}'
+  AND target_table.is_latest IS TRUE
 ) delta_actuals
 ON   delta_actuals.upsert_key = target_table.key
-AND target_table.valid_to = '{maximum_valid_to}'
+AND target_table.is_latest IS TRUE
 WHEN MATCHED AND delta_actuals.value != target_table.value THEN UPDATE
-SET valid_to = '{current_timestamp}'
+SET valid_to = '{current_timestamp}',
+is_latest = FALSE
 WHEN NOT MATCHED THEN
   INSERT VALUES (
     key,
@@ -116,7 +117,8 @@ WHEN NOT MATCHED THEN
     '{maximum_valid_to}',
     config_name,
     dimension_split,
-    CAST(dimension_split_value AS STRING)
+    CAST(dimension_split_value AS STRING),
+    TRUE
   )
 ")
 }
