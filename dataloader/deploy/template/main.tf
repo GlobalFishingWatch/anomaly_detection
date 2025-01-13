@@ -5,7 +5,7 @@ provider "google" {
 
 locals {
 
-  project_name_dashed = format("qa-gfw-anomaly-detection-dataloder-%s", var.environment)
+  project_name_dashed = format("qa-gfw-anomaly-detection-dataloader-%s", var.environment)
   project_name_print  = format("QA Anomaly detection data loader (%s)", var.environment)
   sa                  = "qa-anomaly-detection@world-fishing-827.iam.gserviceaccount.com"
   region              = "us-central1"
