@@ -34,7 +34,8 @@ get_anomaly_detection_actuals = function(
     db_anomaly_detection_actuals, 
     anomaly_detection_config, 
     maximum_valid_to = "9999-12-31 23:59:59 UTC",
-    allowed_size = NULL
+    allowed_size = NULL,
+    columns = c("timestamp", "value")
 ) {
   db_anomaly_detection_actuals %>% 
     filter(is_latest == TRUE) %>% 
@@ -42,6 +43,7 @@ get_anomaly_detection_actuals = function(
     filter(dimension_split == !!anomaly_detection_config$dimension_split) %>% 
     filter(timestamp != '1979-01-01') %>% 
     filter(!is.na(value)) %>%
+    select(all_of(columns)) %>%
     safe_query(con = con, allowed_size = allowed_size, verbose = T)
 }
 
@@ -58,7 +60,11 @@ create_scd_statement = function(
   glue(.null = "", "
 MERGE INTO `{target_table}` AS target_table
 USING (
-  WITH target_table AS (SELECT * FROM `{target_table}`),
+  WITH target_table AS (
+    SELECT * FROM `{target_table}`
+    WHERE config_name = '{current_anomaly_detection_config$name}'
+    AND dimension_split = '{current_anomaly_detection_config$dimension_split}'
+    AND is_latest IS TRUE),
   new_actuals AS (
     SELECT 
       '{current_anomaly_detection_config$name}' config_name,
@@ -91,10 +97,8 @@ USING (
   JOIN target_table
   ON   new_actuals_with_key.key = target_table.key
   AND  new_actuals_with_key.value != target_table.value
-  AND target_table.is_latest IS TRUE
 ) delta_actuals
 ON   delta_actuals.upsert_key = target_table.key
-AND target_table.is_latest IS TRUE
 WHEN MATCHED AND delta_actuals.value != target_table.value THEN UPDATE
 SET valid_to = '{current_timestamp}',
 is_latest = FALSE

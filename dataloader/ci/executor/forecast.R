@@ -177,7 +177,8 @@ dt_train = get_anomaly_detection_actuals(
   db_anomaly_detection_actuals, 
   current_anomaly_detection_config,
   maximum_valid_to = "9999-12-31 23:59:59 UTC",
-  allowed_size = allowed_size
+  allowed_size = allowed_size,
+  columns = c("timestamp", "value", "dimension_split_value")
 ) %>% 
   .[, .(timestamp, y = value, dimension_split_value)] %>% 
   .[dimension_split_value %>% is.na, dimension_split_value := "NA"] %>% 
