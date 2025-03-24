@@ -105,7 +105,8 @@ existing_timestamps = get_anomaly_detection_actuals(
   db_anomaly_detection_actuals, 
   current_anomaly_detection_config,
   maximum_valid_to = "9999-12-31 23:59:59 UTC",
-  allowed_size = allowed_size
+  allowed_size = allowed_size,
+  columns = c("timestamp")
 ) %>% 
   .[, timestamp]
 
