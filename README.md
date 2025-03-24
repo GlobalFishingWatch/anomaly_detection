@@ -3,6 +3,10 @@
 1. Generate forecast for latest day.
 2. If delta between actual vs forecast exceeds preset threshold an alert is raised.
 
+## Structure
+
+The repo is structured into a dataloader module (R) and an alerting module (Python). A DBT project currently serves the single purpose of maintaining lookup files.
+
 # Costs
 The anomaly detection dataloader module is not intended to run directly on large tables (anything in the range of hundreds of GB and more). That is because the module is currently a prototype and the data load mechanism might change over time. Therefore, you cannot expect tables generated from the dataloader to exist for a long time and always have to expect data to be corrupted or truncated due to ongoing development. It is therefore important to develop anomaly configurations in a way that backfills are not prohibitively expensive.
 
@@ -43,7 +47,7 @@ Each anomaly configuration requires a unique definition for loading the data. Th
 
 # [Anomaly detection monitoring dashboard](https://lookerstudio.google.com/reporting/1f9b8d37-a87b-4177-a108-3b3e87ce5804)
 
-An dashboard has been created to explore new monitoring opportunities, tweak existing anomaly detection configurations, and debug anomalies after alerts have been triggered.
+A dashboard has been created to explore new monitoring opportunities, tweak existing anomaly detection configurations, and debug anomalies after alerts have been triggered.
 
 <img src="README-anomaly-detection-sample.png" width="600" />
 
