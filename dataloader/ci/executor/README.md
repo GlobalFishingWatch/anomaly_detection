@@ -14,11 +14,11 @@ Currently, this is also the fastest way to regenerate the delta table and ensure
 
 The high level workflow when adding a new anomaly configuration is as follows:
 1. Everything starts with a hypothesis why a specific measure is worth monitoring, which is often derived from observations in the monitoring dashboard or based on past incidents.
-2. Add anomaly configuration in config_{environment}.yaml
-3. Set anomaly thresholds in /dbt/seeds/thresholds_{environment}.csv and (optionally) provide a description in /dbt/seeds/config_descriptions_{environment}.csv
-4. Run initial full load locally using new anomaly config
-5. Run one incremental load locally
-6. Deploy anomaly config so it runs automatically
+2. Add anomaly configuration in config_{environment}.yaml. For developing and testing anomaly configurations this could happen in the dev and staging environment in order to gain experience how the configuration does in practice and then maybe fine tune.
+3. Set anomaly thresholds in /dbt/seeds/thresholds_{environment}.csv and (optionally) provide a description in /dbt/seeds/config_descriptions_{environment}.csv.
+4. Run initial full load locally using new anomaly config.
+5. Run one incremental load locally.
+6. Deploy anomaly config so it runs automatically.
 7. Whenever the anomaly threshold is exceeded, the alerting module automatically raises an alert using the defined alerting mechanism, e.g. in a Slack channel.
 
 ## Data loader
