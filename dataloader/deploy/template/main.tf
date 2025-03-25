@@ -99,8 +99,8 @@ resource "google_cloud_run_v2_job" "job" {
     parallelism = 1
     template {
       service_account = local.sa
-      timeout         = "3600s" # 60m
-      max_retries     = 3
+      timeout         = "1200s" # 60m
+      max_retries     = 1
 
       containers {
         image = var.docker_image
