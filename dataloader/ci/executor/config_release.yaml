@@ -1,0 +1,21 @@
+anomalies:
+  parser_errors_daily:
+      source_dataset: "tech_dq_monitoring"
+      source_table: "t_pipe_nmea_parsed_errors"
+      source_timestamp_column: "date"
+      source_timestamp_column_sql: 'TIMESTAMP(date)'
+      source_forecast_column: "count"
+      source_forecast_column_sql: "SUM(count)"
+      period_length: "day"
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 365.25
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 30
+          median:
+              parameters:
+                sliding_window: 30
