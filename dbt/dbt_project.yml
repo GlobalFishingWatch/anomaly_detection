@@ -2,12 +2,12 @@
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'monitoring'
+name: 'anomaly_detection'
 version: '1.0.0'
 config-version: 2
 
 # This setting configures which "profile" dbt uses for this project.
-profile: 'monitoring'
+profile: 'anomaly_detection'
 
 # These configurations specify where dbt should look for different types of files.
 # The `model-paths` config, for example, states that models in this project can be
@@ -31,10 +31,29 @@ clean-targets:         # directories to be removed by `dbt clean`
 # directory as views. These settings can be overridden in the individual model
 # files using the `{{ config(...) }}` macro.
 models:
-  monitoring:
-    # Config indicated by + and applies to all files under models/example/
-    anomaly_detection:
+  anomaly_detection:
 
 
 vars:
   "dbt_date:time_zone": "UTC"
+
+seeds:
+  anomaly_detection:
+    thresholds_dev:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'dev' }}"
+      alias: t_thresholds_dev
+    thresholds_staging:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'staging' }}"
+      alias: t_thresholds_staging
+    thresholds_prod:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'prod' }}"
+      alias: t_thresholds_prod
+    config_descriptions_dev:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'dev' }}"
+      alias: t_config_descriptions_dev
+    config_descriptions_staging:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'staging' }}"
+      alias: t_config_descriptions_staging
+    config_descriptions_prod:
+      enabled: "{{ env_var('DBT_ENVIRONMENT') == 'prod' }}"
+      alias: t_config_descriptions_prod

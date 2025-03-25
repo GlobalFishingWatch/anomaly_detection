@@ -9,7 +9,8 @@
 #' @examples parse_date_or_period("2021-01-01")
 #' @examples parse_date_or_period("1 week")
 parse_date_or_period = function(date_or_period_expression, reference_date = Sys.time()) {
-  if (is.na(ymd(date_or_period_expression, quiet = T))) {
+  if (is.na(ymd(date_or_period_expression, quiet = T)) && 
+      is.na(lubridate::ymd_hms(date_or_period_expression, quiet = T))) {
     return(reference_date - period(date_or_period_expression))
   } else {
     return(date_or_period_expression)
@@ -33,15 +34,16 @@ get_anomaly_detection_actuals = function(
     db_anomaly_detection_actuals, 
     anomaly_detection_config, 
     maximum_valid_to = "9999-12-31 23:59:59 UTC",
-    allowed_size = NULL
+    allowed_size = NULL,
+    columns = c("timestamp", "value")
 ) {
-  source_sql_hash = digest::digest(anomaly_detection_config$source_sql, algo = "md5")
   db_anomaly_detection_actuals %>% 
-    filter(valid_to == maximum_valid_to) %>% 
-    filter(
-      config_name == !!anomaly_detection_config$name
-    ) %>% 
+    filter(is_latest == TRUE) %>% 
+    filter(config_name == !!anomaly_detection_config$name) %>% 
+    filter(dimension_split == !!anomaly_detection_config$dimension_split) %>% 
     filter(timestamp != '1979-01-01') %>% 
+    filter(!is.na(value)) %>%
+    select(all_of(columns)) %>%
     safe_query(con = con, allowed_size = allowed_size, verbose = T)
 }
 
@@ -58,10 +60,15 @@ create_scd_statement = function(
   glue(.null = "", "
 MERGE INTO `{target_table}` AS target_table
 USING (
-  WITH target_table AS (SELECT * FROM `{target_table}`),
+  WITH target_table AS (
+    SELECT * FROM `{target_table}`
+    WHERE config_name = '{current_anomaly_detection_config$name}'
+    AND dimension_split = '{current_anomaly_detection_config$dimension_split}'
+    AND is_latest IS TRUE),
   new_actuals AS (
     SELECT 
       '{current_anomaly_detection_config$name}' config_name,
+      '{current_anomaly_detection_config$dimension_split}' dimension_split,
         '{current_anomaly_detection_config$source_dataset}' source_dataset, 
         '{current_anomaly_detection_config$source_table}' source_table,
         '{current_anomaly_detection_config$source_timestamp_column}' source_timestamp_column,
@@ -77,15 +84,8 @@ USING (
     SELECT 
       MD5(CONCAT(
         config_name,
-        source_dataset,
-        source_table,
-        source_timestamp_column,
-        source_timestamp_column_sql,
-        source_forecast_column,
-        source_forecast_column_sql,
-        source_sql,
-        source_sql_hash,
-        period_length,
+        dimension_split,
+        dimension_split_value,
         {forecast_column_sql}
         timestamp)) key,
       * 
@@ -97,12 +97,11 @@ USING (
   JOIN target_table
   ON   new_actuals_with_key.key = target_table.key
   AND  new_actuals_with_key.value != target_table.value
-  AND target_table.valid_to = '{maximum_valid_to}'
 ) delta_actuals
 ON   delta_actuals.upsert_key = target_table.key
-AND target_table.valid_to = '{maximum_valid_to}'
 WHEN MATCHED AND delta_actuals.value != target_table.value THEN UPDATE
-SET valid_to = '{current_timestamp}'
+SET valid_to = '{current_timestamp}',
+is_latest = FALSE
 WHEN NOT MATCHED THEN
   INSERT VALUES (
     key,
@@ -120,7 +119,19 @@ WHEN NOT MATCHED THEN
     value,
     '{current_timestamp}',
     '{maximum_valid_to}',
-    config_name
+    config_name,
+    dimension_split,
+    CAST(dimension_split_value AS STRING),
+    TRUE
   )
 ")
+}
+
+refresh_deltas_table = function(con, project, dataset, environment) {
+  # read and interpolate "sql/t_deltas.sql" file
+  sql = readr::read_file("sql/t_deltas.sql") %>% 
+    glue(PROJECT = project, DATASET = dataset, ENVIRONMENT = environment)
+
+  sql %>%
+    safe_query(con = con, verbose = T, allowed_size = 10 * BQ_GB) 
 }
