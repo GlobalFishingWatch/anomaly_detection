@@ -75,7 +75,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
             echo "******* At environment: $${env} ********"
             echo "*************************************************"
             set -o pipefail && terraform init || exit 1
-            cd ../../../
+            cd ./${local.subproject_name_dashed_short}/../
           done
         EOF
       ]
@@ -103,7 +103,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
             elif [ $${env} = "release" ]; then
               set -o pipefail && terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
             fi
-            cd ../../../
+            cd ./${local.subproject_name_dashed_short}/../
           done
         EOF
       ]
@@ -206,7 +206,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
           echo "******* At environment: release ********"
           echo "*************************************************"
           set -o pipefail && terraform init || exit 1
-          cd ../../../
+          cd ./${local.subproject_name_dashed_short}/../
 
         EOF
       ]
@@ -225,7 +225,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
           echo "******* At environment: release ********"
           echo "*************************************************"
           set -o pipefail && terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME" || exit 1
-          cd ../../../
+          cd ./${local.subproject_name_dashed_short}/../
         EOF
       ]
     }
