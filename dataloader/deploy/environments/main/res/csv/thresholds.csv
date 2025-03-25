@@ -1,2 +1,0 @@
-config_name,forecast_method,critical_lower,critical_higher,warning_lower,warning_higher
-parser_errors_daily,median,-0.5,0.5,-0.3,0.3

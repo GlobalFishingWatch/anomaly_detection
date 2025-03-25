@@ -1,3 +1,0 @@
-config_name,description
-parser_errors_daily,"The pipe nmea parser can fail parsing a message for various reasons which are logged. This is a simple count of parsing errors per day."
-parsed_row_count_daily,"The is a simple count of parsed messages per day which also includes errors and duplicates that get removed during normalization."
