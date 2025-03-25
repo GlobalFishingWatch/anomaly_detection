@@ -68,14 +68,12 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
           for dir in ${local.subproject_name_dashed_short}/deploy/environments/*/
           do
             cd $${dir}
-            env=$${dir%*/}
-            env=$${env#*/}
             echo ""
             echo "*************** TERRAFORM INIT ******************"
-            echo "******* At environment: $${env} ********"
+            echo "******* In dir: $${dir} ********"
             echo "*************************************************"
             set -o pipefail && terraform init || exit 1
-            cd ./${local.subproject_name_dashed_short}/../
+            cd ../../../../
           done
         EOF
       ]
@@ -90,20 +88,12 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
           for dir in ${local.subproject_name_dashed_short}/deploy/environments/*/
           do
             cd $${dir}
-            env=$${dir%*/}
-            env=$${env#*/}
             echo ""
             echo "*************** TERRAFOM PLAN ******************"
-            echo "******* At environment: $${env} ********"
+            echo "******* In dir: $${dir} ********"
             echo "*************************************************"
-            if [ $${env} = "dev" ]; then
-              set -o pipefail && terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
-            elif [ $${env} = "staging" ]; then
-              set -o pipefail && terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
-            elif [ $${env} = "release" ]; then
-              set -o pipefail && terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
-            fi
-            cd ./${local.subproject_name_dashed_short}/../
+            set -o pipefail && terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
+            cd ../../../../
           done
         EOF
       ]
@@ -121,11 +111,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
           echo "*************** TERRAFOM APPLY ******************"
           echo "******* At environment: $BRANCH_NAME ********"
           echo "*************************************************"
-          if [ $BRANCH_NAME = "dev" ]; then
-            set -o pipefail && terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
-          elif [ $BRANCH_NAME = "main" ]; then
-            set -o pipefail && terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
-          fi
+          set -o pipefail && terraform apply -auto-approve -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$COMMIT_SHA" 2>&1 | sed -r "s/\x1B\[[0-9;]*[mK]//g" || exit 1
         else
           echo "***************************** SKIPPING APPLYING *******************************"
           echo "Branch '$BRANCH_NAME' does not represent an oficial environment."
@@ -206,7 +192,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
           echo "******* At environment: release ********"
           echo "*************************************************"
           set -o pipefail && terraform init || exit 1
-          cd ./${local.subproject_name_dashed_short}/../
+          cd ../../../../
 
         EOF
       ]
@@ -225,7 +211,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
           echo "******* At environment: release ********"
           echo "*************************************************"
           set -o pipefail && terraform plan -var "docker_image=gcr.io/world-fishing-827/github.com/globalfishingwatch/${local.subproject_name_dashed}:$TAG_NAME" || exit 1
-          cd ./${local.subproject_name_dashed_short}/../
+          cd ../../../../
         EOF
       ]
     }
