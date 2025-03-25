@@ -434,4 +434,22 @@ anomalies:
           median:
               parameters:
                 sliding_window: 72
-
+  gfw_api_delays:
+      source_dataset: tech_dq_monitoring
+      source_table: v_scraped_api_values
+      source_timestamp_column: timestamp
+      source_timestamp_column_sql: timestamp
+      source_forecast_column: timestamp_delay_hour_now_hypothetical
+      source_forecast_column_sql: MIN(timestamp_delay_hour_now_hypothetical)
+      period_length: day
+      dimension_split: dataset
+      history_start: '2025-01-31'
+      source_filter_sql: "
+      date_interval = 'DAY' 
+      AND timestamp_delay_hour_now_hypothetical IS NOT NULL
+      AND date >= '2025-01-31'
+      AND DATE_DIFF(CURRENT_DATE(), date, DAY) >= 4"
+      algorithms:
+          constant_value:
+              parameters:
+                value: 0.5
