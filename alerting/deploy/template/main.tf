@@ -6,9 +6,33 @@ provider "google" {
 locals {
 
   project_name_dashed = format("qa-gfw-anomaly-detection-alerting-%s", var.environment)
+  project_name_underscored = format("qa_gfw_anomaly_detection_alerting_%s", var.environment)
   project_name_print  = format("QA Anomaly detection alerting (%s)", var.environment)
   sa                  = "qa-anomaly-detection@world-fishing-827.iam.gserviceaccount.com"
   region              = "us-central1"
+}
+
+resource "google_bigquery_table" "deduplication_index" {
+  dataset_id = "tech_anomaly_detection"
+  table_id   = "t_${local.project_name_underscored}_deduplication-index"
+  project    = var.project
+
+  time_partitioning {
+    type  = "MONTH"
+    field = "processed_at"
+
+  }
+
+  clustering = ["event_hash"]
+
+  schema = <<EOF
+[
+    {"name": "event_hash", "type": "STRING"},
+    {"name": "processed_at", "type": "TIMESTAMP"},
+    {"name": "rendered_message", "type": "STRING"}
+  ]
+EOF
+
 }
 
 resource "google_cloud_run_v2_job" "job" {
@@ -112,7 +136,8 @@ resource "google_cloud_scheduler_job" "job" {
       overrides = {
         containerOverrides = [{
           args = [
-            "--environment=${var.environment}"
+            "--environment=${var.environment}",
+            "--deduplication_index=${google_bigquery_table.deduplication_index.id}"
           ]
         }]
       }
