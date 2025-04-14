@@ -173,7 +173,7 @@ if __name__ == '__main__':
     dest='query_template',
     required=False,
     default='''
-    SELECT * FROM `world-fishing-827.tech_anomaly_detection.v_{environment}_deltas`
+    SELECT * FROM `world-fishing-827.tech_anomaly_detection.t_{environment}_deltas`
     WHERE anomaly_type != 'normal'
     AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30*24 HOUR)
     ORDER BY timestamp DESC
