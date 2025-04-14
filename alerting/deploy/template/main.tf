@@ -137,7 +137,7 @@ resource "google_cloud_scheduler_job" "job" {
         containerOverrides = [{
           args = [
             "--environment=${var.environment}",
-            "--deduplication_index=${google_bigquery_table.deduplication_index.id}"
+            "--deduplication-index=${google_bigquery_table.deduplication_index.id}"
           ]
         }]
       }
