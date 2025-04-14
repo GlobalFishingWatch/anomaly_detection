@@ -146,6 +146,8 @@ def run(environment, query_template, report_id, page_id, deduplication_window):
         if SLACK_WEBHOOK_URL is not None:
             if write_event_to_bigquery(event_hash=event_hash, rendered_message=rendered_message, environment=environment, deduplication_window=deduplication_window):
                 response=webhook.send(text=rendered_message)
+                assert response.status_code == 200
+                assert response.body == "ok"
                 logging.info(response.status_code)
                 logging.info(response.body)
             else:
