@@ -21,9 +21,9 @@ def make_looker_studio_url(report_id, page_id, config_name, fc, dimension):
     logging.info(f"Looker Studio URL: {url_with_params}")
     return url_with_params
 
-def write_event_to_bigquery(event_hash, rendered_message, environment, deduplication_window=30*24*60*60):
+def write_event_to_bigquery(event_hash, rendered_message, deduplication_index, deduplication_window=30*24*60*60):
     query = f"""
-    SELECT * FROM `world-fishing-827.tech_anomaly_detection.qa-gfw-anomaly-detection-alerting-{environment}_deduplication-index`
+    SELECT * FROM `{deduplication_index}`
     WHERE event_hash = '{event_hash}'
     """
     query_job = client.query(query)
@@ -40,7 +40,7 @@ def write_event_to_bigquery(event_hash, rendered_message, environment, deduplica
             print(f"Event is outside deduplication window. Processing.")
     
     query = f"""
-    INSERT INTO `world-fishing-827.tech_anomaly_detection.qa-gfw-anomaly-detection-alerting-{environment}_deduplication-index`
+    INSERT INTO `{deduplication_index}`
     VALUES (@event_hash, @processing_timestamp, @rendered_message)
     """
     job_config = bigquery.QueryJobConfig(
@@ -67,6 +67,7 @@ def get_query_results(
     return results
 
 def create_anomaly_alert_slack_message(
+    environment,
     anomaly_config_name, 
     dimension_split_value,
     description, 
@@ -83,6 +84,7 @@ def create_anomaly_alert_slack_message(
     alert_emoji=":red_circle:" if anomaly_type == 'critical' else ":large_yellow_circle:"
     description=description if description else "No description available"
     dimension=f'\n*Dimension*: {dimension_split_value}' if dimension_split_value != '' else ""
+    anomaly_alerting_environment=f'\n*Environment*: {environment}' if environment != 'prod' else ""
     message=f"""{alert_emoji}
 *Anomaly*: {anomaly_config_name}{dimension}
 *URL*: <{looker_dashboard_url}|Anomaly Detection Dashboard>
@@ -94,6 +96,7 @@ def create_anomaly_alert_slack_message(
 *Relative delta*: {delta_rel}
 *Threshold*: {threshold}
 *Description*: {description}
+{anomaly_alerting_environment}
 *Query*: 
 ```
 SELECT{query}
@@ -101,13 +104,14 @@ SELECT{query}
     return message
 
 
-def run(environment, query_template, report_id, page_id, deduplication_window):
+def run(environment, query_template, report_id, page_id, deduplication_index, deduplication_window):
     results=get_query_results(environment, query_template)
 
     for row in results:
         logging.info(row)
         looker_dashboard_url=make_looker_studio_url(report_id, page_id, row['config_name'], row['forecast_method'], row['dimension_split_value'])
         rendered_message=create_anomaly_alert_slack_message(
+            environment=environment,
             anomaly_config_name=row['config_name'],
             dimension_split_value=row['dimension_split_value'],
             description=row['description'],
@@ -144,10 +148,9 @@ def run(environment, query_template, report_id, page_id, deduplication_window):
         logging.info(event_hash)
 
         if SLACK_WEBHOOK_URL is not None:
-            if write_event_to_bigquery(event_hash=event_hash, rendered_message=rendered_message, environment=environment, deduplication_window=deduplication_window):
+            if write_event_to_bigquery(event_hash=event_hash, rendered_message=rendered_message, deduplication_index=deduplication_index, deduplication_window=deduplication_window):
                 response=webhook.send(text=rendered_message)
                 assert response.status_code == 200
-                assert response.body == "ok"
                 logging.info(response.status_code)
                 logging.info(response.body)
             else:
@@ -194,6 +197,12 @@ if __name__ == '__main__':
         required=False
     )
   parser.add_argument(
+        '--deduplication-index',
+        help='BigQuery table for deduplication',
+        dest='deduplication_index',
+        required=True
+    )
+  parser.add_argument(
         '--deduplication-window',
         help='Deduplication window in seconds',
         dest='deduplication_window',
@@ -204,10 +213,11 @@ if __name__ == '__main__':
   known_args, _=parser.parse_known_args()
   
   run(
-        known_args.environment, 
-        known_args.query_template,
-        known_args.report_id,
-        known_args.page_id,
-        known_args.deduplication_window
+        environment=known_args.environment, 
+        query_template=known_args.query_template,
+        report_id=known_args.report_id,
+        page_id=known_args.page_id,
+        deduplication_index=known_args.deduplication_index,
+        deduplication_window=known_args.deduplication_window
      ) 
      
