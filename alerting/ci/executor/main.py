@@ -67,6 +67,7 @@ def get_query_results(
     return results
 
 def create_anomaly_alert_slack_message(
+    environment,
     anomaly_config_name, 
     dimension_split_value,
     description, 
@@ -83,6 +84,7 @@ def create_anomaly_alert_slack_message(
     alert_emoji=":red_circle:" if anomaly_type == 'critical' else ":large_yellow_circle:"
     description=description if description else "No description available"
     dimension=f'\n*Dimension*: {dimension_split_value}' if dimension_split_value != '' else ""
+    anomaly_alerting_environment=f'\n*Environment*: {environment}' if environment != 'prod' else ""
     message=f"""{alert_emoji}
 *Anomaly*: {anomaly_config_name}{dimension}
 *URL*: <{looker_dashboard_url}|Anomaly Detection Dashboard>
@@ -94,6 +96,7 @@ def create_anomaly_alert_slack_message(
 *Relative delta*: {delta_rel}
 *Threshold*: {threshold}
 *Description*: {description}
+{anomaly_alerting_environment}
 *Query*: 
 ```
 SELECT{query}
@@ -108,6 +111,7 @@ def run(environment, query_template, report_id, page_id, deduplication_index, de
         logging.info(row)
         looker_dashboard_url=make_looker_studio_url(report_id, page_id, row['config_name'], row['forecast_method'], row['dimension_split_value'])
         rendered_message=create_anomaly_alert_slack_message(
+            environment=environment,
             anomaly_config_name=row['config_name'],
             dimension_split_value=row['dimension_split_value'],
             description=row['description'],
