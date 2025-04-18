@@ -2,11 +2,11 @@ provider "google" {
   project = "world-fishing-827"
 }
 
-module "anomaly_dataloader_release" {
+module "anomaly_dataloader_prod" {
   source       = "../../template"
   project      = var.project
-  environment  = "release"
+  environment  = "prod"
   docker_image = var.docker_image
 
-  config_path = "../../../ci/executor/config_release.yaml"
+  config_path = "../../../ci/executor/config_prod.yaml"
 }
