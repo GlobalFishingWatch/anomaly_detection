@@ -1,0 +1,4 @@
+config_name,environment,slack_channel_id,slack_channel_name
+parser_errors_daily,prod,C08PGM43PDK,gfw-dq-alerts-ais-latest-ingestion
+,dev,C08PX1N9ZED,gfw-dq-alerts-dev
+,staging,C08PNGD7W84,gfw-dq-alerts-staging
