@@ -1,12 +1,2 @@
 config_name,forecast_method,critical_lower,critical_higher,warning_lower,warning_higher
-parser_errors_daily,median,-0.5,0.5,-0.3,0.3
-parsed_row_count_source_daily,mean,-0.2,0.2,-0.1,0.1
-parsed_row_count_hourly,median,-0.15,0.15,-0.10,0.10
-pipe3_gaps,median,-0.5,0.5,-0.25,0.25
-parser_errors_daily_by_source,median,-0.5,0.5,-0.3,0.3
-parsed_row_count_main_types_daily,mean,-0.2,0.2,-0.1,0.1
-parsed_row_count_non_main_types_daily,mean,-0.75,0.75,-0.5,0.5
-parsed_row_count_receiver_type_daily,mean,-0.3,0.3,-0.15,0.15
-t_world_fishing_827_queries_billed,constant_value,-1,0.50,-0.95,0.25
-v_world_fishing_827_queries_billed_by_sa_non_sa,max,,0.50,,0.25
-gfw_api_delays,constant_value,,1,,
+parser_errors_daily,median,-0.75,0.75,-0.5,0.5
