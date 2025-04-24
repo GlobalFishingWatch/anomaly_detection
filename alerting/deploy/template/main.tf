@@ -58,10 +58,10 @@ resource "google_cloud_run_v2_job" "job" {
         }
 
         env {
-          name = "SLACK_WEBHOOK_URL"
+          name = "SLACK_BOT_TOKEN"
           value_source {
             secret_key_ref {
-              secret  = "projects/386173530526/secrets/QA_WEBHOOK_URL"
+              secret  = "projects/386173530526/secrets/QA_SLACK_BOT_USER_OAUTH_TOKEN"
               version = "latest"
             }
           }

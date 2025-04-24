@@ -2,17 +2,17 @@ import logging
 import argparse
 from google.cloud import bigquery
 import os
-from slack_sdk.webhook import WebhookClient
 import datetime
 import json
 import hashlib
 import urllib.parse
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
-SLACK_WEBHOOK_URL=os.getenv('SLACK_WEBHOOK_URL')
-
-webhook=WebhookClient(SLACK_WEBHOOK_URL)
+SLACK_BOT_TOKEN=os.getenv('SLACK_BOT_TOKEN')
 
 client=bigquery.Client()
+slack_client=WebClient(token= SLACK_BOT_TOKEN)
 
 def make_looker_studio_url(report_id, page_id, config_name, fc, dimension):
     params_json={'PARAM_CONFIG_NAME': config_name, 'PARAM_FC': fc, 'PARAM_DIMENSION': dimension}
@@ -32,12 +32,12 @@ def write_event_to_bigquery(event_hash, rendered_message, deduplication_index, d
     results = list(results)
     processing_timestamp = datetime.datetime.now(datetime.timezone.utc)
     if results:
-        print(f"Event already processed at {results[0].get('processed_at')}.")
+        logging.info(f"Event already processed at {results[0].get('processed_at')}.")
         if (processing_timestamp - results[0].get('processed_at')).total_seconds() < deduplication_window:
-            print(f"Event is within deduplication window. Skipping.")
+            logging.info(f"Event is within deduplication window. Skipping.")
             return False
         else:
-            print(f"Event is outside deduplication window. Processing.")
+            logging.info(f"Event is outside deduplication window. Processing.")
     
     query = f"""
     INSERT INTO `{deduplication_index}`
@@ -52,7 +52,7 @@ def write_event_to_bigquery(event_hash, rendered_message, deduplication_index, d
     )
     query_job = client.query(query, job_config=job_config)
     results = query_job.result()
-    print(f"Event written to BigQuery.")
+    logging.info(f"Event written to BigQuery.")
     return True
 
 def get_query_results(
@@ -104,6 +104,44 @@ SELECT{query}
     return message
 
 
+def get_slack_channel_id(config_name, environment):
+    slack_channel_query = f"""
+    SELECT
+        CASE
+            WHEN config_name = '{config_name}' AND environment = '{environment}' THEN 1
+            WHEN config_name IS NULL AND environment = '{environment}' THEN 2
+            ELSE 3
+        END AS prioritisation,
+        config_name,
+        environment,
+        slack_channel_id,
+        slack_channel_name
+    FROM `world-fishing-827.tech_anomaly_detection.slack_channels_environments_config_mapping`
+    ORDER BY prioritisation
+    LIMIT 1
+    """
+
+    query_job = client.query(slack_channel_query)
+    results = query_job.result()
+
+    # throw error if no priortisation 1 or 2
+    # or if results empty
+    if not results:
+        raise ValueError("No results found for the given config_name and environment.")
+    
+    for row in results:
+        slack_channel_id = row['slack_channel_id']
+        slack_channel_name = row['slack_channel_name']
+        if row['prioritisation'] == 1 or row['prioritisation'] == 2:
+            break
+    
+    if not slack_channel_id:
+        raise ValueError("No slack channel id found for the given config_name and environment.")
+
+    logging.info(f"Slack channel id: {slack_channel_id}")
+    logging.info(f"Slack channel name: {slack_channel_name}")
+    return slack_channel_id
+
 def run(environment, query_template, report_id, page_id, deduplication_index, deduplication_window):
     results=get_query_results(environment, query_template)
 
@@ -147,17 +185,19 @@ def run(environment, query_template, report_id, page_id, deduplication_index, de
 
         logging.info(event_hash)
 
-        if SLACK_WEBHOOK_URL is not None:
-            if write_event_to_bigquery(event_hash=event_hash, rendered_message=rendered_message, deduplication_index=deduplication_index, deduplication_window=deduplication_window):
-                response=webhook.send(text=rendered_message)
-                assert response.status_code == 200
-                logging.info(response.status_code)
-                logging.info(response.body)
-            else:
-                logging.info("Event already processed. Skipping sending message to slack.")
+        # We write the event hash to the bigquery deduplication index if it is not already present
+        # if it is present, we skip sending the slack alert
+        # TODO: this is a bit problematic in case the slack alert fails because we have already inserted the event hash
+        if write_event_to_bigquery(event_hash=event_hash, rendered_message=rendered_message, deduplication_index=deduplication_index, deduplication_window=deduplication_window):
+            channel_id=get_slack_channel_id(row['config_name'], environment)
+            try:
+                result = slack_client.chat_postMessage(channel=channel_id, text=rendered_message, unfurl_links=False)
+                logging.info(result)
+
+            except SlackApiError as e:
+                logging.error(f"Error: {e}")
         else:
-            logging.warning("No SLACK_WEBHOOK_URL provided. Skipping sending message to slack.")
-        
+            logging.info("Event already processed. Skipping sending message to slack.")
 
 if __name__ == '__main__':
   log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
@@ -168,7 +208,8 @@ if __name__ == '__main__':
       '--environment',
       help='Environment: dev, staging, prod',
       dest='environment',
-      required=True
+      required=False,
+      default='dev'
   )
   parser.add_argument(
     '--query-template',
@@ -179,7 +220,7 @@ if __name__ == '__main__':
     SELECT * FROM `world-fishing-827.tech_anomaly_detection.t_{environment}_deltas`
     WHERE anomaly_type != 'normal'
     AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30*24 HOUR)
-    ORDER BY timestamp DESC
+    ORDER BY timestamp DESC, config_name, dimension_split_value
     '''
   )
   parser.add_argument(
@@ -200,7 +241,8 @@ if __name__ == '__main__':
         '--deduplication-index',
         help='BigQuery table for deduplication',
         dest='deduplication_index',
-        required=True
+        required=False,
+        default='world-fishing-827.tech_anomaly_detection.t_qa_gfw_anomaly_detection_alerting_dev_deduplication-index'
     )
   parser.add_argument(
         '--deduplication-window',
@@ -218,6 +260,6 @@ if __name__ == '__main__':
         report_id=known_args.report_id,
         page_id=known_args.page_id,
         deduplication_index=known_args.deduplication_index,
-        deduplication_window=known_args.deduplication_window
+        deduplication_window=int(known_args.deduplication_window),
      ) 
      
