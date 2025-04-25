@@ -34,10 +34,10 @@ def write_event_to_bigquery(event_hash, rendered_message, deduplication_index, d
     if results:
         logging.info(f"Event already processed at {results[0].get('processed_at')}.")
         if (processing_timestamp - results[0].get('processed_at')).total_seconds() < deduplication_window:
-            logging.info(f"Event is within deduplication window. Skipping.")
+            logging.info("Event is within deduplication window. Skipping.")
             return False
         else:
-            logging.info(f"Event is outside deduplication window. Processing.")
+            logging.info("Event is outside deduplication window. Processing.")
     
     query = f"""
     INSERT INTO `{deduplication_index}`
@@ -52,7 +52,7 @@ def write_event_to_bigquery(event_hash, rendered_message, deduplication_index, d
     )
     query_job = client.query(query, job_config=job_config)
     results = query_job.result()
-    logging.info(f"Event written to BigQuery.")
+    logging.info("Event written to BigQuery.")
     return True
 
 def get_query_results(
@@ -242,7 +242,7 @@ if __name__ == '__main__':
         help='BigQuery table for deduplication',
         dest='deduplication_index',
         required=False,
-        default='world-fishing-827.tech_anomaly_detection.t_qa_gfw_anomaly_detection_alerting_dev_deduplication-index'
+        default=''
     )
   parser.add_argument(
         '--deduplication-window',
@@ -254,12 +254,24 @@ if __name__ == '__main__':
   
   known_args, _=parser.parse_known_args()
   
+  
+  environment = known_args.environment
+  query_template = known_args.query_template
+  report_id = known_args.report_id
+  page_id = known_args.page_id
+  deduplication_window = known_args.deduplication_window
+  
+  if known_args.deduplication_index == '':
+      deduplication_index = f"world-fishing-827.tech_anomaly_detection.t_qa_gfw_anomaly_detection_alerting_{environment}_deduplication-index"
+  else:
+      deduplication_index = known_args.deduplication_index
+  
   run(
-        environment=known_args.environment, 
-        query_template=known_args.query_template,
-        report_id=known_args.report_id,
-        page_id=known_args.page_id,
-        deduplication_index=known_args.deduplication_index,
-        deduplication_window=int(known_args.deduplication_window),
-     ) 
-     
+      environment=environment,
+      query_template=query_template,
+      report_id=report_id,
+      page_id=page_id,
+      deduplication_index=deduplication_index,
+      deduplication_window=deduplication_window
+      ) 
+      
