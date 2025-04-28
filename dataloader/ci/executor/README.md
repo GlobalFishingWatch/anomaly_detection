@@ -8,7 +8,18 @@ docker run -v ~/.config/gcloud:/root/.config/gcloud anomaly_forecast --environme
 Since the anomaly configurations (config_{environment}.yml) are part of the docker image, it is advisable to make docker build part of the default command to run the container:
 docker build . -t anomaly_forecast && docker run -v ~/.config/gcloud:/root/.config/gcloud anomaly_forecast --environment=dev --config_name=parser_errors_daily
 
-Currently, this is also the fastest way to regenerate the delta table and ensure that thresholds and descriptions are reloaded.
+# How-to: Regenerate t_{environment}_deltas table
+The t_{environment}_deltas table is a table that contains the deltas between the actuals and the forecasted values. It is used to calculate the anomalies. The table is regenerated every time the data loader is run.
+
+After making changes to the query in `sql/t_deltas.sql` you can manually regenerate the table by running the following command:
+```bash
+# need to replace {PROJECT}, {DATASET} and {ENVIRONMENT} with the respective values
+export PROJECT=world-fishing-827
+export DATASET=tech_anomaly_detection
+export ENVIRONMENT=dev
+cat sql/t_deltas.sql | sed "s/{PROJECT}/$PROJECT/g" | sed "s/{DATASET}/$DATASET/g" | sed "s/{ENVIRONMENT}/$ENVIRONMENT/g" | bq query --nouse_legacy_sql
+```
+
 
 # Workflow
 

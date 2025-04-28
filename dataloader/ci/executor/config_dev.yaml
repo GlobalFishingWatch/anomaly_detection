@@ -40,81 +40,6 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
-  fishing_effort_pipe2_5_esp_daily:
-    source_dataset: "skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public"
-    source_table: "ais_global_v20231026_fishing_effort_public"
-    source_timestamp_column: "timestamp"
-    source_timestamp_column_sql: 'timestamp'
-    source_forecast_column: "value"
-    source_forecast_column_sql: "SUM(value)"
-    period_length: "day"
-    source_sql: '
-    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, "" AS dimension_split_value
-    FROM `skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public.ais_global_v20231026_fishing_effort_public`
-    WHERE flag = "ESP"
-    GROUP BY timestamp, dimension_split_value
-    ORDER BY timestamp, dimension_split_value
-    '
-    algorithms:
-        mstl: 
-            parameters: 
-              season_length: 
-                - 365.25
-                - 7
-        mean:
-            parameters:
-              sliding_window: 30
-        median:
-            parameters:
-              sliding_window: 30
-  fishing_effort_pipe3:
-    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public"
-    source_table: "fishing_effort_public"
-    source_timestamp_column: "timestamp"
-    source_timestamp_column_sql: 'timestamp'
-    source_forecast_column: "value"
-    source_forecast_column_sql: "SUM(value)"
-    period_length: "day"
-    history_start: "3650 days"
-    algorithms:
-        mstl: 
-            parameters: 
-              season_length: 
-                - 365.25
-                - 7
-        mean:
-            parameters:
-              sliding_window: 30
-        median:
-            parameters:
-              sliding_window: 30
-  fishing_effort_pipe2_5_flag_daily:
-    source_dataset: "skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public"
-    source_table: "ais_global_v20231026_fishing_effort_public"
-    source_timestamp_column: "timestamp"
-    source_timestamp_column_sql: 'timestamp'
-    source_forecast_column: "value"
-    source_forecast_column_sql: "SUM(value)"
-    period_length: "day"
-    source_sql: '
-    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, flag AS dimension_split_value
-    FROM `skytruth-pelagos-production.ais_global_v20231026_fishing_effort_public.ais_global_v20231026_fishing_effort_public`
-    WHERE flag IN ("ESP", "FRA", "GBR", "MAR", "PRT", "TUR", "BRA", "NOR", "IDN", "JPN", "RUS", "THA", "USA")
-    GROUP BY timestamp, dimension_split_value
-    ORDER BY timestamp, dimension_split_value
-    '
-    algorithms:
-        mstl: 
-            parameters: 
-              season_length: 
-                - 365.25
-                - 7
-        mean:
-            parameters:
-              sliding_window: 30
-        median:
-            parameters:
-              sliding_window: 30
   parsed_row_count_source_daily:
       source_dataset: "tech_dq_monitoring"
       source_table: "t_facts_pipe_nmea_parsed_stats_daily"
@@ -146,33 +71,6 @@ anomalies:
           median:
               parameters:
                 sliding_window: 30
-  fishing_effort_pipe3_flag_daily:
-    source_dataset: "skytruth-pelagos-production.ais_global_v3_fishing_effort_public"
-    source_table: "fishing_effort_public"
-    source_timestamp_column: "timestamp"
-    source_timestamp_column_sql: 'timestamp'
-    source_forecast_column: "value"
-    source_forecast_column_sql: "SUM(value)"
-    period_length: "day"
-    source_sql: '
-    SUM(value) AS value, TIMESTAMP_TRUNC(timestamp, day) AS timestamp, flag AS dimension_split_value
-    FROM `skytruth-pelagos-production.ais_global_v3_fishing_effort_public.fishing_effort_public`
-    WHERE flag IN ("ESP", "FRA", "GBR", "MAR", "PRT", "TUR", "BRA", "NOR", "IDN", "JPN", "RUS", "THA", "USA")
-    GROUP BY timestamp, dimension_split_value
-    ORDER BY timestamp, dimension_split_value
-    '
-    algorithms:
-        mstl: 
-            parameters: 
-              season_length: 
-                - 365.25
-                - 7
-        mean:
-            parameters:
-              sliding_window: 30
-        median:
-            parameters:
-              sliding_window: 30
   pipe3_gaps:
       source_dataset: pipe_ais_v3_published
       source_table: product_events_ais_disabling
