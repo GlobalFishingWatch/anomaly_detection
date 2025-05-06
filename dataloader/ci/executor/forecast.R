@@ -29,7 +29,7 @@ option_list = list(
               help = "Delta load"),
   make_option(c("-s", "--allowed_size"), type = "character", default = "60",
               help = "Allowed size"),
-  make_option(c("-t", "--forecast_timestamp_from"), type = "character", default = "90 days",
+  make_option(c("-t", "--forecast_timestamp_from"), type = "character", default = "",
               help = "Forecast timestamp from"),
   make_option(c("-u", "--forecast_timestamp_to"), type = "character", default = "",
               help = "Forecast timestamp to")
@@ -75,6 +75,16 @@ history_start = current_anomaly_detection_config$history_start %||% "2012-01-01"
   parse_date_or_period()
 current_anomaly_detection_config$period_length = current_anomaly_detection_config$period_length %||% "day"
 
+# create mapping between "full" sql period lengths and R's unconventional short lengths
+r_period_lengths = c("sec", "min", "hour", "day", "DSTday", "week", "month", "quarter", "year")
+sql_period_lengths = c("SECOND", "MINUTE", "HOUR", "DAY", "DAY", "WEEK", "MONTH", "QUARTER", "YEAR")
+period_length_mapping = r_period_lengths %>% 
+  set_names(sql_period_lengths)
+
+if (!tolower(current_anomaly_detection_config$period_length) %in% tolower(sql_period_lengths)) {
+  stop(glue("period_length {current_anomaly_detection_config$period_length} is not supported"))
+}
+
 config_fields = c(
   "dimension_split",
   "source_dataset",
@@ -114,7 +124,7 @@ existing_timestamps = get_anomaly_detection_actuals(
 all_historic_timestamps = seq(
   history_start %>% as.Date() %>% as.POSIXct() %>% with_tz("UTC"), 
   now(tz = "UTC"), 
-  current_anomaly_detection_config$period_length
+  period_length_mapping[toupper(current_anomaly_detection_config$period_length)]
 )
 
 missing_timestamps = all_historic_timestamps %>% setdiff(existing_timestamps) %>% as.POSIXct(origin="1970-01-01", tz = "UTC") 
@@ -185,9 +195,10 @@ dt_train = get_anomaly_detection_actuals(
   .[dimension_split_value %>% is.na, dimension_split_value := "NA"] %>% 
   .[order(timestamp, dimension_split_value)]
 
-# By default forecast the last 90 days, unless this is provided by the config or environment
+# By default forecast the last 90 periods, unless this is provided by the config or environment
 if (forecast_timestamp_from == "") {
-  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% "90 days"
+  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% 
+  glue("90 {current_anomaly_detection_config$period_length}s")
 }
 
 forecast_timestamp_from %<>% 
@@ -195,6 +206,7 @@ forecast_timestamp_from %<>%
     with_tz("UTC") %>% 
     floor_date(current_anomaly_detection_config$period_length)
 
+cat(glue("Forecasting from {forecast_timestamp_from}"), fill = T)
 
 forecast_timestamp_to = as.POSIXct(forecast_timestamp_to, format = "%Y-%m-%d %H:%M:%S") %>% 
   with_tz("UTC")
