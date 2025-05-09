@@ -375,12 +375,11 @@ anomalies:
   pipe3_product_events_fishing_count_esp:
       source_dataset: tech_dq_monitoring
       source_table: t_product_events_fishing_metrics
-      source_timestamp_column: event_start_hour
-      source_timestamp_column_sql: TIMESTAMP_TRUNC(event_start_minute, HOUR)
+      source_timestamp_column: event_start_day
+      source_timestamp_column_sql: TIMESTAMP_TRUNC(event_start_minute, DAY)
       source_forecast_column: count
       source_forecast_column_sql: SUM(count)
-      period_length: hour
-      forecast_start: 14 days
+      period_length: day
       source_filter_sql: flag = 'ESP'
       algorithms:
           mstl: 
