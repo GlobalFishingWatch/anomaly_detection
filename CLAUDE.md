@@ -303,11 +303,28 @@ To set up anomaly detection in a new GCP project:
 
 **TRANSFORMATION COMPLETE**: Repository successfully converted from GFW-specific tool to generic, reusable platform
 
+**END-USER TESTING IN PROGRESS:**
+15. **Demo Project Setup**: Partially working
+    - Project switching mechanism works correctly
+    - DBT seed path resolution works (finds 2 seeds)
+    - Environment variables set correctly for project isolation
+    
+16. **Critical Issue Discovered**: DBT Profile Configuration
+    - `~/.dbt/profiles.yml` hardcoded to `world-fishing-827` project
+    - Breaks multi-project isolation - all operations go to GFW project
+    - Solution: User added `anomaly_detection_demo_project` profile (testing pending)
+    
+17. **Issues Found During End-User Testing**:
+    - Demo seed files initially named with `_demo` suffix, needed renaming
+    - DBT expects relative paths from project root
+    - Authentication works but needs correct gcloud config activation
+    - Environment variables don't persist across bash command chains
+
 **PENDING:**
-15. Update backend.tf files to use project-specific buckets
-16. Fix environment parameter passing to Docker  
-17. Deploy infrastructure to create required tables
-18. Test complete end-to-end workflow
+18. Test DBT with new demo profile
+19. Deploy infrastructure to create required tables  
+20. Test complete dataloader and alerting workflow
+21. Update backend.tf files to use project-specific buckets
 
 ### Architecture Benefits Achieved:
 - **Isolation**: Teams can run independent instances without conflicts
