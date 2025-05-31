@@ -43,6 +43,41 @@ cd cloudbuild && terraform init && terraform apply
 
 ## Project Configuration
 
+### Demo Project Setup
+**IMPORTANT: For demo project `anomaly-detection-demo-461518`, use user: `christianhomberg@gmail.com`**
+
+#### Project-Specific gcloud Configuration
+To isolate the demo project and avoid authentication conflicts with other projects:
+
+```bash
+# Create dedicated configuration for anomaly detection demo
+gcloud config configurations create anomaly-demo
+gcloud config configurations activate anomaly-demo
+gcloud config set account christianhomberg@gmail.com
+gcloud config set project anomaly-detection-demo-461518
+
+# Set up Application Default Credentials for Terraform
+gcloud auth application-default login
+```
+
+#### Switching Between Projects
+```bash
+# Switch to demo project
+gcloud config configurations activate anomaly-demo
+
+# Switch back to other projects
+gcloud config configurations activate default  # or other config name
+
+# List all configurations
+gcloud config configurations list
+```
+
+This approach ensures:
+- Demo project uses correct user account
+- No interference with other GCP projects/accounts
+- Clean separation for development work
+- Terraform authentication works correctly
+
 ### Multi-Project Support
 - System now supports multiple GCP projects for development/testing
 - Project configuration managed via environment variables and Terraform variables
@@ -110,3 +145,129 @@ To set up anomaly detection in a new GCP project:
 - **Dashboard**: [Looker Studio dashboard](https://lookerstudio.google.com/reporting/1f9b8d37-a87b-4177-a108-3b3e87ce5804) for exploring monitoring opportunities and debugging anomalies
 - **Tables**: Check `t_{env}_deltas` for anomaly detection results, `t_{env}_forecasts` for prediction outputs
 - **Logs**: Cloud Run job logs in GCP Console for runtime debugging
+
+## Refactoring Progress Checkpoint
+
+### Current Status (Branch: refactor/multi-project-support)
+**Major refactoring completed for multi-project GCP support** - System can now be deployed to any GCP project instead of being hardcoded to `world-fishing-827`.
+
+### Key Changes Implemented:
+1. **Infrastructure Parameterization**:
+   - Added `terraform.tfvars.example` template for project-specific configuration
+   - All Terraform modules now accept: project ID, service account email, docker registry as variables
+   - Removed hardcoded references to `world-fishing-827` throughout codebase
+
+2. **Environment Variable Support**:
+   - Alerting Python code now uses `GCP_PROJECT_ID` and `BQ_DATASET` environment variables
+   - Runtime configuration flexible across different projects
+
+3. **Documentation Enhancement**:
+   - `PROJECT_SETUP.md`: Complete step-by-step guide for new GCP project setup
+   - `project-config.yaml`: Configuration template with examples for dev/test/prod
+   - Updated CLAUDE.md with multi-project guidance
+
+4. **Alerting System Improvements**:
+   - Migrated from Slack webhooks to Slack WebClient API for better reliability
+   - Environment-specific Slack channel routing via seed files
+   - Enhanced deduplication logic with configurable time windows
+
+5. **Environment Standardization**:
+   - Renamed "release" environment to "prod" for consistency
+   - Added complete seed file sets for staging/prod environments
+   - Environment-specific threshold and configuration management
+
+### Files Ready for Commit:
+- `DEV_SETUP.md` (untracked)
+- `QUICKSTART.md` (untracked) 
+- `quickstart/` directory (untracked)
+
+### End User Testing Progress:
+**COMPLETED:**
+1. **Environment Setup**: 
+   - GCP Project: `anomaly-detection-demo-461518` (verified active)
+   - Environment variables: `GCP_PROJECT_ID` and `BQ_DATASET` configured
+   - `terraform.tfvars` created and customized for demo project
+   - BigQuery dataset `tech_anomaly_detection` created successfully
+
+2. **DBT Environment**:
+   - `setenv.sh` works correctly (sets `DBT_ENVIRONMENT=dev` on refactor branch)
+   - Environment detection logic working as expected
+
+**ISSUE DISCOVERED:**
+3. **Configuration Dependencies**: Current seed files and dataloader configs are GFW-specific
+   - `dbt/seeds/*_dev.csv` reference non-existent datasets/tables in demo project
+   - `dataloader/ci/executor/config_dev.yaml` hardcodes `world-fishing-827` project references
+   - Need demo-specific configurations for proper end user testing
+
+**COMPLETED:**
+4. **Demo Configurations Created**: 
+   - Wikipedia pageviews-based configurations using public BigQuery data
+   - Three realistic demo configs: Python topics daily, English hourly, trending topics daily
+   - Tested data access - works perfectly with clear weekly patterns
+   - Self-contained configurations requiring no private data
+
+**COMPLETED:**
+5. **DBT Operations Successful**: 
+   - Virtual environment activation required (venv/bin/activate)
+   - DBT seed operations work correctly with demo configurations
+   - Environment setup (setenv.sh) functions as expected 
+   - Demo seed tables created successfully in BigQuery
+
+**COMPLETED:**
+6. **Docker Development Workflow**: 
+   - Docker build successful, container starts and loads configuration correctly
+   - GCP authentication working via volume mount, R environment functional
+
+**CRITICAL ISSUES DISCOVERED:**
+7. **Environment Parameter Missing**: 
+   - R script expects `--environment dev` command line argument, not just env vars
+   - Current run: `t__actuals` (missing environment) should be `t_dev_actuals`
+   - Need to pass environment parameter to Docker container
+
+8. **Remote State Not Generalized**: 
+   - `backend.tf` files hardcode `skytruth-pelagos-production-tfstate-us-central1` bucket
+   - Demo projects can't access this bucket - need project-specific remote state
+   - All backend.tf files need parameterization for multi-project support
+
+9. **Infrastructure Dependencies**: 
+   - Missing tables: `t_dev_actuals`, `t_dev_forecasts` 
+   - Created by Terraform in `/deploy` directories
+   - Need to deploy infrastructure before dataloader can run
+
+**GENERALIZATION REQUIREMENTS:**
+- Remote state buckets must be project-specific
+- Backend configuration needs to be templated
+- Environment parameter handling needs documentation
+
+**COMPLETED:**
+10. **Bootstrap Terraform Setup**: Created `/terraform/bootstrap/` for managing remote state bucket with local state
+
+**AUTHENTICATION APPROACH DOCUMENTED:**
+11. **gcloud Configuration Management**: Documented project-specific authentication approach
+    - Created instructions for `anomaly-demo` gcloud configuration
+    - Isolates demo project from other GCP projects/accounts
+    - Proper Application Default Credentials setup for Terraform
+    - Added to bootstrap/README.md and CLAUDE.md
+
+**COMPLETED:**
+12. **Authentication Success**: Project-specific gcloud configuration working
+    - `anomaly-demo` configuration active with `christianhomberg@gmail.com`
+    - Application Default Credentials authenticated correctly
+    - Browser authentication with checkboxes completed successfully
+
+13. **Remote State Bucket Created**: Bootstrap Terraform successful
+    - Bucket: `anomaly-detection-demo-461518-tfstate` created with versioning
+    - Lifecycle rules configured for automatic cleanup
+    - Ready for use by other Terraform modules
+
+**PENDING:**
+14. Update backend.tf files to use project-specific bucket
+15. Fix environment parameter passing to Docker
+16. Deploy infrastructure to create required tables
+17. Test complete dataloader workflow
+
+### Architecture Benefits Achieved:
+- **Isolation**: Teams can run independent instances without conflicts
+- **Flexibility**: Easy deployment to any GCP project with proper permissions
+- **Maintainability**: Centralized configuration through environment variables and Terraform
+- **Documentation**: Clear setup guides for new users and projects
