@@ -79,9 +79,42 @@ This approach ensures:
 - Terraform authentication works correctly
 
 ### Multi-Project Support
-- System now supports multiple GCP projects for development/testing
-- Project configuration managed via environment variables and Terraform variables
-- See `PROJECT_SETUP.md` for complete setup guide for new projects
+**This repository supports multiple organizations/projects simultaneously**
+
+#### Project Configuration Structure
+```
+configs/
+├── world-fishing-827/              # GFW production configurations
+├── anomaly-detection-demo-461518/  # Demo project configurations  
+├── template/                       # Template for new projects
+└── your-project-id/                # Your custom project
+```
+
+#### Usage
+
+**Project Switching:**
+```bash
+# Use the project switcher script (recommended)
+source scripts/set-project.sh anomaly-detection-demo-461518   # Demo project
+source scripts/set-project.sh world-fishing-827              # GFW production
+source scripts/set-project.sh your-project-id                # Your project
+```
+
+**Operations with Active Project:**
+```bash
+# DBT operations use project-specific configurations
+cd dbt && source setenv.sh  # Sets up project-specific seed paths
+dbt seed                     # Uses configs/$ANOMALY_PROJECT/dbt_seeds/
+
+# Docker operations use project-specific configs
+./scripts/docker-run.sh dataloader  # Uses configs/$ANOMALY_PROJECT/dataloader/
+
+# Quick start for new users
+./scripts/quick-start.sh  # Interactive project selection and setup
+```
+
+- See `configs/README.md` for complete multi-project usage guide
+- See `configs/template/README.md` for new project setup instructions
 
 ### Environment Variables
 ```bash
@@ -271,3 +304,8 @@ To set up anomaly detection in a new GCP project:
 - **Flexibility**: Easy deployment to any GCP project with proper permissions
 - **Maintainability**: Centralized configuration through environment variables and Terraform
 - **Documentation**: Clear setup guides for new users and projects
+
+## Important Instructions
+- **NO EMOJIS**: Never use emojis anywhere - not in code, comments, documentation, commit messages, or output text
+- Follow existing code style and conventions
+- Prefer editing existing files over creating new ones

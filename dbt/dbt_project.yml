@@ -15,7 +15,7 @@ profile: 'anomaly_detection'
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
-seed-paths: ["seeds"]
+seed-paths: ["{{ env_var('DBT_PROJECT_SEEDS_DIR', 'seeds') }}"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
