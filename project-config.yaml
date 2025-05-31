@@ -1,0 +1,41 @@
+# Project Configuration for Anomaly Detection System
+# This file defines GCP project settings for different environments
+
+# Default production project (existing)
+production:
+  project_id: "world-fishing-827"
+  region: "us-central1"
+  service_account: "qa-anomaly-detection@world-fishing-827.iam.gserviceaccount.com"
+  docker_registry: "gcr.io/world-fishing-827"
+
+# Development project template
+development:
+  project_id: "your-dev-project-id"  # Replace with your dev project
+  region: "us-central1"
+  service_account: "anomaly-detection-dev@your-dev-project-id.iam.gserviceaccount.com"
+  docker_registry: "gcr.io/your-dev-project-id"
+
+# Testing project template  
+testing:
+  project_id: "your-test-project-id"  # Replace with your test project
+  region: "us-central1"
+  service_account: "anomaly-detection-test@your-test-project-id.iam.gserviceaccount.com"
+  docker_registry: "gcr.io/your-test-project-id"
+
+# Common configuration
+common:
+  # BigQuery dataset naming pattern: {environment}_{module}
+  datasets:
+    anomaly_detection: "anomaly_detection"
+    monitoring: "monitoring"
+  
+  # Cloud Run configuration
+  cloud_run:
+    memory: "2Gi"
+    cpu: "1000m"
+    timeout: "3600s"
+  
+  # Scheduler configuration
+  scheduler:
+    dataloader_cron: "0 8 * * *"  # Daily at 8 AM UTC
+    alerting_cron: "0 9 * * *"    # Daily at 9 AM UTC (after dataloader)

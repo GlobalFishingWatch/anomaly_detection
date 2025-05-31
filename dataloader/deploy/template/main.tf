@@ -1,14 +1,14 @@
 provider "google" {
-  project = "world-fishing-827"
+  project = var.project
+  region  = var.region
 }
 
 
 locals {
-
   project_name_dashed = format("qa-gfw-anomaly-detection-dataloader-%s", var.environment)
   project_name_print  = format("QA Anomaly detection data loader (%s)", var.environment)
-  sa                  = "qa-anomaly-detection@world-fishing-827.iam.gserviceaccount.com"
-  region              = "us-central1"
+  sa                  = var.service_account_email
+  region              = var.region
 }
 
 resource "google_bigquery_table" "actuals" {
@@ -157,7 +157,7 @@ resource "google_cloud_scheduler_job" "job" {
   name             = format("%s_scheduler_%s", local.project_name_dashed, each.key)
   schedule         = "20 10 * * *"
   attempt_deadline = "320s"
-  region           = "us-central1"
+  region           = var.region
   retry_config {
     retry_count = 1
   }

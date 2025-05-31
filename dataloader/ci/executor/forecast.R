@@ -17,9 +17,9 @@ option_list = list(
               help = "Environment"),
   make_option(c("-c", "--anomaly_detection_config_name"), type = "character", default = NULL,
               help = "Anomaly detection config name"),
-  make_option(c("-p", "--project_id"), type = "character", default = "world-fishing-827",
+  make_option(c("-p", "--project_id"), type = "character", default = Sys.getenv("GCP_PROJECT_ID", "world-fishing-827"),
               help = "Project ID"),
-  make_option(c("-d", "--dataset_id"), type = "character", default = "tech_anomaly_detection",
+  make_option(c("-d", "--dataset_id"), type = "character", default = Sys.getenv("BQ_DATASET", "tech_anomaly_detection"),
               help = "Dataset ID"),
   make_option(c("-a", "--actuals_table"), type = "character", default = "actuals",
               help = "Actuals table"),
@@ -58,7 +58,7 @@ cat(glue("Using {no_cores} cores"))
 
 map_fun = map_fun %>% compose(progressr::with_progress, .dir = "forward")
 
-con = DBI::dbConnect(drv = bigrquery::bigquery(), project = "world-fishing-827", use_legacy_sql = FALSE)
+con = DBI::dbConnect(drv = bigrquery::bigquery(), project = project_id, use_legacy_sql = FALSE)
 
 target_table_actuals = paste0(dataset_id, ".t_", environment, "_", actuals_table)
 target_table_forecasts = paste0(dataset_id, ".t_", environment, "_", forecasts_table)

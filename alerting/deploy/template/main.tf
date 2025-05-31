@@ -1,15 +1,15 @@
 provider "google" {
-  project = "world-fishing-827"
+  project = var.project
+  region  = var.region
 }
 
 
 locals {
-
   project_name_dashed = format("qa-gfw-anomaly-detection-alerting-%s", var.environment)
   project_name_underscored = format("qa_gfw_anomaly_detection_alerting_%s", var.environment)
   project_name_print  = format("QA Anomaly detection alerting (%s)", var.environment)
-  sa                  = "qa-anomaly-detection@world-fishing-827.iam.gserviceaccount.com"
-  region              = "us-central1"
+  sa                  = var.service_account_email
+  region              = var.region
 }
 
 resource "google_bigquery_table" "deduplication_index" {
@@ -115,7 +115,7 @@ resource "google_cloud_scheduler_job" "job" {
   name             = format("%s_scheduler", local.project_name_dashed)
   schedule         = "0 * * * *"
   attempt_deadline = "320s"
-  region           = "us-central1"
+  region           = var.region
   retry_config {
     retry_count = 1
   }

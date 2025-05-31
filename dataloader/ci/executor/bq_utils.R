@@ -30,7 +30,7 @@ allowed_size = 0.1 * BQ_GB
 #' @export
 #'
 #' @examples
-estimate_query_size = function(query, billing = "world-fishing-827") {
+estimate_query_size = function(query, billing = Sys.getenv("GCP_PROJECT_ID", "world-fishing-827")) {
   if("tbl_lazy" %in% class(query)) {
     query %<>% sql_render()
   }

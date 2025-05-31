@@ -11,8 +11,10 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "world-fishing-827")
+BQ_DATASET = os.getenv("BQ_DATASET", "tech_anomaly_detection")
 
-client = bigquery.Client()
+client = bigquery.Client(project=GCP_PROJECT_ID)
 slack_client = WebClient(token=SLACK_BOT_TOKEN)
 
 
@@ -127,10 +129,10 @@ def get_slack_channel_id(config_name, environment):
         environment,
         slack_channel_id,
         slack_channel_name
-    FROM `world-fishing-827.tech_anomaly_detection.slack_channels_environments_config_mapping`
+    FROM `{GCP_PROJECT_ID}.{BQ_DATASET}.slack_channels_environments_config_mapping`
     ORDER BY prioritisation
     LIMIT 1
-    """
+    """.format(GCP_PROJECT_ID=GCP_PROJECT_ID, BQ_DATASET=BQ_DATASET)
 
     query_job = client.query(slack_channel_query)
     results = query_job.result()
@@ -248,7 +250,9 @@ if __name__ == "__main__":
         dest="query_template",
         required=False,
         default="""
-    SELECT * FROM `world-fishing-827.tech_anomaly_detection.t_{environment}_deltas`
+    SELECT * FROM `{project}.{dataset}.t_{environment}_deltas`
+    """.format(project=GCP_PROJECT_ID, dataset=BQ_DATASET)
+        + """
     WHERE anomaly_type != 'normal'
     AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30*24 HOUR)
     ORDER BY timestamp DESC, config_name, dimension_split_value
@@ -293,7 +297,7 @@ if __name__ == "__main__":
 
     if known_args.deduplication_index == "":
         deduplication_index = (
-            f"world-fishing-827.tech_anomaly_detection.t_qa_gfw_anomaly_detection_alerting_{environment}_deduplication-index"
+            f"{GCP_PROJECT_ID}.{BQ_DATASET}.t_qa_gfw_anomaly_detection_alerting_{environment}_deduplication-index"
         )
     else:
         deduplication_index = known_args.deduplication_index
