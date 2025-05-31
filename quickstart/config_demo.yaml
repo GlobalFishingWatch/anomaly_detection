@@ -1,0 +1,60 @@
+anomalies:
+  citibike_daily_trips:
+    source_dataset: "bigquery-public-data.new_york_citibike"
+    source_table: "citibike_trips"
+    source_timestamp_column: "starttime"
+    source_timestamp_column_sql: 'TIMESTAMP(DATE(starttime))'
+    source_forecast_column: "trip_count"
+    source_forecast_column_sql: "COUNT(*)"
+    period_length: "day"
+    source_sql: |
+      SELECT 
+        DATE(starttime) as date_column,
+        COUNT(*) as value
+      FROM `bigquery-public-data.new_york_citibike.citibike_trips`
+      WHERE DATE(starttime) >= DATE_SUB(CURRENT_DATE(), INTERVAL 730 DAY)
+        AND DATE(starttime) <= DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+      GROUP BY DATE(starttime)
+      ORDER BY date_column
+    algorithms:
+      mstl: 
+        parameters: 
+          season_length: 
+            - 365.25  # Yearly seasonality
+            - 7       # Weekly seasonality  
+      mean:
+        parameters:
+          sliding_window: 30
+      median:
+        parameters:
+          sliding_window: 30
+
+  weather_impact_demo:
+    source_dataset: "bigquery-public-data.new_york_citibike"  
+    source_table: "citibike_trips"
+    source_timestamp_column: "starttime"
+    source_timestamp_column_sql: 'TIMESTAMP(DATE(starttime))'
+    source_forecast_column: "avg_duration"
+    source_forecast_column_sql: "AVG(tripduration)"
+    period_length: "day"
+    source_sql: |
+      SELECT 
+        DATE(starttime) as date_column,
+        AVG(tripduration) as value
+      FROM `bigquery-public-data.new_york_citibike.citibike_trips`
+      WHERE DATE(starttime) >= DATE_SUB(CURRENT_DATE(), INTERVAL 365 DAY)
+        AND DATE(starttime) <= DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+        AND tripduration IS NOT NULL
+        AND tripduration > 0
+        AND tripduration < 7200  -- Remove outliers > 2 hours
+      GROUP BY DATE(starttime)
+      ORDER BY date_column
+    algorithms:
+      mstl: 
+        parameters: 
+          season_length: 
+            - 365.25
+            - 7
+      mean:
+        parameters:
+          sliding_window: 14

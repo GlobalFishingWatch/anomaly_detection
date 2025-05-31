@@ -1,0 +1,98 @@
+anomalies:
+  wiki_pageviews_python_daily:
+      source_dataset: "bigquery-public-data.wikipedia"
+      source_table: "pageviews_2024"
+      source_timestamp_column: "datehour"
+      source_timestamp_column_sql: 'DATE(datehour)'
+      source_forecast_column: "views"
+      source_forecast_column_sql: "SUM(views)"
+      period_length: "day"
+      source_sql: '
+      SUM(views) AS value, DATE(datehour) AS timestamp, "" AS dimension_split_value
+      FROM `bigquery-public-data.wikipedia.pageviews_2024`
+      WHERE wiki = "en"
+      AND (LOWER(title) LIKE "%python%" OR LOWER(title) LIKE "%django%" OR LOWER(title) LIKE "%flask%")
+      AND DATE(datehour) IN ({missing_timestamps_sql})
+      AND DATE(datehour) NOT IN ({existing_timestamps_sql})
+      AND DATE(datehour) >= "2024-01-01"
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 14
+          median:
+              parameters:
+                sliding_window: 14
+                
+  wiki_pageviews_english_hourly:
+      source_dataset: "bigquery-public-data.wikipedia"
+      source_table: "pageviews_2024"
+      source_timestamp_column: "datehour"
+      source_timestamp_column_sql: 'TIMESTAMP_TRUNC(datehour, HOUR)'
+      source_forecast_column: "views"
+      source_forecast_column_sql: "SUM(views)"
+      period_length: "hour"
+      history_start: "7 days"
+      source_sql: '
+      SUM(views) AS value, TIMESTAMP_TRUNC(datehour, HOUR) AS timestamp, "" AS dimension_split_value
+      FROM `bigquery-public-data.wikipedia.pageviews_2024`
+      WHERE wiki = "en"
+      AND TIMESTAMP_TRUNC(datehour, HOUR) IN ({missing_timestamps_sql})
+      AND TIMESTAMP_TRUNC(datehour, HOUR) NOT IN ({existing_timestamps_sql})
+      AND datehour >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 168  # Weekly pattern
+                  - 24   # Daily pattern
+          mean:
+              parameters:
+                sliding_window: 48
+          median:
+              parameters:
+                sliding_window: 48
+                
+  wiki_pageviews_trending_topics_daily:
+      source_dataset: "bigquery-public-data.wikipedia"
+      source_table: "pageviews_2024"
+      source_timestamp_column: "datehour"
+      source_timestamp_column_sql: 'DATE(datehour)'
+      source_forecast_column: "views"
+      source_forecast_column_sql: "SUM(views)"
+      period_length: "day"
+      source_sql: '
+      SUM(views) AS value, DATE(datehour) AS timestamp, "" AS dimension_split_value
+      FROM `bigquery-public-data.wikipedia.pageviews_2024`
+      WHERE wiki = "en"
+      AND (LOWER(title) LIKE "%artificial intelligence%" 
+           OR LOWER(title) LIKE "%chatgpt%" 
+           OR LOWER(title) LIKE "%machine learning%"
+           OR LOWER(title) LIKE "%cryptocurrency%"
+           OR LOWER(title) LIKE "%climate change%")
+      AND DATE(datehour) IN ({missing_timestamps_sql})
+      AND DATE(datehour) NOT IN ({existing_timestamps_sql})
+      AND DATE(datehour) >= "2024-01-01"
+      GROUP BY timestamp, dimension_split_value
+      ORDER BY timestamp, dimension_split_value
+      '
+      algorithms:
+          mstl: 
+              parameters: 
+                season_length: 
+                  - 7
+          mean:
+              parameters:
+                sliding_window: 21
+          median:
+              parameters:
+                sliding_window: 21

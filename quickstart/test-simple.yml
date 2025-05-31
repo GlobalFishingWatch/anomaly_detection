@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  test-dataloader:
+    build:
+      context: ../dataloader/ci/executor
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    volumes:
+      - '~/.config/gcloud:/root/.config/gcloud'
+      - './config_demo.yaml:/project/config_demo.yaml'
+    environment:
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - BQ_DATASET=${BQ_DATASET:-anomaly_detection_demo}
+    entrypoint: >
+      Rscript /project/forecast.R 
+      --environment=demo 
+      --anomaly_detection_config_name=citibike_daily_trips
+      --project_id=${GCP_PROJECT_ID}
+      --dataset_id=${BQ_DATASET:-anomaly_detection_demo}
+      --config_path=/project/config_demo.yaml
