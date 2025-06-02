@@ -1,4 +1,0 @@
-config_name,forecast_method,critical_lower,critical_higher,warning_lower,warning_higher
-wiki_pageviews_python_daily,median,-0.6,0.8,-0.4,0.6
-wiki_pageviews_english_hourly,mean,-0.5,0.5,-0.3,0.3
-wiki_pageviews_trending_topics_daily,median,-0.7,1.2,-0.5,0.8

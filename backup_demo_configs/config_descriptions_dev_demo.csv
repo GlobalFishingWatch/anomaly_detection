@@ -1,4 +1,0 @@
-config_name,description
-wiki_pageviews_python_daily,"Demo configuration tracking daily Wikipedia pageviews for Python-related articles. Shows anomaly detection on real web traffic patterns."
-wiki_pageviews_english_hourly,"Demo configuration monitoring hourly English Wikipedia pageviews across all articles. Demonstrates time series forecasting on high-volume web data."
-wiki_pageviews_trending_topics_daily,"Demo configuration tracking daily pageviews for trending technology topics. Shows how anomaly detection can identify viral content or news events."

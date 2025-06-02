@@ -10,6 +10,54 @@ This is a three-component anomaly detection system for maritime data monitoring 
 - **Alerting (Python)**: Monitors anomalies and sends Slack notifications when thresholds are exceeded  
 - **DBT**: Manages lookup tables, thresholds, and creates the core `v_deltas` view combining forecasts with actuals
 
+## End-User Workflow Strategy
+
+### Repository Usage Model
+**CRITICAL: This repository follows a FORK-BASED workflow, not clone-and-configure.**
+
+#### Intended Usage Pattern:
+1. **Users FORK this repository** (do not clone the original)
+2. **Replace demo configuration** with their organization's configuration
+3. **Each fork is dedicated to ONE organization/project**
+4. **Complete isolation** between different organizations
+
+#### Why Fork Instead of Clone:
+- **State Isolation**: Each fork has independent Terraform remote state buckets
+- **Security**: No cross-contamination between organizations' configurations
+- **Maintenance**: Can pull upstream improvements while maintaining customizations
+- **Simplicity**: No complex multi-project switching mechanisms needed in production
+
+#### Configuration Location Strategy:
+- **Current**: Configuration stored in repository (`configs/{project-id}/`)
+- **Future**: External configuration (home directory, separate repos) for cleaner separation
+- **Implementation**: For now, fork-based approach with in-repo configuration
+
+#### Implications for Development:
+- Demo project (`anomaly-detection-demo-461518`) is template/testing only
+- Production deployments should use forked repositories
+- Backend.tf files must be project-specific in each fork
+- No support for multiple organizations in single repository instance
+
+#### Implementation Requirements for Fork-Based Workflow:
+**✅ COMPLETED: Backend.tf templating system implemented**
+
+The repository includes a complete templating system for isolated remote state:
+
+**For new forks/organizations:**
+```bash
+# 🔴 WARNING: This modifies backend.tf files affecting Terraform state buckets
+# Run ONLY when setting up a new fork for your organization
+./scripts/generate-backend-configs.sh your-organization-project-id
+```
+
+This will:
+1. Generate project-specific backend.tf files from `backend.tf.template` files
+2. Create isolated state bucket configuration: `{project-id}-tfstate`
+3. Ensure complete separation from other organizations' state
+4. Preserve GFW's existing state bucket when used with `world-fishing-827`
+
+**Critical:** Each fork should run this script exactly once during initial setup.
+
 ## Key Commands
 
 ### DBT Operations
@@ -78,8 +126,10 @@ This approach ensures:
 - Clean separation for development work
 - Terraform authentication works correctly
 
-### Multi-Project Support
-**This repository supports multiple organizations/projects simultaneously**
+### Multi-Project Support (Development/Testing Only)
+**This repository includes multi-project tooling for development and testing purposes.**
+
+**NOTE: Production deployments should use the fork-based workflow described above, not multi-project switching.**
 
 #### Project Configuration Structure
 ```
@@ -90,9 +140,15 @@ configs/
 └── your-project-id/                # Your custom project
 ```
 
-#### Usage
+#### Development Usage
 
-**Project Switching:**
+**When to Use Multi-Project Tools:**
+- Testing the system with different project configurations
+- Developing new features across multiple projects
+- Comparing configurations between projects
+- Demo and training purposes
+
+**Project Switching (Development Only):**
 ```bash
 # Use the project switcher script (recommended)
 source scripts/set-project.sh anomaly-detection-demo-461518   # Demo project
@@ -108,9 +164,6 @@ dbt seed                     # Uses configs/$ANOMALY_PROJECT/dbt_seeds/
 
 # Docker operations use project-specific configs
 ./scripts/docker-run.sh dataloader  # Uses configs/$ANOMALY_PROJECT/dataloader/
-
-# Quick start for new users
-./scripts/quick-start.sh  # Interactive project selection and setup
 ```
 
 - See `configs/README.md` for complete multi-project usage guide
@@ -211,8 +264,7 @@ To set up anomaly detection in a new GCP project:
 
 ### Files Ready for Commit:
 - `DEV_SETUP.md` (untracked)
-- `QUICKSTART.md` (untracked) 
-- `quickstart/` directory (untracked)
+- `QUICKSTART.md` (untracked)
 
 ### End User Testing Progress:
 **COMPLETED:**
@@ -298,7 +350,7 @@ To set up anomaly detection in a new GCP project:
     - Project switcher script: `scripts/set-project.sh`
     - Project-aware DBT with dynamic seed paths
     - Project-aware Docker runner: `scripts/docker-run.sh`
-    - Interactive quick-start script for new users
+    - Streamlined project switching workflow
     - Complete documentation and usage examples
 
 **TRANSFORMATION COMPLETE**: Repository successfully converted from GFW-specific tool to generic, reusable platform
@@ -361,3 +413,23 @@ To set up anomaly detection in a new GCP project:
 - **NO EMOJIS**: Never use emojis anywhere - not in code, comments, documentation, commit messages, or output text
 - Follow existing code style and conventions
 - Prefer editing existing files over creating new ones
+
+### 🔴 CRITICAL SAFETY PROTOCOL 🔴
+**ALWAYS warn in RED COLOR before making changes that cannot be easily rolled back:**
+
+🔴 **WARNING REQUIRED FOR:**
+- Terraform state modifications
+- GCS bucket/resource changes
+- Infrastructure deployments
+- Backend configuration changes
+- Database schema modifications
+- Any operations affecting live systems
+
+🔴 **WARNING FORMAT:**
+```
+🔴 WARNING: About to modify [RESOURCE TYPE]
+This action will [DESCRIBE IMPACT] and cannot be easily rolled back.
+Please confirm before proceeding.
+```
+
+**NEVER proceed with potentially destructive operations without explicit user confirmation.**

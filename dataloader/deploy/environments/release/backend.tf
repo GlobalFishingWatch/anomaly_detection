@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket = "anomaly-detection-demo-461518-tfstate"
+    bucket = "skytruth-pelagos-production-tfstate-us-central1"
     prefix = "projects/anomaly_detection/dataloader/release" # Not change for this project
   }
 }

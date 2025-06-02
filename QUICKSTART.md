@@ -93,8 +93,8 @@ cd anomaly_detection
 # Switch to our refactoring branch
 git checkout refactor/multi-project-support
 
-# Run the quickstart demo
-cd quickstart
+# Run the dataloader component demo
+cd dataloader/ci/executor
 docker-compose up --build
 
 # This will:
@@ -134,7 +134,7 @@ gcloud projects delete $PROJECT_ID
 Once the demo works:
 
 1. **Explore Results**: Check BigQuery tables for forecast vs actual data
-2. **Modify Config**: Edit `quickstart/config_demo.yaml` to try different algorithms
+2. **Modify Config**: Edit `configs/anomaly-detection-demo-461518/dataloader/config_demo.yaml` to try different algorithms
 3. **Add Your Data**: Replace demo data with your own time series
 4. **Set Up Alerting**: Configure Slack notifications for real anomalies
 5. **Deploy Production**: Follow `PROJECT_SETUP.md` for full infrastructure

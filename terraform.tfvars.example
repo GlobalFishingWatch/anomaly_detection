@@ -1,14 +1,15 @@
-# Example Terraform variables file
+# Terraform Variables Template
 # Copy this to terraform.tfvars and update with your project details
 
-# Development Environment Example
-project               = "your-dev-project-id"
+# Required: Your GCP project configuration
+project               = "your-project-id"
 region                = "us-central1"
-service_account_email = "anomaly-detection-dev@your-dev-project-id.iam.gserviceaccount.com"
-docker_registry       = "gcr.io/your-dev-project-id"
+service_account_email = "anomaly-detection@your-project-id.iam.gserviceaccount.com"
+docker_registry       = "gcr.io/your-project-id"
 
-# Production Environment Example (for reference)
-# project               = "world-fishing-827"
-# region                = "us-central1"
-# service_account_email = "qa-anomaly-detection@world-fishing-827.iam.gserviceaccount.com"
-# docker_registry       = "gcr.io/world-fishing-827"
+# Optional: Custom Cloud Run job names (defaults will be used if not specified)
+# anomaly_alerting_project_name = "your-alerting-job-name"
+# anomaly_dataloader_project_name = "your-dataloader-job-name"
+
+# Optional: Additional users with access to the anomaly detection resources
+# additional_users = ["user:your-email@your-domain.com", "user:teammate@your-domain.com"]

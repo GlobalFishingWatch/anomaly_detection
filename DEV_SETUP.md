@@ -114,11 +114,10 @@ cd ../..
 
 ## Test Your Setup
 
-### Option A: Run Quickstart Demo
+### Option A: Test Dataloader Component
 
 ```bash
-cd quickstart
-./run_demo.sh
+cd dataloader/ci/executor && docker-compose up
 ```
 
 ### Option B: Manual Test
@@ -265,7 +264,7 @@ docker-compose logs
 
 ## Next Steps
 
-1. **Run the quickstart demo** to verify everything works
+1. **Test the components** using docker-compose to verify everything works
 2. **Explore the data** in BigQuery Console
 3. **Modify configs** in `configs/your-project-id/dataloader/` to try different data sources  
 4. **Set up alerting** by configuring Slack integration
@@ -292,7 +291,7 @@ terraform apply -var-file="../../../../configs/$ANOMALY_PROJECT/terraform.tfvars
 
 ## Support
 
-- Check `quickstart/README.md` for demo-specific help
+- Review component-specific READMEs in `alerting/README.md` and `dataloader/README.md`
 - Review `PROJECT_SETUP.md` for full production setup
 - See `configs/template/README.md` for new project setup guide
 - Use `./scripts/setup-new-project.sh --help` for automated setup options
