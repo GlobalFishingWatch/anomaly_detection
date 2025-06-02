@@ -5,9 +5,8 @@ provider "google" {
 
 
 locals {
-  project_name_dashed = format("qa-gfw-anomaly-detection-alerting-%s", var.environment)
-  project_name_underscored = format("qa_gfw_anomaly_detection_alerting_%s", var.environment)
-  project_name_print  = format("QA Anomaly detection alerting (%s)", var.environment)
+  project_name_dashed = format("%s-%s", var.project_name, var.environment)
+  project_name_underscored = format("%s_%s", replace(var.project_name, "-", "_"), var.environment)
   sa                  = var.service_account_email
   region              = var.region
 }

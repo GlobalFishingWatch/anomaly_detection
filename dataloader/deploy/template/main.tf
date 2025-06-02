@@ -5,8 +5,7 @@ provider "google" {
 
 
 locals {
-  project_name_dashed = format("qa-gfw-anomaly-detection-dataloader-%s", var.environment)
-  project_name_print  = format("QA Anomaly detection data loader (%s)", var.environment)
+  project_name_dashed = format("%s-%s", var.project_name, var.environment)
   sa                  = var.service_account_email
   region              = var.region
 }
@@ -128,19 +127,15 @@ resource "google_cloud_run_v2_job" "job" {
 data "google_iam_policy" "cloud_run_invoker" {
   binding {
     role = "roles/run.invoker"
-    members = [
+    members = concat([
       format("serviceAccount:%s", local.sa),
-      "user:christian.homberg@globalfishingwatch.org",
-      "user:raul@globalfishingwatch.org",
-    ]
+    ], var.additional_users)
   }
   binding {
     role = "roles/run.developer"
-    members = [
+    members = concat([
       format("serviceAccount:%s", local.sa),
-      "user:christian.homberg@globalfishingwatch.org",
-      "user:raul@globalfishingwatch.org",
-    ]
+    ], var.additional_users)
   }
 }
 

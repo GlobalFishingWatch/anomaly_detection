@@ -27,3 +27,14 @@ variable "docker_registry" {
   default     = "gcr.io/your-dev-project-id"  # Update this
 }
 
+variable "anomaly_dataloader_project_name" {
+  description = "Project name for anomaly dataloader resource naming (e.g., 'qa-gfw-anomaly-detection-dataloader' for GFW)"
+  type        = string
+}
+
+variable "additional_users" {
+  description = "Additional users to grant Cloud Run access (e.g., ['user:email@domain.com'])"
+  type        = list(string)
+  default     = []
+}
+

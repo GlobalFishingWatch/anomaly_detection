@@ -30,3 +30,15 @@ variable "docker_registry" {
   description = "Docker registry URL"
   type        = string
 }
+
+variable "project_name" {
+  description = "Project name for dataloader resource naming"
+  type        = string
+  default     = "anomaly-detection-dataloader"
+}
+
+variable "additional_users" {
+  description = "Additional users to grant Cloud Run access (e.g., ['user:email@domain.com'])"
+  type        = list(string)
+  default     = []
+}

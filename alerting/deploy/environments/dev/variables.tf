@@ -27,3 +27,8 @@ variable "docker_registry" {
   default     = "gcr.io/your-dev-project-id"  # Update this
 }
 
+variable "anomaly_alerting_project_name" {
+  description = "Project name for anomaly alerting resource naming (e.g., 'qa-gfw-anomaly-detection-alerting' for GFW)"
+  type        = string
+}
+

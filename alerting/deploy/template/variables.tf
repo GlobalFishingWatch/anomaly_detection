@@ -27,4 +27,9 @@ variable "docker_registry" {
   type        = string
 }
 
+variable "project_name" {
+  description = "Project name for resource naming"
+  type        = string
+  default     = "anomaly-detection-alerting"
+}
 

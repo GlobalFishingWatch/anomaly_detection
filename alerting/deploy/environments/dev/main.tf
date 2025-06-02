@@ -11,4 +11,5 @@ module "anomaly_alerting_dev" {
   region                = var.region
   service_account_email = var.service_account_email
   docker_registry       = var.docker_registry
+  project_name          = var.anomaly_alerting_project_name
 }

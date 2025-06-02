@@ -12,4 +12,6 @@ module "anomaly_dataloader_dev" {
   region                = var.region
   service_account_email = var.service_account_email
   docker_registry       = var.docker_registry
+  project_name          = var.anomaly_dataloader_project_name
+  additional_users      = var.additional_users
 }
