@@ -320,17 +320,42 @@ To set up anomaly detection in a new GCP project:
     - Authentication works but needs correct gcloud config activation
     - Environment variables don't persist across bash command chains
 
-**PENDING:**
-18. Test DBT with new demo profile
-19. Deploy infrastructure to create required tables  
-20. Test complete dataloader and alerting workflow
-21. Update backend.tf files to use project-specific buckets
+**COMPLETED:**
+18. **Comprehensive Setup Script Implementation**: Complete automation workflow
+    - Created `scripts/setup-new-project.sh` (400+ lines) automating full project setup
+    - Handles: GCP authentication, project configuration, directory structure, DBT profiles, Terraform state
+    - Fixed API naming issue: `cloudrun.googleapis.com` to `run.googleapis.com`
+    - Validates: Prerequisites, authentication, project structure creation
+    - Testing revealed requirement for existing GCP projects with proper permissions
+
+19. **Setup Script Testing and Validation**:
+    - Authentication workflow: Works (creates project-specific gcloud configurations)
+    - Directory structure creation: Works (proper configs/{project-id}/ hierarchy)
+    - DBT profile generation: Works (avoids duplication, project-specific profiles)
+    - API enablement: Works (with corrected API names and sufficient permissions)
+    - Template file generation: Works (terraform.tfvars, seed files, configs)
+
+**DECISION POINT REACHED:**
+20. **GCP Project Creation Scope**: Two approaches identified
+    - **Current**: Script expects existing GCP projects (simpler, focused scope)
+    - **Enhanced**: Script creates new GCP projects (requires billing account, organization setup)
+    
+21. **Terraform State Management Architecture Decision**:
+    - **Current Issue**: All backend.tf files hardcode GFW production state bucket
+    - **Required**: Template-based backend configuration for true multi-project support
+    - **Implementation Plan**: Convert backend.tf to templates with {{PROJECT_ID}} placeholders
+
+**NEXT PHASE PLANNING COMPLETED:**
+- Comprehensive plan documented for GCP project creation + Terraform automation
+- Identified need for backend.tf template system
+- Scope decision needed: existing vs. new project creation approach
 
 ### Architecture Benefits Achieved:
 - **Isolation**: Teams can run independent instances without conflicts
 - **Flexibility**: Easy deployment to any GCP project with proper permissions
 - **Maintainability**: Centralized configuration through environment variables and Terraform
 - **Documentation**: Clear setup guides for new users and projects
+- **Automation**: One-command setup for new project configuration (when project exists)
 
 ## Important Instructions
 - **NO EMOJIS**: Never use emojis anywhere - not in code, comments, documentation, commit messages, or output text

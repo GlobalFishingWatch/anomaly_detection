@@ -139,7 +139,7 @@ setup_gcp_project() {
     print_status "Enabling required APIs..."
     gcloud services enable bigquery.googleapis.com \
         cloudbuild.googleapis.com \
-        cloudrun.googleapis.com \
+        run.googleapis.com \
         cloudscheduler.googleapis.com \
         secretmanager.googleapis.com \
         storage.googleapis.com
