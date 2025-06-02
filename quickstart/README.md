@@ -1,4 +1,4 @@
-# 🚀 Quickstart Demo
+# Quickstart Demo
 
 This directory contains a minimal working example of the anomaly detection system using public BigQuery data.
 
@@ -19,10 +19,10 @@ This directory contains a minimal working example of the anomaly detection syste
 ## Expected Results
 
 The demo will:
-1. ✅ Generate forecasts using MSTL and mean algorithms
-2. ✅ Store results in your BigQuery dataset
-3. ✅ Show forecast accuracy and any detected anomalies
-4. 📊 Create tables you can query and visualize
+1. Generate forecasts using MSTL and mean algorithms
+2. Store results in your BigQuery dataset
+3. Show forecast accuracy and any detected anomalies
+4. Create tables you can query and visualize
 
 ## Quick Start
 
@@ -47,7 +47,7 @@ docker-compose --profile results up results-viewer
 
 ## Next Steps
 
-1. 🔍 **Explore Results**: Query the generated tables in BigQuery
-2. 🎯 **Add Alerting**: Set up the alerting component with Slack
-3. 🏗️ **Deploy**: Use Terraform to deploy to Cloud Run
-4. 📊 **Monitor**: Connect to Looker Studio for dashboards
+1. **Explore Results**: Query the generated tables in BigQuery
+2. **Add Alerting**: Set up the alerting component with Slack
+3. **Deploy**: Use Terraform to deploy to Cloud Run
+4. **Monitor**: Connect to Looker Studio for dashboards

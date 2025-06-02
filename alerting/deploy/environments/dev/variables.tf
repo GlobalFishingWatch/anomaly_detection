@@ -32,3 +32,14 @@ variable "anomaly_alerting_project_name" {
   type        = string
 }
 
+variable "slack_bot_token_secret" {
+  description = "Full path to Slack bot token secret in Secret Manager"
+  type        = string
+}
+
+variable "additional_users" {
+  description = "Additional users to grant access to Cloud Run jobs"
+  type        = list(string)
+  default     = []
+}
+

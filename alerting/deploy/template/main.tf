@@ -60,7 +60,7 @@ resource "google_cloud_run_v2_job" "job" {
           name = "SLACK_BOT_TOKEN"
           value_source {
             secret_key_ref {
-              secret  = "projects/386173530526/secrets/QA_SLACK_BOT_USER_OAUTH_TOKEN"
+              secret  = var.slack_bot_token_secret
               version = "latest"
             }
           }
@@ -87,19 +87,15 @@ resource "google_cloud_run_v2_job" "job" {
 data "google_iam_policy" "cloud_run_invoker" {
   binding {
     role = "roles/run.invoker"
-    members = [
+    members = concat([
       format("serviceAccount:%s", local.sa),
-      "user:christian.homberg@globalfishingwatch.org",
-      "user:raul@globalfishingwatch.org",
-    ]
+    ], var.additional_users)
   }
   binding {
     role = "roles/run.developer"
-    members = [
+    members = concat([
       format("serviceAccount:%s", local.sa),
-      "user:christian.homberg@globalfishingwatch.org",
-      "user:raul@globalfishingwatch.org",
-    ]
+    ], var.additional_users)
   }
 }
 

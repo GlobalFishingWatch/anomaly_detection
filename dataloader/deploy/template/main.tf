@@ -91,8 +91,6 @@ resource "google_cloud_run_v2_job" "job" {
   location = local.region
   project  = var.project
 
-  deletion_protection = false
-
   template {
     task_count  = 1
     parallelism = 1

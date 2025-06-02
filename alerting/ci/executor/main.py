@@ -273,7 +273,7 @@ if __name__ == "__main__":
         required=False,
     )
     parser.add_argument(
-        "--deduplication-index",
+        "--A",
         help="BigQuery table for deduplication",
         dest="deduplication_index",
         required=False,

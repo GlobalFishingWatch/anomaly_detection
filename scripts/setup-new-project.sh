@@ -267,6 +267,66 @@ EOF
     print_success "Terraform remote state bucket created"
 }
 
+# Generate backend configurations for Terraform
+generate_backend_configs() {
+    print_status "Generating backend configurations..."
+    
+    # Check if the backend generator script exists
+    if [ ! -f "scripts/generate-backend-configs.sh" ]; then
+        print_error "Backend generator script not found: scripts/generate-backend-configs.sh"
+        exit 1
+    fi
+    
+    # Generate backend configurations for this project
+    ./scripts/generate-backend-configs.sh "$PROJECT_ID"
+    
+    print_success "Backend configurations generated"
+}
+
+# Validate project-specific state bucket
+validate_state_bucket() {
+    print_status "Validating Terraform state bucket..."
+    
+    # Determine expected bucket name
+    if [ "$PROJECT_ID" = "world-fishing-827" ]; then
+        EXPECTED_BUCKET="skytruth-pelagos-production-tfstate-us-central1"
+    else
+        EXPECTED_BUCKET="${PROJECT_ID}-tfstate"
+    fi
+    
+    # Check if bucket exists
+    if gsutil ls "gs://$EXPECTED_BUCKET" &>/dev/null; then
+        print_success "State bucket exists: $EXPECTED_BUCKET"
+    else
+        print_error "State bucket not found: $EXPECTED_BUCKET"
+        print_status "This should have been created by the bootstrap step."
+        print_status "Please verify the bootstrap deployment was successful."
+        exit 1
+    fi
+    
+    # Validate backend configurations were generated
+    backend_count=$(find . -name "backend.tf" | wc -l)
+    if [ "$backend_count" -eq 0 ]; then
+        print_error "No backend.tf files found. Backend generation may have failed."
+        exit 1
+    fi
+    
+    print_success "Found $backend_count backend configuration files"
+    
+    # Validate a sample backend.tf contains the correct bucket
+    sample_backend=$(find . -name "backend.tf" | head -1)
+    if [ -n "$sample_backend" ]; then
+        if grep -q "$EXPECTED_BUCKET" "$sample_backend"; then
+            print_success "Backend configurations correctly reference: $EXPECTED_BUCKET"
+        else
+            print_error "Backend configurations do not reference expected bucket: $EXPECTED_BUCKET"
+            print_status "Found in $sample_backend:"
+            grep "bucket" "$sample_backend" || true
+            exit 1
+        fi
+    fi
+}
+
 # Setup DBT profile
 setup_dbt_profile() {
     print_status "Setting up DBT profile..."
@@ -435,6 +495,8 @@ main() {
     setup_gcp_project
     create_project_structure
     setup_terraform_state
+    generate_backend_configs
+    validate_state_bucket
     setup_dbt_profile
     create_project_scripts
     create_project_docs
@@ -442,11 +504,18 @@ main() {
     echo ""
     print_success "Project setup completed successfully!"
     echo ""
+    echo "Setup Summary:"
+    echo "  - GCP Project: $PROJECT_ID"
+    echo "  - State Bucket: $([ "$PROJECT_ID" = "world-fishing-827" ] && echo "skytruth-pelagos-production-tfstate-us-central1" || echo "${PROJECT_ID}-tfstate")"
+    echo "  - Backend Configs: Generated for all Terraform modules"
+    echo "  - DBT Profile: $DBT_PROFILE_NAME"
+    echo ""
     echo "Next steps:"
     echo "1. Activate your environment: source configs/$PROJECT_ID/activate.sh"
     echo "2. Review and customize: configs/$PROJECT_ID/README.md"
     echo "3. Configure your data sources in: configs/$PROJECT_ID/dataloader/"
     echo "4. Deploy and test: cd dbt && dbt seed --profile $DBT_PROFILE_NAME"
+    echo "5. Deploy infrastructure: cd dataloader/deploy/environments/dev && terraform init && terraform apply"
     echo ""
     echo "Your anomaly detection project is ready!"
 }
