@@ -18,3 +18,4 @@ v_world_fishing_827_queries_billed_by_sa_non_sa,max,,0.50,,0.25
 gfw_api_delays,constant_value,,1,,
 pipe3_product_events_fishing_count,mstl,-0.5,0.5,-0.25,0.25
 pipe3_product_events_fishing_count_esp,mstl,-0.5,0.5,-0.25,0.25
+s2_published_detections_delays,constant_value,,1,,

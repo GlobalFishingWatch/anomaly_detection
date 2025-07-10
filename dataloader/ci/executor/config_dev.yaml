@@ -351,6 +351,23 @@ anomalies:
           constant_value:
               parameters:
                 value: 0.5
+  s2_published_detections_delays:
+      source_dataset: tech_dq_monitoring
+      source_table: v_s2_published_detections_delays
+      source_timestamp_column: timestamp
+      source_timestamp_column_sql: timestamp
+      source_forecast_column: timestamp_delay_minute_now_hypothetical
+      source_forecast_column_sql: MIN(timestamp_delay_minute_now_hypothetical)
+      period_length: day
+      history_start: '2025-07-03'
+      source_filter_sql: "
+      timestamp_lag_minute_now_hypothetical > 0
+      AND date >= '2025-07-03'
+      "
+      algorithms:
+          constant_value:
+              parameters:
+                value: 0.5
   pipe3_product_events_fishing_count:
       source_dataset: tech_dq_monitoring
       source_table: t_product_events_fishing_metrics
