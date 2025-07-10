@@ -7,7 +7,10 @@ suppressMessages({
   library(glue)
   library(lubridate)
   library(optparse)
+  library(logger)
 })
+
+log_threshold(INFO)
 
 source("bq_utils.R")
 source("helpers.R")
@@ -38,7 +41,8 @@ option_list = list(
 parser = OptionParser(option_list = option_list)
 args = parse_args(parser)
 
-print(args)
+log_info("Parsed arguments:")
+log_info(list(args))
 
 anomaly_detection_config_name = args$anomaly_detection_config_name
 allowed_size = as.numeric(args$allowed_size) * BQ_GB
@@ -54,7 +58,7 @@ forecast_timestamp_to = args$forecast_timestamp_to
 no_cores = future::availableCores() - 2
 future::plan(future::multicore(), workers = no_cores)
 map_fun = partial(furrr::future_imap_dfr, .options = furrr::furrr_options(seed = T))
-cat(glue("Using {no_cores} cores"))
+log_info(glue("Using {no_cores} cores"))
 
 map_fun = map_fun %>% compose(progressr::with_progress, .dir = "forward")
 
@@ -102,7 +106,8 @@ current_anomaly_detection_config[config_fields] = config_fields %>%
   set_names() %>% 
   imap(~ current_anomaly_detection_config[[.x]] %||% "")
 
-print(current_anomaly_detection_config)
+log_info("Current anomaly detection config:")
+log_info(list(current_anomaly_detection_config))
 
 if ("allowed_size" %in% names(current_anomaly_detection_config)) {
   allowed_size = as.numeric(current_anomaly_detection_config$allowed_size) * BQ_GB
@@ -153,7 +158,7 @@ source_filter_sql = if(current_anomaly_detection_config$source_filter_sql == "")
 
 if (current_anomaly_detection_config$source_sql != "") {
   select_timestamp_value_sql = glue(current_anomaly_detection_config$source_sql)
-  print(select_timestamp_value_sql)
+  log_info(select_timestamp_value_sql)
 } else {
   select_timestamp_value_sql = glue(.null = "", "
     TIMESTAMP_TRUNC({current_anomaly_detection_config$source_timestamp_column_sql}, {current_anomaly_detection_config$period_length}) timestamp, 
@@ -177,7 +182,7 @@ if (length(missing_timestamps)) {
   ) %>% 
     safe_query(con = con, allowed_size = allowed_size, verbose = T) 
 } else {
-  cat("No actual data missing", fill = T)
+  log_info("No actual data missing", fill = T)
 }
 
 
@@ -203,10 +208,11 @@ if (forecast_timestamp_from == "") {
 
 forecast_timestamp_from %<>% 
     parse_date_or_period()  %>% 
+    max(as.POSIXct(history_start)) %>%
     with_tz("UTC") %>% 
     floor_date(current_anomaly_detection_config$period_length)
 
-cat(glue("Forecasting from {forecast_timestamp_from}"), fill = T)
+log_info(glue("Forecasting from {forecast_timestamp_from}"), fill = T)
 
 forecast_timestamp_to = as.POSIXct(forecast_timestamp_to, format = "%Y-%m-%d %H:%M:%S") %>% 
   with_tz("UTC")
@@ -225,7 +231,7 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
   p = progressr::progressor(steps = length(periods_to_forecast))
   
   dt_current_dimension_split = dt_train[dimension_split_value == current_dimension_split_value]
-  cat(glue("forecasting {dt_current_dimension_split[1, dimension_split_value]}"), fill = T)
+  log_info(glue("forecasting {dt_current_dimension_split[1, dimension_split_value]}"), fill = T)
   
   dt_current_forecasts = periods_to_forecast %>% 
     furrr::future_imap_dfr(\(current_fc_period, index) {
