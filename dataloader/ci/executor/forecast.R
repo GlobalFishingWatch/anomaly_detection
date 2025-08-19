@@ -200,6 +200,12 @@ dt_train = get_anomaly_detection_actuals(
   .[dimension_split_value %>% is.na, dimension_split_value := "NA"] %>% 
   .[order(timestamp, dimension_split_value)]
 
+if (!dt_train[, .N]) {
+  log_error("No training data available, nothing to forecast", fill = T)
+  quit(status = 0)
+}
+
+
 # By default forecast the last 90 periods, unless this is provided by the config or environment
 if (forecast_timestamp_from == "") {
   forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% 
