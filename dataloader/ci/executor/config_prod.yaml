@@ -1,5 +1,6 @@
 anomalies:
   parser_errors_daily:
+      source_project: "world-fishing-827"
       source_dataset: "tech_dq_monitoring"
       source_table: "t_pipe_nmea_parsed_errors"
       source_timestamp_column: "date"

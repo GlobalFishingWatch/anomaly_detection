@@ -69,6 +69,7 @@ USING (
     SELECT 
       '{current_anomaly_detection_config$name}' config_name,
       '{current_anomaly_detection_config$dimension_split}' dimension_split,
+        '{current_anomaly_detection_config$source_project}' source_project, 
         '{current_anomaly_detection_config$source_dataset}' source_dataset, 
         '{current_anomaly_detection_config$source_table}' source_table,
         '{current_anomaly_detection_config$source_timestamp_column}' source_timestamp_column,
@@ -105,6 +106,7 @@ is_latest = FALSE
 WHEN NOT MATCHED THEN
   INSERT VALUES (
     key,
+    source_project,
     source_dataset,
     source_table,
     source_timestamp_column,

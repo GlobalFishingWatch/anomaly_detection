@@ -1,5 +1,6 @@
 anomalies:
   parser_errors_daily:
+      source_project: "world-fishing-827"
       source_dataset: "tech_dq_monitoring"
       source_table: "t_pipe_nmea_parsed_errors"
       source_timestamp_column: "date"
@@ -20,6 +21,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   parser_errors_daily_by_source:
+      source_project: "world-fishing-827"
       source_dataset: "tech_dq_monitoring"
       source_table: "t_pipe_nmea_parsed_errors"
       source_timestamp_column: "date"
@@ -41,6 +43,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   parsed_row_count_source_daily:
+      source_project: "world-fishing-827"
       source_dataset: "tech_dq_monitoring"
       source_table: "t_facts_pipe_nmea_parsed_stats_daily"
       source_timestamp_column: "date"
@@ -72,6 +75,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   parsed_row_count_receiver_type_daily:
+      source_project: "world-fishing-827"
       source_dataset: "tech_dq_monitoring"
       source_table: "t_facts_pipe_nmea_parsed_stats_daily"
       source_timestamp_column: "date"
@@ -104,6 +108,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   parsed_row_count_main_types_daily:
+      source_project: "world-fishing-827"
       source_dataset: "tech_dq_monitoring"
       source_table: "t_facts_pipe_nmea_parsed_stats_daily"
       source_timestamp_column: "date"
@@ -136,6 +141,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   parsed_row_count_non_main_types_daily:
+      source_project: "world-fishing-827"
       source_dataset: "tech_dq_monitoring"
       source_table: "t_facts_pipe_nmea_parsed_stats_daily"
       source_timestamp_column: "date"
@@ -168,6 +174,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   pipe3_gaps:
+      source_project: "global-fishing-watch"
       source_dataset: pipe_ais_v3_published
       source_table: product_events_ais_disabling
       source_timestamp_column: event_end
@@ -188,6 +195,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   t_world_fishing_827_queries_billed:
+      source_project: "world-fishing-827"
       source_dataset: tech_dq_monitoring
       source_table: t_world_fishing_827_queries
       source_timestamp_column: date
@@ -214,6 +222,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   v_world_fishing_827_queries_billed_by_sa_non_sa:
+      source_project: "world-fishing-827"
       source_dataset: tech_dq_monitoring
       source_table: v_world_fishing_827_queries
       source_timestamp_column: date
@@ -241,6 +250,7 @@ anomalies:
               parameters:
                 sliding_window: 30
   parsed_row_count_hourly:
+      source_project: "world-fishing-827"
       source_dataset: tech_dq_monitoring
       source_table: v_all_partitions_latest
       source_timestamp_column: partition_hour
@@ -270,6 +280,7 @@ anomalies:
               parameters:
                 sliding_window: 72
   gfw_api_delays:
+      source_project: "world-fishing-827"
       source_dataset: tech_dq_monitoring
       source_table: v_scraped_api_values
       source_timestamp_column: timestamp

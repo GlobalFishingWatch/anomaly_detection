@@ -26,6 +26,7 @@ resource "google_bigquery_table" "actuals" {
   schema = <<EOF
 [
     {"name": "key", "type": "BYTES"},
+    {"name": "source_project", "type": "STRING"},
     {"name": "source_dataset", "type": "STRING"},
     {"name": "source_table", "type": "STRING"},
     {"name": "source_timestamp_column", "type": "STRING"},
@@ -63,6 +64,7 @@ resource "google_bigquery_table" "forecasts" {
   schema = <<EOF
 [
     {"name": "key", "type": "BYTES"},
+    {"name": "source_project", "type": "STRING"},
     {"name": "source_dataset", "type": "STRING"},
     {"name": "source_table", "type": "STRING"},
     {"name": "source_timestamp_column", "type": "STRING"},
