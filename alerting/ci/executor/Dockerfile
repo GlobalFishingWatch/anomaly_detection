@@ -12,6 +12,10 @@ WORKDIR /code
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY main.py main.py
+COPY main.py bq.py slack.py state.py ./
+COPY tests/ tests/
+
+# Run unit tests at build time so a failing state machine blocks the image.
+RUN python -m pytest tests/test_state.py -v
 
 ENTRYPOINT ["python3", "-u", "main.py"]

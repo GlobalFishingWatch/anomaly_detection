@@ -1,305 +1,309 @@
+"""Anomaly alerting orchestrator.
+
+Queries the deltas table, groups by config, decides per-config actions via
+the pure state machine in state.py, and applies them via bq.py and slack.py.
+
+One Slack "incident" == one top-level parent message per (config, open
+period). All per-dimension alerts for that incident are flat thread
+replies under the parent. Classifications changes edit the reply in
+place; resolution edits the reply to mark it resolved; parent summary
+(critical/warning x lower/higher counts) is edited in place as counts
+change. Incidents auto-close after `thread_timeout_hours` of inactivity
+(default 24h) and are hard-capped at 7 days.
+"""
+
+from __future__ import annotations
+
 import argparse
 import datetime
-import hashlib
 import json
 import logging
 import os
-import urllib.parse
 
 from google.cloud import bigquery
 from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
 
-SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
-
-client = bigquery.Client()
-slack_client = WebClient(token=SLACK_BOT_TOKEN)
+import bq
+import slack as slacklib
+import state
 
 
-def make_looker_studio_url(report_id, page_id, config_name, fc, dimension):
-    params_json = {
-        "PARAM_CONFIG_NAME": config_name,
-        "PARAM_FC": fc,
-        "PARAM_DIMENSION": dimension,
-    }
-    encoded_params = urllib.parse.quote(json.dumps(params_json))
-    url_with_params = f"https://lookerstudio.google.com/reporting/{report_id}/page/{page_id}?params={encoded_params}"
-    logging.info(f"Looker Studio URL: {url_with_params}")
-    return url_with_params
+def apply_actions(
+    actions: list,
+    *,
+    bq_client: bigquery.Client,
+    slack_client: WebClient,
+    incidents_table: str,
+    replies_table: str,
+    environment: str,
+    config_name: str,
+    description: str | None,
+    report_id: str,
+    page_id: str,
+    now: datetime.datetime,
+    dry_run: bool = False,
+) -> None:
+    """Translate state-machine actions into Slack + BigQuery calls.
 
-
-def write_event_to_bigquery(
-    event_hash,
-    rendered_message,
-    deduplication_index,
-    deduplication_window=30 * 24 * 60 * 60,
-):
-    query = f"""
-    SELECT * FROM `{deduplication_index}`
-    WHERE event_hash = '{event_hash}'
+    Actions reference the "pending" parent via `incident_slack_ts = None`
+    when an OpenIncident action is scheduled earlier in the batch. The
+    real ts is patched in here after OpenIncident is applied.
     """
-    query_job = client.query(query)
-    results = query_job.result()
+    new_parent_ts: str | None = None
 
-    results = list(results)
-    processing_timestamp = datetime.datetime.now(datetime.timezone.utc)
-    if results:
-        logging.info(f"Event already processed at {results[0].get('processed_at')}.")
-        if (processing_timestamp - results[0].get("processed_at")).total_seconds() < deduplication_window:
-            logging.info("Event is within deduplication window. Skipping.")
-            return False
-        else:
-            logging.info("Event is outside deduplication window. Processing.")
+    for action in actions:
+        if isinstance(action, state.OpenIncident):
+            counts = {"critical_higher": 0, "critical_lower": 0,
+                      "warning_higher": 0, "warning_lower": 0}
+            looker_url = slacklib.make_looker_studio_url(
+                report_id, page_id, action.config_name, "", "")
+            text = slacklib.render_summary(
+                environment, action.config_name, description, counts, looker_url)
+            logging.info("[open_incident] %s -> %s", action.config_name,
+                         action.slack_channel_id)
+            if dry_run:
+                new_parent_ts = "DRYRUN-" + str(id(action))
+                continue
+            ts = slacklib.post_parent(slack_client, action.slack_channel_id, text)
+            new_parent_ts = ts
+            bq.insert_incident(
+                bq_client, incidents_table,
+                config_name=action.config_name,
+                slack_channel_id=action.slack_channel_id,
+                slack_ts=ts, now=now,
+                summary_counts_json=json.dumps(counts),
+                client_msg_id=bq.new_client_msg_id(),
+            )
 
-    query = f"""
-    INSERT INTO `{deduplication_index}`
-    VALUES (@event_hash, @processing_timestamp, @rendered_message)
-    """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("event_hash", "STRING", event_hash),
-            bigquery.ScalarQueryParameter("processing_timestamp", "TIMESTAMP", processing_timestamp),
-            bigquery.ScalarQueryParameter("rendered_message", "STRING", rendered_message),
-        ]
-    )
-    query_job = client.query(query, job_config=job_config)
-    results = query_job.result()
-    logging.info("Event written to BigQuery.")
-    return True
+        elif isinstance(action, state.CreateReply):
+            parent_ts = new_parent_ts
+            if parent_ts is None:
+                # No OpenIncident in this batch: fetch from DB.
+                existing = bq.find_open_incident(bq_client, incidents_table,
+                                                 action.config_name)
+                if existing is None:
+                    logging.error(
+                        "[create_reply] no open incident for %s; skipping",
+                        action.config_name)
+                    continue
+                parent_ts = existing["slack_ts"]
 
+            looker_url = slacklib.make_looker_studio_url(
+                report_id, page_id, action.config_name,
+                action.forecast_method, action.dimension_split_value)
+            text = slacklib.render_dimension_card(action.deltas_row, looker_url)
+            logging.info("[create_reply] %s / %s / %s", action.config_name,
+                         action.dimension_split_value, action.anomaly_type_lower_higher)
+            if dry_run:
+                continue
+            ts = slacklib.post_reply(slack_client, action.slack_channel_id,
+                                     parent_ts, text)
+            bq.insert_reply(
+                bq_client, replies_table,
+                incident_slack_ts=parent_ts,
+                config_name=action.config_name,
+                dimension_split_value=action.dimension_split_value,
+                forecast_method=action.forecast_method,
+                slack_ts=ts,
+                slack_channel_id=action.slack_channel_id,
+                anomaly_type_lower_higher=action.anomaly_type_lower_higher,
+                last_anomaly_timestamp=action.deltas_row["timestamp"],
+                now=now,
+                client_msg_id=bq.new_client_msg_id(),
+            )
 
-def get_query_results(environment, query_template):
-    query = query_template.format(environment=environment)
+        elif isinstance(action, state.UpdateReplyClassification):
+            looker_url = slacklib.make_looker_studio_url(
+                report_id, page_id, config_name,
+                action.deltas_row.get("forecast_method", ""),
+                action.dimension_split_value)
+            text = slacklib.render_dimension_card(action.deltas_row, looker_url)
+            logging.info("[update_reply] %s / %s -> %s",
+                         config_name, action.dimension_split_value,
+                         action.new_anomaly_type_lower_higher)
+            if dry_run:
+                continue
+            ok = slacklib.update_message(slack_client, action.slack_channel_id,
+                                         action.reply_slack_ts, text)
+            if ok:
+                bq.update_reply(
+                    bq_client, replies_table, slack_ts=action.reply_slack_ts,
+                    now=now,
+                    anomaly_type_lower_higher=action.new_anomaly_type_lower_higher,
+                    last_anomaly_timestamp=action.deltas_row["timestamp"],
+                )
 
-    query_job = client.query(query, job_config=bigquery.QueryJobConfig(use_query_cache=False))
-    results = query_job.result()
+        elif isinstance(action, state.ResolveReply):
+            # Fetch the current text so we can keep the original content
+            # and prepend the resolved marker. Slack doesn't return the
+            # previous text directly; we re-render a placeholder.
+            text = (":large_green_circle: *Resolved* (was "
+                    + action.previous_anomaly_type_lower_higher + ")\n"
+                    f"*Dimension*: {action.dimension_split_value}")
+            logging.info("[resolve_reply] %s / %s",
+                         config_name, action.dimension_split_value)
+            if dry_run:
+                continue
+            ok = slacklib.update_message(slack_client, action.slack_channel_id,
+                                         action.reply_slack_ts, text)
+            if ok:
+                bq.update_reply(bq_client, replies_table,
+                                slack_ts=action.reply_slack_ts, now=now,
+                                status="resolved",
+                                anomaly_type_lower_higher="normal")
 
-    return results
+        elif isinstance(action, state.UpdateParentSummary):
+            parent_ts = action.incident_slack_ts or new_parent_ts
+            if parent_ts is None:
+                logging.warning("[update_parent] no parent ts; skipping")
+                continue
+            looker_url = slacklib.make_looker_studio_url(
+                report_id, page_id, action.config_name, "", "")
+            text = slacklib.render_summary(
+                environment, action.config_name, description,
+                action.counts, looker_url)
+            logging.info("[update_parent] %s counts=%s",
+                         action.config_name, action.counts)
+            if dry_run:
+                continue
+            ok = slacklib.update_message(slack_client, action.slack_channel_id,
+                                         parent_ts, text)
+            if ok:
+                bq.update_incident(bq_client, incidents_table, slack_ts=parent_ts,
+                                   now=now,
+                                   summary_counts_json=json.dumps(action.counts))
 
-
-def create_anomaly_alert_slack_message(
-    environment,
-    anomaly_config_name,
-    dimension_split_value,
-    description,
-    anomaly_type,
-    anomaly_timestamp,
-    forecast_value,
-    forecast_method,
-    actual_value,
-    threshold,
-    delta_rel,
-    query,
-    looker_dashboard_url,
-):
-    alert_emoji = ":red_circle:" if anomaly_type == "critical" else ":large_yellow_circle:"
-    description = description if description else "No description available"
-    dimension = f"\n*Dimension*: {dimension_split_value}" if dimension_split_value != "" else ""
-    anomaly_alerting_environment = f"\n*Environment*: {environment}" if environment != "prod" else ""
-    message = f"""{alert_emoji}
-*Anomaly*: {anomaly_config_name}{dimension}
-*URL*: <{looker_dashboard_url}|Anomaly Detection Dashboard>
-*Anomaly level*: {anomaly_type}
-*Timestamp*: {anomaly_timestamp}
-*Forecast value*: {forecast_value}
-*Forecast method*: {forecast_method}
-*Actual value*: {actual_value}
-*Relative delta*: {delta_rel}
-*Threshold*: {threshold}
-*Description*: {description}
-{anomaly_alerting_environment}
-*Query*: 
-```
-SELECT{query}
-```"""
-    return message
-
-
-def get_slack_channel_id(config_name, environment):
-    slack_channel_query = f"""
-    SELECT
-        CASE
-            WHEN config_name = '{config_name}' AND environment = '{environment}' THEN 1
-            WHEN config_name IS NULL AND environment = '{environment}' THEN 2
-            ELSE 3
-        END AS prioritisation,
-        config_name,
-        environment,
-        slack_channel_id,
-        slack_channel_name
-    FROM `world-fishing-827.tech_anomaly_detection.slack_channels_environments_config_mapping`
-    ORDER BY prioritisation
-    LIMIT 1
-    """
-
-    query_job = client.query(slack_channel_query)
-    results = query_job.result()
-
-    # throw error if no priortisation 1 or 2
-    # or if results empty
-    if not results:
-        raise ValueError("No results found for the given config_name and environment.")
-
-    for row in results:
-        slack_channel_id = row["slack_channel_id"]
-        slack_channel_name = row["slack_channel_name"]
-        if row["prioritisation"] == 1 or row["prioritisation"] == 2:
-            break
-
-    if not slack_channel_id:
-        raise ValueError("No slack channel id found for the given config_name and environment.")
-
-    logging.info(f"Slack channel id: {slack_channel_id}")
-    logging.info(f"Slack channel name: {slack_channel_name}")
-    return slack_channel_id
+        elif isinstance(action, state.CloseIncident):
+            # Append a closed marker; callers to `update_message` that fail
+            # softly (message deleted) are fine -- we still mark BQ closed.
+            text = (":white_check_mark: *Incident closed* (" + action.reason
+                    + ")\n*Config*: " + action.config_name)
+            logging.info("[close_incident] %s reason=%s",
+                         action.config_name, action.reason)
+            if dry_run:
+                continue
+            slacklib.update_message(slack_client, action.slack_channel_id,
+                                    action.incident_slack_ts, text)
+            bq.update_incident(bq_client, incidents_table,
+                               slack_ts=action.incident_slack_ts, now=now,
+                               status="resolved", closed_at=now)
 
 
 def run(
-    environment,
-    query_template,
-    report_id,
-    page_id,
-    deduplication_index,
-    deduplication_window,
-):
-    results = get_query_results(environment, query_template)
+    *,
+    environment: str,
+    incidents_table: str,
+    replies_table: str,
+    report_id: str,
+    page_id: str,
+    dry_run: bool = False,
+    replay_fixture: str | None = None,
+) -> None:
+    bq_client = bigquery.Client()
+    slack_client = WebClient(token=os.getenv("SLACK_BOT_TOKEN"))
+    now = datetime.datetime.now(datetime.timezone.utc)
 
-    for row in results:
-        logging.info(row)
-        looker_dashboard_url = make_looker_studio_url(
-            report_id,
-            page_id,
-            row["config_name"],
-            row["forecast_method"],
-            row["dimension_split_value"],
+    if replay_fixture:
+        with open(replay_fixture) as fh:
+            deltas_all = json.load(fh)
+        # Normalize timestamps from ISO strings back to datetime.
+        for r in deltas_all:
+            if isinstance(r.get("timestamp"), str):
+                r["timestamp"] = datetime.datetime.fromisoformat(r["timestamp"])
+    else:
+        deltas_all = bq.query_deltas_with_open_replies(
+            bq_client, environment, replies_table)
+
+    # Group by config, also ensure we visit configs with open incidents
+    # that have no active deltas rows (so we can close them on timeout).
+    deltas_by_config: dict[str, list[dict]] = {}
+    for r in deltas_all:
+        deltas_by_config.setdefault(r["config_name"], []).append(r)
+
+    active_configs = set(deltas_by_config.keys())
+    if not replay_fixture:
+        try:
+            active_configs.update(
+                bq.list_configs_with_activity(bq_client, environment,
+                                              incidents_table))
+        except Exception as e:
+            logging.warning("list_configs_with_activity failed: %s", e)
+
+    for config_name in sorted(active_configs):
+        rows = deltas_by_config.get(config_name, [])
+        description = rows[0].get("description") if rows else None
+
+        channel = bq.get_channel_config(bq_client, config_name, environment)
+        open_incident = bq.find_open_incident(bq_client, incidents_table,
+                                              config_name)
+        open_replies = bq.find_open_replies(bq_client, replies_table,
+                                            config_name) \
+            if open_incident else []
+
+        actions = state.process_config(
+            config_name=config_name,
+            slack_channel_id=channel["slack_channel_id"],
+            thread_timeout_hours=channel.get("thread_timeout_hours") or state.DEFAULT_TIMEOUT_HOURS,
+            deltas_rows=rows,
+            open_incident=open_incident,
+            open_replies=open_replies,
+            now=now,
         )
-        rendered_message = create_anomaly_alert_slack_message(
-            environment=environment,
-            anomaly_config_name=row["config_name"],
-            dimension_split_value=row["dimension_split_value"],
-            description=row["description"],
-            anomaly_type=row["anomaly_type"],
-            anomaly_timestamp=row["timestamp"],
-            forecast_value=row["forecast_value"],
-            forecast_method=row["forecast_method"],
-            actual_value=row["actual_value"],
-            threshold=row["exceeded_threshold_lower_higher"],
-            delta_rel=row["delta_rel"],
-            query=row["source_sql"],
-            looker_dashboard_url=looker_dashboard_url,
-        )
 
-        logging.info(rendered_message)
+        if actions:
+            logging.info("[%s] %d actions: %s", config_name, len(actions),
+                         [type(a).__name__ for a in actions])
+            apply_actions(
+                actions,
+                bq_client=bq_client, slack_client=slack_client,
+                incidents_table=incidents_table, replies_table=replies_table,
+                environment=environment, config_name=config_name,
+                description=description,
+                report_id=report_id, page_id=page_id, now=now,
+                dry_run=dry_run,
+            )
 
-        # Fuzzy dedup: one alert per (config, dimension, forecast method, timestamp,
-        # direction+criticality). Values like actual_value, forecast_value and delta_rel
-        # are intentionally excluded so that upstream reprocessing that shifts the
-        # numbers but keeps the anomaly classification stable does not re-fire.
-        columns_used = [
-            row["config_name"],
-            row["dimension_split_value"],
-            row["forecast_method"],
-            row["timestamp"],
-            row["anomaly_type_lower_higher"],
-        ]
 
-        event_hash = hashlib.sha256(str(columns_used).encode()).hexdigest()
-
-        logging.info(event_hash)
-
-        # We write the event hash to the bigquery deduplication index if it is not already present
-        # if it is present, we skip sending the slack alert
-        # TODO: this is a bit problematic in case the slack alert fails because we have already inserted the event hash
-        if write_event_to_bigquery(
-            event_hash=event_hash,
-            rendered_message=rendered_message,
-            deduplication_index=deduplication_index,
-            deduplication_window=deduplication_window,
-        ):
-            channel_id = get_slack_channel_id(row["config_name"], environment)
-            try:
-                result = slack_client.chat_postMessage(channel=channel_id, text=rendered_message, unfurl_links=False)
-                logging.info(result)
-
-            except SlackApiError as e:
-                logging.error(f"Error: {e}")
-        else:
-            logging.info("Event already processed. Skipping sending message to slack.")
+def _derive_default_table(env: str, suffix: str) -> str:
+    return (f"world-fishing-827.tech_anomaly_detection."
+            f"t_qa_gfw_anomaly_detection_alerting_{env}_{suffix}")
 
 
 if __name__ == "__main__":
-    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-    logging.basicConfig(level=log_level)
+    logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--environment",
-        help="Environment: dev, staging, prod",
-        dest="environment",
-        required=False,
-        default="dev",
-    )
-    parser.add_argument(
-        "--query-template",
-        help="SQL anomaly query template",
-        dest="query_template",
-        required=False,
-        default="""
-    SELECT * FROM `world-fishing-827.tech_anomaly_detection.t_{environment}_deltas`
-    WHERE anomaly_type != 'normal'
-    AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30*24 HOUR)
-    ORDER BY timestamp DESC, config_name, dimension_split_value
-    """,
-    )
-    parser.add_argument(
-        "--looker-report-id",
-        help="Looker report id",
-        dest="report_id",
-        default="1f9b8d37-a87b-4177-a108-3b3e87ce5804",
-        required=False,
-    )
-    parser.add_argument(
-        "--looker-page-id",
-        help="Looker page id",
-        dest="page_id",
-        default="p_ufk1l0slhd",
-        required=False,
-    )
-    parser.add_argument(
-        "--deduplication-index",
-        help="BigQuery table for deduplication",
-        dest="deduplication_index",
-        required=False,
-        default="",
-    )
-    parser.add_argument(
-        "--deduplication-window",
-        help="Deduplication window in seconds",
-        dest="deduplication_window",
-        default=30 * 24 * 60 * 60,
-        required=False,
-    )
+    parser.add_argument("--environment", default="dev")
+    parser.add_argument("--incidents-table",
+                        help="Default: derived from environment.")
+    parser.add_argument("--replies-table",
+                        help="Default: derived from environment.")
+    parser.add_argument("--looker-report-id",
+                        default="1f9b8d37-a87b-4177-a108-3b3e87ce5804",
+                        dest="report_id")
+    parser.add_argument("--looker-page-id", default="p_ufk1l0slhd",
+                        dest="page_id")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Log actions without calling Slack or BQ writes.")
+    parser.add_argument("--replay",
+                        help="Path to a JSON fixture of deltas rows for replay.")
+    # Accept the legacy --deduplication-index arg but ignore it (kept for
+    # backward compatibility with the scheduler body until Terraform rolls).
+    parser.add_argument("--deduplication-index", required=False)
 
-    known_args, _ = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
 
-    environment = known_args.environment
-    query_template = known_args.query_template
-    report_id = known_args.report_id
-    page_id = known_args.page_id
-    deduplication_window = known_args.deduplication_window
-
-    if known_args.deduplication_index == "":
-        deduplication_index = (
-            f"world-fishing-827.tech_anomaly_detection.t_qa_gfw_anomaly_detection_alerting_{environment}_deduplication-index"
-        )
-    else:
-        deduplication_index = known_args.deduplication_index
+    incidents = args.incidents_table or _derive_default_table(
+        args.environment, "incidents")
+    replies = args.replies_table or _derive_default_table(
+        args.environment, "incident_replies")
 
     run(
-        environment=environment,
-        query_template=query_template,
-        report_id=report_id,
-        page_id=page_id,
-        deduplication_index=deduplication_index,
-        deduplication_window=deduplication_window,
+        environment=args.environment,
+        incidents_table=incidents,
+        replies_table=replies,
+        report_id=args.report_id,
+        page_id=args.page_id,
+        dry_run=args.dry_run,
+        replay_fixture=args.replay,
     )
