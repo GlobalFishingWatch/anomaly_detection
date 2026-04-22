@@ -35,9 +35,9 @@ EOF
 
 }
 
-# Parent messages: one per (config, open incident). Each row maps an active
-# Slack thread back to the config it summarises. Updated in place via
-# chat.update so the summary counts stay current.
+# Parent messages: one per (config_name, anomaly_date). Posted once at
+# thread open and never edited. Updated in BQ only for status flip on
+# close and for the debounce key (summary_counts_json).
 resource "google_bigquery_table" "alerting_incidents" {
   dataset_id = "tech_anomaly_detection"
   table_id   = "t_${local.project_name_underscored}_incidents"
@@ -48,15 +48,15 @@ resource "google_bigquery_table" "alerting_incidents" {
     field = "opened_at"
   }
 
-  clustering = ["config_name", "status"]
+  clustering = ["config_name", "anomaly_date"]
 
   schema = <<EOF
 [
     {"name": "config_name", "type": "STRING"},
+    {"name": "anomaly_date", "type": "DATE"},
     {"name": "slack_channel_id", "type": "STRING"},
     {"name": "slack_ts", "type": "STRING"},
     {"name": "opened_at", "type": "TIMESTAMP"},
-    {"name": "last_activity_at", "type": "TIMESTAMP"},
     {"name": "closed_at", "type": "TIMESTAMP"},
     {"name": "status", "type": "STRING"},
     {"name": "client_msg_id", "type": "STRING"},
@@ -66,9 +66,10 @@ EOF
 
 }
 
-# Per-dimension thread replies under each incident. Identity is
-# (config_name, dimension_split_value, forecast_method); classification
-# changes update the same row in place.
+# Append-only event log of thread replies. One row per Slack reply posted.
+# Each row captures the state announced by that reply; we never update
+# rows. "Current state of dim X in thread Y" = ORDER BY posted_at DESC
+# LIMIT 1 filtered by kind != 'summary'.
 resource "google_bigquery_table" "alerting_incident_replies" {
   dataset_id = "tech_anomaly_detection"
   table_id   = "t_${local.project_name_underscored}_incident_replies"
@@ -76,10 +77,10 @@ resource "google_bigquery_table" "alerting_incident_replies" {
 
   time_partitioning {
     type  = "MONTH"
-    field = "opened_at"
+    field = "posted_at"
   }
 
-  clustering = ["incident_slack_ts", "status"]
+  clustering = ["incident_slack_ts", "dimension_split_value", "forecast_method"]
 
   schema = <<EOF
 [
@@ -89,11 +90,11 @@ resource "google_bigquery_table" "alerting_incident_replies" {
     {"name": "forecast_method", "type": "STRING"},
     {"name": "slack_ts", "type": "STRING"},
     {"name": "slack_channel_id", "type": "STRING"},
+    {"name": "kind", "type": "STRING"},
     {"name": "anomaly_type_lower_higher", "type": "STRING"},
-    {"name": "last_anomaly_timestamp", "type": "TIMESTAMP"},
-    {"name": "status", "type": "STRING"},
-    {"name": "opened_at", "type": "TIMESTAMP"},
-    {"name": "last_updated_at", "type": "TIMESTAMP"},
+    {"name": "previous_anomaly_type_lower_higher", "type": "STRING"},
+    {"name": "anomaly_timestamp", "type": "TIMESTAMP"},
+    {"name": "posted_at", "type": "TIMESTAMP"},
     {"name": "client_msg_id", "type": "STRING"}
   ]
 EOF

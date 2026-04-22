@@ -1,15 +1,14 @@
-"""Anomaly alerting orchestrator.
+"""Anomaly alerting orchestrator (v2: data-date scoping + append-only).
 
-Queries the deltas table, groups by config, decides per-config actions via
-the pure state machine in state.py, and applies them via bq.py and slack.py.
+Queries the deltas table, groups by (config, DATE(timestamp)), decides
+per-thread actions via the pure state machine in state.py, and applies
+them via bq.py and slack.py.
 
-One Slack "incident" == one top-level parent message per (config, open
-period). All per-dimension alerts for that incident are flat thread
-replies under the parent. Classifications changes edit the reply in
-place; resolution edits the reply to mark it resolved; parent summary
-(critical/warning x lower/higher counts) is edited in place as counts
-change. Incidents auto-close after `thread_timeout_hours` of inactivity
-(default 24h) and are hard-capped at 7 days.
+Thread identity is `(config_name, anomaly_date)`. Each firing dim+method
+posts a 'fire' reply; each bucket flip posts a 'severity_change' reply;
+each return to normal posts a 'resolve' reply; the aggregate state posts
+one debounced 'summary' reply per thread per run. Parent messages are
+never edited.
 """
 
 from __future__ import annotations
@@ -36,8 +35,6 @@ def apply_actions(
     incidents_table: str,
     replies_table: str,
     environment: str,
-    config_name: str,
-    description: str | None,
     report_id: str,
     page_id: str,
     now: datetime.datetime,
@@ -46,21 +43,22 @@ def apply_actions(
     """Translate state-machine actions into Slack + BigQuery calls.
 
     Actions reference the "pending" parent via `incident_slack_ts = None`
-    when an OpenIncident action is scheduled earlier in the batch. The
-    real ts is patched in here after OpenIncident is applied.
+    when an `OpenThread` action is scheduled earlier in the batch. The
+    real ts is patched in after `OpenThread` posts.
     """
     new_parent_ts: str | None = None
 
     for action in actions:
-        if isinstance(action, state.OpenIncident):
+        if isinstance(action, state.OpenThread):
             counts = {"critical_higher": 0, "critical_lower": 0,
                       "warning_higher": 0, "warning_lower": 0}
             looker_url = slacklib.make_looker_studio_url(
                 report_id, page_id, action.config_name, "", "")
-            text = slacklib.render_summary(
-                environment, action.config_name, description, counts, looker_url)
-            logging.info("[open_incident] %s -> %s", action.config_name,
-                         action.slack_channel_id)
+            text = slacklib.render_thread_opener(
+                action.config_name, action.anomaly_date, environment,
+                action.description, looker_url)
+            logging.info("[open_thread] %s / %s", action.config_name,
+                         action.anomaly_date)
             if dry_run:
                 new_parent_ts = "DRYRUN-" + str(id(action))
                 continue
@@ -69,124 +67,182 @@ def apply_actions(
             bq.insert_incident(
                 bq_client, incidents_table,
                 config_name=action.config_name,
+                anomaly_date=action.anomaly_date,
                 slack_channel_id=action.slack_channel_id,
                 slack_ts=ts, now=now,
                 summary_counts_json=json.dumps(counts),
                 client_msg_id=bq.new_client_msg_id(),
             )
 
-        elif isinstance(action, state.CreateReply):
-            parent_ts = new_parent_ts
+        elif isinstance(action, state.PostFire):
+            parent_ts = _resolve_parent_ts(
+                action.incident_slack_ts, new_parent_ts, action.config_name,
+                dry_run)
             if parent_ts is None:
-                # No OpenIncident in this batch: fetch from DB.
-                existing = bq.find_open_incident(bq_client, incidents_table,
-                                                 action.config_name)
-                if existing is None:
-                    logging.error(
-                        "[create_reply] no open incident for %s; skipping",
-                        action.config_name)
-                    continue
-                parent_ts = existing["slack_ts"]
-
+                continue
             looker_url = slacklib.make_looker_studio_url(
                 report_id, page_id, action.config_name,
                 action.forecast_method, action.dimension_split_value)
-            text = slacklib.render_dimension_card(action.deltas_row, looker_url)
-            logging.info("[create_reply] %s / %s / %s", action.config_name,
-                         action.dimension_split_value, action.anomaly_type_lower_higher)
+            text = slacklib.render_fire(action.deltas_row, looker_url)
+            logging.info("[post_fire] %s / %s / %s", action.config_name,
+                         action.dimension_split_value or "<no-dim>",
+                         action.anomaly_type_lower_higher)
             if dry_run:
                 continue
             ts = slacklib.post_reply(slack_client, action.slack_channel_id,
                                      parent_ts, text)
-            bq.insert_reply(
+            bq.insert_reply_event(
                 bq_client, replies_table,
                 incident_slack_ts=parent_ts,
                 config_name=action.config_name,
-                dimension_split_value=action.dimension_split_value,
-                forecast_method=action.forecast_method,
+                dimension_split_value=action.dimension_split_value or None,
+                forecast_method=action.forecast_method or None,
                 slack_ts=ts,
                 slack_channel_id=action.slack_channel_id,
+                kind="fire",
                 anomaly_type_lower_higher=action.anomaly_type_lower_higher,
-                last_anomaly_timestamp=action.deltas_row["timestamp"],
+                previous_anomaly_type_lower_higher=None,
+                anomaly_timestamp=action.deltas_row.get("timestamp"),
                 now=now,
                 client_msg_id=bq.new_client_msg_id(),
             )
 
-        elif isinstance(action, state.UpdateReplyClassification):
+        elif isinstance(action, state.PostSeverityChange):
+            parent_ts = _resolve_parent_ts(
+                action.incident_slack_ts, new_parent_ts, action.config_name,
+                dry_run)
+            if parent_ts is None:
+                continue
             looker_url = slacklib.make_looker_studio_url(
-                report_id, page_id, config_name,
-                action.deltas_row.get("forecast_method", ""),
-                action.dimension_split_value)
-            text = slacklib.render_dimension_card(action.deltas_row, looker_url)
-            logging.info("[update_reply] %s / %s -> %s",
-                         config_name, action.dimension_split_value,
+                report_id, page_id, action.config_name,
+                action.forecast_method, action.dimension_split_value)
+            text = slacklib.render_severity_change(
+                action.deltas_row,
+                action.previous_anomaly_type_lower_higher,
+                action.new_anomaly_type_lower_higher,
+                looker_url)
+            logging.info("[severity_change] %s / %s: %s -> %s",
+                         action.config_name,
+                         action.dimension_split_value or "<no-dim>",
+                         action.previous_anomaly_type_lower_higher,
                          action.new_anomaly_type_lower_higher)
             if dry_run:
                 continue
-            ok = slacklib.update_message(slack_client, action.slack_channel_id,
-                                         action.reply_slack_ts, text)
-            if ok:
-                bq.update_reply(
-                    bq_client, replies_table, slack_ts=action.reply_slack_ts,
-                    now=now,
-                    anomaly_type_lower_higher=action.new_anomaly_type_lower_higher,
-                    last_anomaly_timestamp=action.deltas_row["timestamp"],
-                )
+            ts = slacklib.post_reply(slack_client, action.slack_channel_id,
+                                     parent_ts, text)
+            bq.insert_reply_event(
+                bq_client, replies_table,
+                incident_slack_ts=parent_ts,
+                config_name=action.config_name,
+                dimension_split_value=action.dimension_split_value or None,
+                forecast_method=action.forecast_method or None,
+                slack_ts=ts,
+                slack_channel_id=action.slack_channel_id,
+                kind="severity_change",
+                anomaly_type_lower_higher=action.new_anomaly_type_lower_higher,
+                previous_anomaly_type_lower_higher=action.previous_anomaly_type_lower_higher,
+                anomaly_timestamp=action.deltas_row.get("timestamp"),
+                now=now,
+                client_msg_id=bq.new_client_msg_id(),
+            )
 
-        elif isinstance(action, state.ResolveReply):
-            # Fetch the current text so we can keep the original content
-            # and prepend the resolved marker. Slack doesn't return the
-            # previous text directly; we re-render a placeholder.
-            text = (":large_green_circle: *Resolved* (was "
-                    + action.previous_anomaly_type_lower_higher + ")\n"
-                    f"*Dimension*: {action.dimension_split_value}")
-            logging.info("[resolve_reply] %s / %s",
-                         config_name, action.dimension_split_value)
-            if dry_run:
-                continue
-            ok = slacklib.update_message(slack_client, action.slack_channel_id,
-                                         action.reply_slack_ts, text)
-            if ok:
-                bq.update_reply(bq_client, replies_table,
-                                slack_ts=action.reply_slack_ts, now=now,
-                                status="resolved",
-                                anomaly_type_lower_higher="normal")
-
-        elif isinstance(action, state.UpdateParentSummary):
-            parent_ts = action.incident_slack_ts or new_parent_ts
+        elif isinstance(action, state.PostResolve):
+            parent_ts = _resolve_parent_ts(
+                action.incident_slack_ts, new_parent_ts, action.config_name,
+                dry_run)
             if parent_ts is None:
-                logging.warning("[update_parent] no parent ts; skipping")
                 continue
-            looker_url = slacklib.make_looker_studio_url(
-                report_id, page_id, action.config_name, "", "")
-            text = slacklib.render_summary(
-                environment, action.config_name, description,
-                action.counts, looker_url)
-            logging.info("[update_parent] %s counts=%s",
-                         action.config_name, action.counts)
+            text = slacklib.render_resolve(
+                action.previous_anomaly_type_lower_higher,
+                action.dimension_split_value or None)
+            logging.info("[resolve] %s / %s",
+                         action.config_name,
+                         action.dimension_split_value or "<no-dim>")
             if dry_run:
                 continue
-            ok = slacklib.update_message(slack_client, action.slack_channel_id,
-                                         parent_ts, text)
-            if ok:
-                bq.update_incident(bq_client, incidents_table, slack_ts=parent_ts,
-                                   now=now,
-                                   summary_counts_json=json.dumps(action.counts))
+            ts = slacklib.post_reply(slack_client, action.slack_channel_id,
+                                     parent_ts, text)
+            bq.insert_reply_event(
+                bq_client, replies_table,
+                incident_slack_ts=parent_ts,
+                config_name=action.config_name,
+                dimension_split_value=action.dimension_split_value or None,
+                forecast_method=action.forecast_method or None,
+                slack_ts=ts,
+                slack_channel_id=action.slack_channel_id,
+                kind="resolve",
+                anomaly_type_lower_higher="normal",
+                previous_anomaly_type_lower_higher=action.previous_anomaly_type_lower_higher,
+                anomaly_timestamp=None,
+                now=now,
+                client_msg_id=bq.new_client_msg_id(),
+            )
 
-        elif isinstance(action, state.CloseIncident):
-            # Append a closed marker; callers to `update_message` that fail
-            # softly (message deleted) are fine -- we still mark BQ closed.
-            text = (":white_check_mark: *Incident closed* (" + action.reason
-                    + ")\n*Config*: " + action.config_name)
-            logging.info("[close_incident] %s reason=%s",
-                         action.config_name, action.reason)
+        elif isinstance(action, state.PostSummary):
+            parent_ts = _resolve_parent_ts(
+                action.incident_slack_ts, new_parent_ts, action.config_name,
+                dry_run)
+            if parent_ts is None:
+                continue
+            text = slacklib.render_summary(action.counts)
+            logging.info("[summary] %s / %s counts=%s",
+                         action.config_name, action.anomaly_date, action.counts)
             if dry_run:
                 continue
-            slacklib.update_message(slack_client, action.slack_channel_id,
-                                    action.incident_slack_ts, text)
+            ts = slacklib.post_reply(slack_client, action.slack_channel_id,
+                                     parent_ts, text)
+            bq.insert_reply_event(
+                bq_client, replies_table,
+                incident_slack_ts=parent_ts,
+                config_name=action.config_name,
+                dimension_split_value=None,
+                forecast_method=None,
+                slack_ts=ts,
+                slack_channel_id=action.slack_channel_id,
+                kind="summary",
+                anomaly_type_lower_higher=None,
+                previous_anomaly_type_lower_higher=None,
+                anomaly_timestamp=None,
+                now=now,
+                client_msg_id=bq.new_client_msg_id(),
+            )
+            # Update the debounce key on the incident row so the next run
+            # doesn't re-post the same summary.
+            bq.update_incident(bq_client, incidents_table,
+                               slack_ts=parent_ts, now=now,
+                               summary_counts_json=json.dumps(action.counts))
+
+        elif isinstance(action, state.CloseThread):
+            logging.info("[close_thread] %s / %s reason=%s",
+                         action.config_name, action.anomaly_date, action.reason)
+            if dry_run:
+                continue
+            text = slacklib.render_closed(action.reason)
+            slacklib.post_reply(slack_client, action.slack_channel_id,
+                                action.incident_slack_ts, text)
             bq.update_incident(bq_client, incidents_table,
                                slack_ts=action.incident_slack_ts, now=now,
                                status="resolved", closed_at=now)
+
+
+def _resolve_parent_ts(
+    action_ts: str | None,
+    new_parent_ts: str | None,
+    config_name: str,
+    dry_run: bool,
+) -> str | None:
+    """Pick the right parent slack_ts: explicit ts on the action, or the
+    ts from an OpenThread applied earlier in this batch. Returns None
+    (with a log) if neither is available -- the orchestrator should skip
+    the action in that case."""
+    if action_ts is not None:
+        return action_ts
+    if new_parent_ts is not None:
+        return new_parent_ts
+    if dry_run:
+        return "DRYRUN-missing"
+    logging.error("[orphan] no parent ts resolvable for %s", config_name)
+    return None
 
 
 def run(
@@ -206,59 +262,65 @@ def run(
     if replay_fixture:
         with open(replay_fixture) as fh:
             deltas_all = json.load(fh)
-        # Normalize timestamps from ISO strings back to datetime.
         for r in deltas_all:
             if isinstance(r.get("timestamp"), str):
                 r["timestamp"] = datetime.datetime.fromisoformat(r["timestamp"])
+            if "anomaly_date" not in r and isinstance(r.get("timestamp"), datetime.datetime):
+                r["anomaly_date"] = r["timestamp"].date()
     else:
-        deltas_all = bq.query_deltas_with_open_replies(
-            bq_client, environment, replies_table)
+        deltas_all = bq.query_deltas_with_open_incidents(
+            bq_client, environment, incidents_table)
 
-    # Group by config, also ensure we visit configs with open incidents
-    # that have no active deltas rows (so we can close them on timeout).
-    deltas_by_config: dict[str, list[dict]] = {}
+    # Group deltas by (config_name, anomaly_date).
+    by_thread: dict[tuple[str, datetime.date], list[dict]] = {}
     for r in deltas_all:
-        deltas_by_config.setdefault(r["config_name"], []).append(r)
+        d = r.get("anomaly_date")
+        if isinstance(d, str):
+            d = datetime.date.fromisoformat(d)
+        key = (r["config_name"], d)
+        by_thread.setdefault(key, []).append(r)
 
-    active_configs = set(deltas_by_config.keys())
+    # Also visit (config, date) tuples that have an open incident but no
+    # fresh deltas -- so resolution detection runs.
+    thread_keys = set(by_thread.keys())
     if not replay_fixture:
         try:
-            active_configs.update(
-                bq.list_configs_with_activity(bq_client, environment,
-                                              incidents_table))
+            thread_keys.update(bq.list_open_incident_keys(bq_client, incidents_table))
         except Exception as e:
-            logging.warning("list_configs_with_activity failed: %s", e)
+            logging.warning("list_open_incident_keys failed: %s", e)
 
-    for config_name in sorted(active_configs):
-        rows = deltas_by_config.get(config_name, [])
+    for (config_name, anomaly_date) in sorted(thread_keys, key=lambda x: (x[0], str(x[1]))):
+        rows = by_thread.get((config_name, anomaly_date), [])
         description = rows[0].get("description") if rows else None
 
         channel = bq.get_channel_config(bq_client, config_name, environment)
-        open_incident = bq.find_open_incident(bq_client, incidents_table,
-                                              config_name)
-        open_replies = bq.find_open_replies(bq_client, replies_table,
-                                            config_name) \
+        open_incident = bq.find_open_incident(
+            bq_client, incidents_table, config_name, anomaly_date)
+        reply_events = (
+            bq.find_reply_events(bq_client, replies_table,
+                                 open_incident["slack_ts"])
             if open_incident else []
+        )
 
-        actions = state.process_config(
+        actions = state.process_thread(
             config_name=config_name,
+            anomaly_date=anomaly_date,
             slack_channel_id=channel["slack_channel_id"],
-            thread_timeout_hours=channel.get("thread_timeout_hours") or state.DEFAULT_TIMEOUT_HOURS,
             deltas_rows=rows,
             open_incident=open_incident,
-            open_replies=open_replies,
+            reply_events=reply_events,
             now=now,
+            description=description,
         )
 
         if actions:
-            logging.info("[%s] %d actions: %s", config_name, len(actions),
-                         [type(a).__name__ for a in actions])
+            logging.info("[%s / %s] %d actions: %s", config_name, anomaly_date,
+                         len(actions), [type(a).__name__ for a in actions])
             apply_actions(
                 actions,
                 bq_client=bq_client, slack_client=slack_client,
                 incidents_table=incidents_table, replies_table=replies_table,
-                environment=environment, config_name=config_name,
-                description=description,
+                environment=environment,
                 report_id=report_id, page_id=page_id, now=now,
                 dry_run=dry_run,
             )
@@ -287,16 +349,11 @@ if __name__ == "__main__":
                         help="Log actions without calling Slack or BQ writes.")
     parser.add_argument("--replay",
                         help="Path to a JSON fixture of deltas rows for replay.")
-    # Accept the legacy --deduplication-index arg but ignore it (kept for
-    # backward compatibility with the scheduler body until Terraform rolls).
+    # Legacy no-op arg for backward compatibility with scheduler body.
     parser.add_argument("--deduplication-index", required=False)
 
     args, _ = parser.parse_known_args()
 
-    # Canonicalize CLI-supplied identifiers before they reach any SQL
-    # interpolation. canonical_environment / canonical_table_id reject
-    # anything that doesn't parse as a safe identifier (backticks,
-    # whitespace, SQL metacharacters).
     environment = bq.canonical_environment(args.environment)
     incidents = bq.canonical_table_id(
         args.incidents_table or _derive_default_table(environment, "incidents"))
