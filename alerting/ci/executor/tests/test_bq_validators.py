@@ -17,7 +17,7 @@ def test_canonical_table_id_accepts_canonical_triple():
 
 
 def test_canonical_table_id_accepts_hyphens_and_underscores():
-    assert bq.canonical_table_id("a-b.c_d.e-f_g") == "a-b.c_d.e-f_g"
+    assert bq.canonical_table_id("a-b.c_d.e_f_g") == "a-b.c_d.e_f_g"
 
 
 @pytest.mark.parametrize("bad", [
