@@ -5,7 +5,11 @@
 
 ## Structure
 
-The repo is structured into a dataloader module (R) and an alerting module (Python). A DBT project currently serves the single purpose of maintaining lookup files.
+The repo is structured into a dataloader module (R) and an alerting module (Python). A DBT project currently serves the single purpose of maintaining lookup files. Ad-hoc SQL used to derive config values (e.g. expected publication delays) lives under `analysis/`.
+
+## Analysis
+
+`analysis/` contains SQL that derives configuration values from observed data. See `analysis/README.md` for details. In particular, `expected_publication_lags.sql` produces per-dataset expected delays for the `t_expected_publication_lags` seed in the monitoring repo, which the `gfw_api_delays` anomaly config depends on to distinguish "data is genuinely late" from "data has a known multi-day publication cycle".
 
 # Costs
 The anomaly detection dataloader module is not intended to run directly on large tables (anything in the range of hundreds of GB and more). That is because the module is currently a prototype and the data load mechanism might change over time. Therefore, you cannot expect tables generated from the dataloader to exist for a long time and always have to expect data to be corrupted or truncated due to ongoing development. It is therefore important to develop anomaly configurations in a way that backfills are not prohibitively expensive.
