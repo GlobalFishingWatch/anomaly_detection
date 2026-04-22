@@ -95,24 +95,42 @@ def get_channel_config(client: bigquery.Client, config_name: str, environment: s
 def query_deltas_with_open_replies(
     client: bigquery.Client, environment: str, replies_table: str,
 ) -> list[dict]:
-    """Return deltas rows for the last 30 days, including 'normal' rows for
-    any (config, dim, method) that has an open reply -- this lets the state
-    machine detect resolutions."""
+    """Return the latest deltas row per (config, dim, method) for any key
+    that either was anomalous in the last 30 days or has an open reply.
+
+    The state machine treats the latest row per key as the current state,
+    so we must include the most recent row -- even if it's 'normal' --
+    for every key of interest. Otherwise a key that was critical weeks
+    ago but has since returned to normal would still look critical from
+    the state machine's perspective.
+    """
     deltas = DELTAS_TABLE_TEMPLATE.format(env=environment)
     query = f"""
-    WITH open_replies AS (
-      SELECT DISTINCT config_name, dimension_split_value, forecast_method
+    WITH keys_of_interest AS (
+      SELECT DISTINCT config_name,
+                      IFNULL(dimension_split_value, '') AS dimension_split_value,
+                      forecast_method
+      FROM `{deltas}`
+      WHERE anomaly_type != 'normal'
+        AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30*24 HOUR)
+      UNION DISTINCT
+      SELECT DISTINCT config_name,
+                      IFNULL(dimension_split_value, '') AS dimension_split_value,
+                      forecast_method
       FROM `{replies_table}`
       WHERE status = 'open'
     )
     SELECT d.*
     FROM `{deltas}` d
-    LEFT JOIN open_replies r
-      ON d.config_name = r.config_name
-     AND IFNULL(d.dimension_split_value, '') = IFNULL(r.dimension_split_value, '')
-     AND d.forecast_method = r.forecast_method
+    JOIN keys_of_interest k
+      ON d.config_name = k.config_name
+     AND IFNULL(d.dimension_split_value, '') = k.dimension_split_value
+     AND d.forecast_method = k.forecast_method
     WHERE d.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30*24 HOUR)
-      AND (d.anomaly_type != 'normal' OR r.config_name IS NOT NULL)
+    QUALIFY ROW_NUMBER() OVER (
+      PARTITION BY d.config_name, IFNULL(d.dimension_split_value, ''), d.forecast_method
+      ORDER BY d.timestamp DESC
+    ) = 1
     """
     rows = []
     for r in client.query(query, job_config=bigquery.QueryJobConfig(use_query_cache=False)).result():
