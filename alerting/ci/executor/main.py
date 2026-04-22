@@ -191,19 +191,16 @@ def run(
 
         logging.info(rendered_message)
 
-        # Calculate the hash based on the columns used in rendered_message
+        # Fuzzy dedup: one alert per (config, dimension, forecast method, timestamp,
+        # direction+criticality). Values like actual_value, forecast_value and delta_rel
+        # are intentionally excluded so that upstream reprocessing that shifts the
+        # numbers but keeps the anomaly classification stable does not re-fire.
         columns_used = [
             row["config_name"],
             row["dimension_split_value"],
-            row["description"],
-            row["anomaly_type"],
-            row["timestamp"],
-            row["forecast_value"],
             row["forecast_method"],
-            row["actual_value"],
-            row["exceeded_threshold_lower_higher"],
-            row["delta_rel"],
-            row["source_sql"],
+            row["timestamp"],
+            row["anomaly_type_lower_higher"],
         ]
 
         event_hash = hashlib.sha256(str(columns_used).encode()).hexdigest()

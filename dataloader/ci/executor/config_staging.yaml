@@ -30,6 +30,7 @@ anomalies:
       source_forecast_column_sql: "SUM(count)"
       period_length: "day"
       dimension_split: source
+      source_filter_sql: "source != 'marinetraffic'"
       algorithms:
           mstl: 
               parameters: 
@@ -285,16 +286,16 @@ anomalies:
       source_table: v_scraped_api_values
       source_timestamp_column: timestamp
       source_timestamp_column_sql: timestamp
-      source_forecast_column: timestamp_delay_hour_now_hypothetical
-      source_forecast_column_sql: MIN(timestamp_delay_hour_now_hypothetical)
+      source_forecast_column: timestamp_delay_now_hypothetical_vs_expected_delay_hour
+      source_forecast_column_sql: MIN(timestamp_delay_now_hypothetical_vs_expected_delay_hour)
       period_length: day
       dimension_split: dataset
       history_start: '2025-01-31'
       source_filter_sql: "
-      date_interval = 'DAY' 
-      AND timestamp_delay_hour_now_hypothetical IS NOT NULL
-      AND date >= '2025-01-31'
-      AND DATE_DIFF(CURRENT_DATE(), date, DAY) >= 4"
+      date_interval = 'DAY'
+      AND environment = 'prod'
+      AND timestamp_delay_now_hypothetical_vs_expected_delay_hour > 0
+      AND date >= '2025-01-31'"
       algorithms:
           constant_value:
               parameters:
