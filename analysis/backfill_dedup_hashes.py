@@ -22,7 +22,7 @@ DELTAS_TABLE = f"world-fishing-827.tech_anomaly_detection.t_{ENVIRONMENT}_deltas
 
 client = bigquery.Client(project="world-fishing-827")
 
-query = f"""
+deltas_query = f"""
 SELECT
     config_name,
     dimension_split_value,
@@ -34,8 +34,31 @@ WHERE anomaly_type != 'normal'
   AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30*24 HOUR)
 """
 
-rows = list(client.query(query).result())
+# The gfw_api_delays config was changed to monitor vs_expected lag. The next
+# dataloader run will populate deltas with new rows that aren't here yet --
+# predict them by querying the source view directly so the dedup index
+# covers them before they're alerted on.
+gfw_api_delays_forecast_query = """
+SELECT
+    'gfw_api_delays' AS config_name,
+    dataset AS dimension_split_value,
+    'constant_value' AS forecast_method,
+    TIMESTAMP_TRUNC(timestamp, DAY) AS timestamp,
+    'critical_higher' AS anomaly_type_lower_higher
+FROM `world-fishing-827.tech_dq_monitoring.v_scraped_api_values`
+WHERE date_interval = 'DAY'
+  AND environment = 'prod'
+  AND timestamp_delay_now_hypothetical_vs_expected_delay_hour > 1
+  AND date >= first_valid_from_date
+GROUP BY dataset, timestamp
+"""
+
+rows = list(client.query(deltas_query).result())
 print(f"Found {len(rows)} anomalous rows in deltas")
+
+forecast_rows = list(client.query(gfw_api_delays_forecast_query).result())
+print(f"Predicted {len(forecast_rows)} gfw_api_delays rows from view")
+rows = rows + forecast_rows
 
 now_ts = datetime.datetime.now(datetime.timezone.utc)
 new_rows = []

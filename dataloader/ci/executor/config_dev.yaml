@@ -361,7 +361,7 @@ anomalies:
       date_interval = 'DAY'
       AND environment = 'prod'
       AND timestamp_delay_now_hypothetical_vs_expected_delay_hour > 0
-      AND date >= '2025-01-31'"
+      AND date >= first_valid_from_date"
       algorithms:
           constant_value:
               parameters:
