@@ -1,8 +1,14 @@
 """BigQuery queries and writes for the threaded-alerting flow.
 
 All Slack-writing callers should go through these helpers so the SQL is in
-one place. Writes use `insert_rows_json` which is synchronous and returns
-per-row errors.
+one place. Writes use DML `INSERT INTO ... VALUES (...)` executed as query
+jobs rather than streaming inserts -- DML lands rows in managed storage
+immediately, avoiding the 30-90 minute streaming buffer window during
+which UPDATE/DELETE on newly-inserted rows is rejected.
+
+Table names supplied by the caller (CLI args) are canonicalized through
+`canonical_table_id()` before being interpolated into SQL to prevent
+identifier injection.
 """
 
 from __future__ import annotations
@@ -17,6 +23,34 @@ DELTAS_TABLE_TEMPLATE = "world-fishing-827.tech_anomaly_detection.t_{env}_deltas
 CHANNEL_MAPPING_TABLE = (
     "world-fishing-827.tech_anomaly_detection.slack_channels_environments_config_mapping"
 )
+ALLOWED_ENVIRONMENTS = frozenset({"dev", "staging", "main", "prod"})
+
+
+def canonical_table_id(table_id: str) -> str:
+    """Parse `project.dataset.table` and reconstruct the canonical id.
+
+    Rejects anything that doesn't parse as a valid BigQuery table triple --
+    in particular anything containing backticks, whitespace, or SQL
+    metacharacters. Safe to interpolate into a SQL statement inside
+    backticks after this.
+    """
+    # Sanity-check before handing to the SDK: reject unexpected characters
+    # so a single-dotted "dataset.table" can't accidentally pick up the
+    # client's default project.
+    if not all(c.isalnum() or c in "._-" for c in table_id):
+        raise ValueError(f"Invalid table id: {table_id!r}")
+    ref = bigquery.TableReference.from_string(table_id)
+    return f"{ref.project}.{ref.dataset_id}.{ref.table_id}"
+
+
+def canonical_environment(env: str) -> str:
+    """Validate the environment name before interpolating into a table
+    template."""
+    if env not in ALLOWED_ENVIRONMENTS:
+        raise ValueError(
+            f"Invalid environment: {env!r} (allowed: {sorted(ALLOWED_ENVIRONMENTS)})"
+        )
+    return env
 
 
 # --- channel routing ---------------------------------------------------
