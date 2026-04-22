@@ -35,6 +35,71 @@ EOF
 
 }
 
+# Parent messages: one per (config, open incident). Each row maps an active
+# Slack thread back to the config it summarises. Updated in place via
+# chat.update so the summary counts stay current.
+resource "google_bigquery_table" "alerting_incidents" {
+  dataset_id = "tech_anomaly_detection"
+  table_id   = "t_${local.project_name_underscored}_incidents"
+  project    = var.project
+
+  time_partitioning {
+    type  = "MONTH"
+    field = "opened_at"
+  }
+
+  clustering = ["config_name", "status"]
+
+  schema = <<EOF
+[
+    {"name": "config_name", "type": "STRING"},
+    {"name": "slack_channel_id", "type": "STRING"},
+    {"name": "slack_ts", "type": "STRING"},
+    {"name": "opened_at", "type": "TIMESTAMP"},
+    {"name": "last_activity_at", "type": "TIMESTAMP"},
+    {"name": "closed_at", "type": "TIMESTAMP"},
+    {"name": "status", "type": "STRING"},
+    {"name": "client_msg_id", "type": "STRING"},
+    {"name": "summary_counts_json", "type": "STRING"}
+  ]
+EOF
+
+}
+
+# Per-dimension thread replies under each incident. Identity is
+# (config_name, dimension_split_value, forecast_method); classification
+# changes update the same row in place.
+resource "google_bigquery_table" "alerting_incident_replies" {
+  dataset_id = "tech_anomaly_detection"
+  table_id   = "t_${local.project_name_underscored}_incident_replies"
+  project    = var.project
+
+  time_partitioning {
+    type  = "MONTH"
+    field = "opened_at"
+  }
+
+  clustering = ["incident_slack_ts", "status"]
+
+  schema = <<EOF
+[
+    {"name": "incident_slack_ts", "type": "STRING"},
+    {"name": "config_name", "type": "STRING"},
+    {"name": "dimension_split_value", "type": "STRING"},
+    {"name": "forecast_method", "type": "STRING"},
+    {"name": "slack_ts", "type": "STRING"},
+    {"name": "slack_channel_id", "type": "STRING"},
+    {"name": "anomaly_type_lower_higher", "type": "STRING"},
+    {"name": "last_anomaly_timestamp", "type": "TIMESTAMP"},
+    {"name": "status", "type": "STRING"},
+    {"name": "opened_at", "type": "TIMESTAMP"},
+    {"name": "last_updated_at", "type": "TIMESTAMP"},
+    {"name": "client_msg_id", "type": "STRING"}
+  ]
+EOF
+
+}
+
 resource "google_cloud_run_v2_job" "job" {
   name     = local.project_name_dashed
   location = local.region
@@ -138,6 +203,8 @@ resource "google_cloud_scheduler_job" "job" {
           args = [
             "--environment=${var.environment}",
             "--deduplication-index=${google_bigquery_table.deduplication_index.project}.${google_bigquery_table.deduplication_index.dataset_id}.${google_bigquery_table.deduplication_index.table_id}",
+            "--incidents-table=${google_bigquery_table.alerting_incidents.project}.${google_bigquery_table.alerting_incidents.dataset_id}.${google_bigquery_table.alerting_incidents.table_id}",
+            "--replies-table=${google_bigquery_table.alerting_incident_replies.project}.${google_bigquery_table.alerting_incident_replies.dataset_id}.${google_bigquery_table.alerting_incident_replies.table_id}",
           ]
         }]
       }
