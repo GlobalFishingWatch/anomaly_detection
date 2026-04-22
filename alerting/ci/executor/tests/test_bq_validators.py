@@ -30,7 +30,7 @@ def test_canonical_table_id_accepts_hyphens_and_underscores():
     "proj.dataset.t)",          # parens
 ])
 def test_canonical_table_id_rejects_injection_attempts(bad):
-    with pytest.raises((ValueError, Exception)):
+    with pytest.raises(ValueError):
         bq.canonical_table_id(bad)
 
 
