@@ -293,13 +293,18 @@ if __name__ == "__main__":
 
     args, _ = parser.parse_known_args()
 
-    incidents = args.incidents_table or _derive_default_table(
-        args.environment, "incidents")
-    replies = args.replies_table or _derive_default_table(
-        args.environment, "incident_replies")
+    # Canonicalize CLI-supplied identifiers before they reach any SQL
+    # interpolation. canonical_environment / canonical_table_id reject
+    # anything that doesn't parse as a safe identifier (backticks,
+    # whitespace, SQL metacharacters).
+    environment = bq.canonical_environment(args.environment)
+    incidents = bq.canonical_table_id(
+        args.incidents_table or _derive_default_table(environment, "incidents"))
+    replies = bq.canonical_table_id(
+        args.replies_table or _derive_default_table(environment, "incident_replies"))
 
     run(
-        environment=args.environment,
+        environment=environment,
         incidents_table=incidents,
         replies_table=replies,
         report_id=args.report_id,

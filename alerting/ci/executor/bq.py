@@ -1,8 +1,14 @@
 """BigQuery queries and writes for the threaded-alerting flow.
 
 All Slack-writing callers should go through these helpers so the SQL is in
-one place. Writes use `insert_rows_json` which is synchronous and returns
-per-row errors.
+one place. Writes use DML `INSERT INTO ... VALUES (...)` executed as query
+jobs rather than streaming inserts -- DML lands rows in managed storage
+immediately, avoiding the 30-90 minute streaming buffer window during
+which UPDATE/DELETE on newly-inserted rows is rejected.
+
+Table names supplied by the caller (CLI args) are canonicalized through
+`canonical_table_id()` before being interpolated into SQL to prevent
+identifier injection.
 """
 
 from __future__ import annotations
@@ -17,6 +23,34 @@ DELTAS_TABLE_TEMPLATE = "world-fishing-827.tech_anomaly_detection.t_{env}_deltas
 CHANNEL_MAPPING_TABLE = (
     "world-fishing-827.tech_anomaly_detection.slack_channels_environments_config_mapping"
 )
+ALLOWED_ENVIRONMENTS = frozenset({"dev", "staging", "main", "prod"})
+
+
+def canonical_table_id(table_id: str) -> str:
+    """Parse `project.dataset.table` and reconstruct the canonical id.
+
+    Rejects anything that doesn't parse as a valid BigQuery table triple --
+    in particular anything containing backticks, whitespace, or SQL
+    metacharacters. Safe to interpolate into a SQL statement inside
+    backticks after this.
+    """
+    # Sanity-check before handing to the SDK: reject unexpected characters
+    # so a single-dotted "dataset.table" can't accidentally pick up the
+    # client's default project.
+    if not all(c.isalnum() or c in "._-" for c in table_id):
+        raise ValueError(f"Invalid table id: {table_id!r}")
+    ref = bigquery.TableReference.from_string(table_id)
+    return f"{ref.project}.{ref.dataset_id}.{ref.table_id}"
+
+
+def canonical_environment(env: str) -> str:
+    """Validate the environment name before interpolating into a table
+    template."""
+    if env not in ALLOWED_ENVIRONMENTS:
+        raise ValueError(
+            f"Invalid environment: {env!r} (allowed: {sorted(ALLOWED_ENVIRONMENTS)})"
+        )
+    return env
 
 
 # --- channel routing ---------------------------------------------------
@@ -128,20 +162,29 @@ def insert_incident(client: bigquery.Client, incidents_table: str, *,
                     config_name: str, slack_channel_id: str, slack_ts: str,
                     now: datetime.datetime, summary_counts_json: str,
                     client_msg_id: str) -> None:
-    row = {
-        "config_name": config_name,
-        "slack_channel_id": slack_channel_id,
-        "slack_ts": slack_ts,
-        "opened_at": now.isoformat(),
-        "last_activity_at": now.isoformat(),
-        "closed_at": None,
-        "status": "open",
-        "client_msg_id": client_msg_id,
-        "summary_counts_json": summary_counts_json,
-    }
-    errors = client.insert_rows_json(incidents_table, [row])
-    if errors:
-        raise RuntimeError(f"insert_incident failed: {errors}")
+    # DML INSERT writes to managed storage immediately; insert_rows_json
+    # would put the row in the streaming buffer and block subsequent
+    # UPDATE/DELETE on the same row for 30-90 minutes.
+    query = f"""
+    INSERT INTO `{incidents_table}` (
+      config_name, slack_channel_id, slack_ts, opened_at, last_activity_at,
+      closed_at, status, client_msg_id, summary_counts_json
+    )
+    VALUES (
+      @config_name, @slack_channel_id, @slack_ts, @now, @now,
+      NULL, 'open', @client_msg_id, @summary_counts_json
+    )
+    """
+    params = [
+        bigquery.ScalarQueryParameter("config_name", "STRING", config_name),
+        bigquery.ScalarQueryParameter("slack_channel_id", "STRING", slack_channel_id),
+        bigquery.ScalarQueryParameter("slack_ts", "STRING", slack_ts),
+        bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
+        bigquery.ScalarQueryParameter("client_msg_id", "STRING", client_msg_id),
+        bigquery.ScalarQueryParameter("summary_counts_json", "STRING", summary_counts_json),
+    ]
+    client.query(query, job_config=bigquery.QueryJobConfig(
+        query_parameters=params)).result()
 
 
 def update_incident(client: bigquery.Client, incidents_table: str, *,
@@ -193,23 +236,33 @@ def insert_reply(client: bigquery.Client, replies_table: str, *,
                  anomaly_type_lower_higher: str,
                  last_anomaly_timestamp: datetime.datetime,
                  now: datetime.datetime, client_msg_id: str) -> None:
-    row = {
-        "incident_slack_ts": incident_slack_ts,
-        "config_name": config_name,
-        "dimension_split_value": dimension_split_value,
-        "forecast_method": forecast_method,
-        "slack_ts": slack_ts,
-        "slack_channel_id": slack_channel_id,
-        "anomaly_type_lower_higher": anomaly_type_lower_higher,
-        "last_anomaly_timestamp": last_anomaly_timestamp.isoformat(),
-        "status": "open",
-        "opened_at": now.isoformat(),
-        "last_updated_at": now.isoformat(),
-        "client_msg_id": client_msg_id,
-    }
-    errors = client.insert_rows_json(replies_table, [row])
-    if errors:
-        raise RuntimeError(f"insert_reply failed: {errors}")
+    # DML INSERT (not streaming) so rows are immediately eligible for UPDATE.
+    query = f"""
+    INSERT INTO `{replies_table}` (
+      incident_slack_ts, config_name, dimension_split_value, forecast_method,
+      slack_ts, slack_channel_id, anomaly_type_lower_higher,
+      last_anomaly_timestamp, status, opened_at, last_updated_at, client_msg_id
+    )
+    VALUES (
+      @incident_slack_ts, @config_name, @dimension_split_value, @forecast_method,
+      @slack_ts, @slack_channel_id, @anomaly_type_lower_higher,
+      @last_anomaly_timestamp, 'open', @now, @now, @client_msg_id
+    )
+    """
+    params = [
+        bigquery.ScalarQueryParameter("incident_slack_ts", "STRING", incident_slack_ts),
+        bigquery.ScalarQueryParameter("config_name", "STRING", config_name),
+        bigquery.ScalarQueryParameter("dimension_split_value", "STRING", dimension_split_value),
+        bigquery.ScalarQueryParameter("forecast_method", "STRING", forecast_method),
+        bigquery.ScalarQueryParameter("slack_ts", "STRING", slack_ts),
+        bigquery.ScalarQueryParameter("slack_channel_id", "STRING", slack_channel_id),
+        bigquery.ScalarQueryParameter("anomaly_type_lower_higher", "STRING", anomaly_type_lower_higher),
+        bigquery.ScalarQueryParameter("last_anomaly_timestamp", "TIMESTAMP", last_anomaly_timestamp),
+        bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
+        bigquery.ScalarQueryParameter("client_msg_id", "STRING", client_msg_id),
+    ]
+    client.query(query, job_config=bigquery.QueryJobConfig(
+        query_parameters=params)).result()
 
 
 def update_reply(client: bigquery.Client, replies_table: str, *,
