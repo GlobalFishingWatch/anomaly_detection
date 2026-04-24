@@ -50,8 +50,13 @@ def apply_actions(
 
     for action in actions:
         if isinstance(action, state.OpenThread):
-            counts = {"critical_higher": 0, "critical_lower": 0,
-                      "warning_higher": 0, "warning_lower": 0}
+            # Thread-mode openers carry the initial counts table; flat
+            # modes leave counts=None. Persist whatever the state machine
+            # decided so the next run's debounce comparison works.
+            counts = action.counts or {
+                "critical_higher": 0, "critical_lower": 0,
+                "warning_higher": 0, "warning_lower": 0,
+            }
             # In flat mode the opener embeds a fire-card; point its
             # dashboard link at the first firing (dim, method). Otherwise
             # the header-only opener points at the config overview.
@@ -64,7 +69,8 @@ def apply_actions(
                 action.config_name, action.anomaly_date, environment,
                 action.description, looker_url,
                 severity=action.severity,
-                first_fire_row=action.first_fire_row)
+                first_fire_row=action.first_fire_row,
+                counts=action.counts)
             logging.info("[open_thread] %s / %s", action.config_name,
                          action.anomaly_date)
             if dry_run:

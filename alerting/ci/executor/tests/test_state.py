@@ -72,7 +72,9 @@ def _types(actions):
 
 # --- scenarios --------------------------------------------------------
 
-def test_first_fire_opens_thread_and_posts_fire_and_summary():
+def test_first_fire_opens_thread_with_counts_no_summary_reply():
+    # The parent now carries the initial counts; no redundant summary
+    # reply is posted on the first fire.
     actions = state.process_thread(
         config_name="c1", anomaly_date=DATE, slack_channel_id="C1",
         deltas_rows=[_row()], open_incident=None, reply_events=[], now=NOW,
@@ -80,10 +82,10 @@ def test_first_fire_opens_thread_and_posts_fire_and_summary():
     types = _types(actions)
     assert "OpenThread" in types
     assert "PostFire" in types
-    assert "PostSummary" in types
-    # The summary counts should reflect the new fire, not be zero.
-    summary = next(a for a in actions if type(a).__name__ == "PostSummary")
-    assert summary.counts["critical_higher"] == 1
+    assert "PostSummary" not in types
+    opener = next(a for a in actions if type(a).__name__ == "OpenThread")
+    assert opener.counts["critical_higher"] == 1
+    assert opener.counts["warning_higher"] == 0
 
 
 def test_same_bucket_refire_is_noop():
@@ -170,7 +172,7 @@ def test_second_run_after_resolve_is_fully_quiet():
     assert "PostSummary" not in t
 
 
-def test_multiple_dimensions_same_thread_one_summary():
+def test_multiple_dimensions_same_thread_counts_on_parent():
     rows = [
         _row(dim="d1"),
         _row(dim="d2"),
@@ -183,23 +185,26 @@ def test_multiple_dimensions_same_thread_one_summary():
     types = _types(actions)
     assert types.count("OpenThread") == 1
     assert types.count("PostFire") == 3
-    assert types.count("PostSummary") == 1
-    summary = next(a for a in actions if type(a).__name__ == "PostSummary")
-    assert summary.counts["critical_higher"] == 2
-    assert summary.counts["warning_higher"] == 1
+    # No summary reply: the parent already carries the counts.
+    assert types.count("PostSummary") == 0
+    opener = next(a for a in actions if type(a).__name__ == "OpenThread")
+    assert opener.counts["critical_higher"] == 2
+    assert opener.counts["warning_higher"] == 1
 
 
-def test_no_zero_state_summary_on_open():
-    """On thread open, the summary must carry the real counts, not zeros.
-    This prevents the v1 green-then-red flash pattern."""
+def test_no_zero_state_on_open():
+    """On thread open, the parent must carry the real counts, not zeros.
+    Prevents the v1 green-then-red flash pattern (same property as before,
+    different surface: counts live on the parent now)."""
     actions = state.process_thread(
         config_name="c1", anomaly_date=DATE, slack_channel_id="C1",
         deltas_rows=[_row()], open_incident=None, reply_events=[], now=NOW,
     )
-    # Exactly one PostSummary, and it must be non-zero.
-    summaries = [a for a in actions if type(a).__name__ == "PostSummary"]
-    assert len(summaries) == 1
-    assert sum(summaries[0].counts.values()) > 0
+    opener = next(a for a in actions if type(a).__name__ == "OpenThread")
+    assert opener.counts is not None
+    assert sum(opener.counts.values()) > 0
+    # No duplicate summary reply.
+    assert not any(type(a).__name__ == "PostSummary" for a in actions)
 
 
 def test_empty_state_emits_nothing():
@@ -434,8 +439,9 @@ def test_flat_with_resolve_replies_resolve_keeps_reply_and_close(monkeypatch):
     assert "PostFire" not in types
 
 
-def test_thread_mode_default_preserves_all_actions():
-    # No mode override: defaults to 'thread', which is the v2 behaviour.
+def test_thread_mode_default_preserves_fire_and_opener_counts():
+    # No mode override: defaults to 'thread'. On first fire the opener
+    # carries the counts and PostFire is emitted; no redundant summary.
     actions = state.process_thread(
         config_name="c1", anomaly_date=DATE, slack_channel_id="C1",
         deltas_rows=[_row()], open_incident=None, reply_events=[], now=NOW,
@@ -443,7 +449,22 @@ def test_thread_mode_default_preserves_all_actions():
     types = _types(actions)
     assert "OpenThread" in types
     assert "PostFire" in types
-    assert "PostSummary" in types
+    assert "PostSummary" not in types
+    opener = next(a for a in actions if type(a).__name__ == "OpenThread")
+    assert opener.counts is not None
+
+
+def test_opener_counts_only_for_thread_mode(monkeypatch):
+    # Flat / flat-with-resolve-replies modes render a fire card in the
+    # opener instead of a counts table; counts stays None for those.
+    for mode in ("flat", "flat-with-resolve-replies"):
+        monkeypatch.setitem(state.AGGREGATION_MODE, "c_flat", mode)
+        actions = state.process_thread(
+            config_name="c_flat", anomaly_date=DATE, slack_channel_id="C1",
+            deltas_rows=[_row()], open_incident=None, reply_events=[], now=NOW,
+        )
+        opener = next(a for a in actions if type(a).__name__ == "OpenThread")
+        assert opener.counts is None, f"mode={mode} should leave counts=None"
 
 
 # --- v2.1: severity-aware opener -------------------------------------

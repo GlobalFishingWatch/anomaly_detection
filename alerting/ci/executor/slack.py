@@ -62,18 +62,33 @@ def make_looker_studio_url(report_id: str, page_id: str, config_name: str,
             f"/page/{page_id}?params={encoded}")
 
 
+def _render_counts_table(counts: dict) -> str:
+    """Shared counts-table block. Used by the opener (frozen-at-open) and
+    by in-thread summary replies (current state)."""
+    return (
+        "```\n"
+        "          | higher | lower |\n"
+        f" critical | {counts.get('critical_higher', 0):>6} | {counts.get('critical_lower', 0):>5} |\n"
+        f" warning  | {counts.get('warning_higher', 0):>6} | {counts.get('warning_lower', 0):>5} |\n"
+        "```"
+    )
+
+
 def render_thread_opener(config_name: str, anomaly_date: datetime.date,
                          environment: str,
                          description: str | None,
                          looker_url: str,
                          severity: str = "normal",
-                         first_fire_row: dict | None = None) -> str:
+                         first_fire_row: dict | None = None,
+                         counts: dict | None = None) -> str:
     """Parent message. Posted once; never edited.
 
     The leading emoji reflects the aggregate severity at open time:
     critical -> red, warning -> yellow, else green. If `first_fire_row` is
     provided (flat / flat-with-resolve-replies modes) the opener body
     includes the initial fire card so the opener itself is the rich alert.
+    In thread mode `counts` carries the frozen-at-open summary so channel
+    scanning doesn't require thread expansion.
     """
     emoji = _SEVERITY_EMOJI.get(severity, ":large_green_circle:")
     env_line = f"\n*Environment*: {environment}" if environment != "prod" else ""
@@ -85,14 +100,21 @@ def render_thread_opener(config_name: str, anomaly_date: datetime.date,
         f"{env_line}\n"
         f"_{desc}_"
     )
-    if first_fire_row is None:
-        return header
-    anomaly_type_lh = first_fire_row.get("anomaly_type_lower_higher") or "normal"
-    return (
-        f"{header}\n"
-        f"*Anomaly*: {anomaly_type_lh}\n"
-        f"{_render_fire_body(first_fire_row, looker_url)}"
-    )
+    if first_fire_row is not None:
+        anomaly_type_lh = first_fire_row.get("anomaly_type_lower_higher") or "normal"
+        return (
+            f"{header}\n"
+            f"*Anomaly*: {anomaly_type_lh}\n"
+            f"{_render_fire_body(first_fire_row, looker_url)}"
+        )
+    if counts is not None and any(counts.values()):
+        total = sum(counts.values())
+        return (
+            f"{header}\n"
+            f"*State* ({total} active):\n"
+            f"{_render_counts_table(counts)}"
+        )
+    return header
 
 
 def render_fire(row: dict, looker_url: str) -> str:
@@ -136,16 +158,9 @@ def render_summary(counts: dict) -> str:
     changed. Never includes a zero-state: the caller guarantees at least
     one non-zero count before emitting."""
     total = sum(counts.values())
-    table = (
-        "```\n"
-        "          | higher | lower |\n"
-        f" critical | {counts.get('critical_higher', 0):>6} | {counts.get('critical_lower', 0):>5} |\n"
-        f" warning  | {counts.get('warning_higher', 0):>6} | {counts.get('warning_lower', 0):>5} |\n"
-        "```"
-    )
     return (
         f":bar_chart: *Summary* ({total} active)\n"
-        f"{table}"
+        f"{_render_counts_table(counts)}"
     )
 
 

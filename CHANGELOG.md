@@ -4,7 +4,13 @@ Notable changes to this repo. Entries are organised by component and listed newe
 
 ## Alerting
 
-### Unreleased (v2.1 on `dev`)
+### Unreleased (v2.2 on `dev`)
+
+- Thread-mode parent embeds a frozen-at-open counts table so channel scanning doesn't require opening the thread. Parent is still written once (no `chat.update`); count changes between runs continue to post as in-thread summary replies.
+- Redundant initial `PostSummary` reply suppressed — the parent itself is the opening snapshot.
+- Opener bugfix: thread-mode parents no longer duplicate the first fire card (was a v2.1 regression — `OpenThread.first_fire_row` was populated unconditionally).
+
+### v2.1 (`8ee3aa9` on `dev`, 2026-04-24)
 
 - Per-config aggregation modes (`flat`, `flat-with-resolve-replies`, `thread`) via a post-filter at the end of `state.process_thread`. Configs without a `dimension_split` no longer produce opener+fire+summary thread clutter; the opener itself renders as a rich fire card. Thread mode is the v2 behaviour and remains the default.
 - Severity-aware opener emoji. `OpenThread` carries the aggregate severity (`critical` / `warning` / `normal`) derived from the initial fire batch; `render_thread_opener` picks `:red_circle:` / `:large_yellow_circle:` / `:large_green_circle:`. The static `:rotating_light:` is gone.

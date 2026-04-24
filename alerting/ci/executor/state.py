@@ -30,6 +30,11 @@ class OpenThread:
     # modes so the opener itself renders as a rich fire card. None for the
     # default 'thread' mode, which keeps the opener slim.
     first_fire_row: dict | None = None
+    # Frozen-at-open summary counts for thread mode. The opener embeds the
+    # counts table so channel scanning doesn't need thread expansion.
+    # Subsequent count changes still post as in-thread summary replies;
+    # the parent itself is never edited. None for flat modes.
+    counts: dict | None = None
 
 
 @dataclasses.dataclass
@@ -197,6 +202,21 @@ def _count(reply_states: dict[tuple[str, str], dict]) -> dict:
     }
 
 
+def _count_firing_rows(rows: list[dict]) -> dict:
+    """Count non-normal anomaly buckets across a list of firing deltas rows."""
+    c = Counter()
+    for r in rows:
+        t = r.get("anomaly_type_lower_higher")
+        if t and t != "normal":
+            c[t] += 1
+    return {
+        "critical_higher": c.get("critical_higher", 0),
+        "critical_lower": c.get("critical_lower", 0),
+        "warning_higher": c.get("warning_higher", 0),
+        "warning_lower": c.get("warning_lower", 0),
+    }
+
+
 def _hard_cap_reached(incident: dict, now: datetime.datetime) -> bool:
     opened = incident["opened_at"]
     return (now - opened).total_seconds() >= HARD_CAP_HOURS * 3600
@@ -271,6 +291,13 @@ def process_thread(
                                              r.get("forecast_method") or ""))
             if firing_rows and mode != "thread" else None
         )
+        # Thread mode: embed the initial counts table on the parent so
+        # channel scanning doesn't require opening the thread. Flat modes
+        # don't carry a counts table -- the single firing dim already
+        # renders inside the opener.
+        initial_counts: dict | None = None
+        if mode == "thread":
+            initial_counts = _count_firing_rows(firing_rows)
         actions.append(OpenThread(
             config_name=config_name,
             anomaly_date=anomaly_date,
@@ -278,9 +305,11 @@ def process_thread(
             description=description,
             severity=severity,
             first_fire_row=first_fire_row,
+            counts=initial_counts,
         ))
         incident_slack_ts = None
     else:
+        initial_counts = None
         incident_slack_ts = open_incident["slack_ts"] if open_incident else None
 
     # 5. Per (dim, method), emit PostFire / PostSeverityChange / PostResolve.
@@ -353,7 +382,10 @@ def process_thread(
 
     new_counts = _count(projected)
 
-    last_posted_counts = {}
+    # For a freshly-opened thread-mode thread, the parent already embeds
+    # `initial_counts`; seeding the debounce against it suppresses the
+    # redundant first summary reply.
+    last_posted_counts = initial_counts if initial_counts is not None else {}
     if open_incident and open_incident.get("summary_counts_json"):
         try:
             last_posted_counts = json.loads(open_incident["summary_counts_json"])
