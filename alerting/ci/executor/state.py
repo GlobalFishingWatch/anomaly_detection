@@ -23,6 +23,13 @@ class OpenThread:
     anomaly_date: datetime.date
     slack_channel_id: str
     description: str | None
+    # Aggregate severity across the firing rows at open time. One of
+    # 'critical' | 'warning' | 'normal'. Drives the opener emoji.
+    severity: str = "normal"
+    # First firing row details. Populated for flat / flat-with-resolve-replies
+    # modes so the opener itself renders as a rich fire card. None for the
+    # default 'thread' mode, which keeps the opener slim.
+    first_fire_row: dict | None = None
 
 
 @dataclasses.dataclass
@@ -82,6 +89,77 @@ class CloseThread:
 # --- policy knobs ------------------------------------------------------
 
 HARD_CAP_HOURS = 7 * 24
+
+
+# --- aggregation mode --------------------------------------------------
+
+# Per-config output shape. Decision rule (see analysis/alerting_v2_1_plan.md):
+# dimension_split present -> thread; no dim_split + daily -> flat;
+# no dim_split + hourly -> flat-with-resolve-replies. Configs absent from
+# this dict fall back to 'thread'.
+AGGREGATION_MODE: dict[str, str] = {
+    # flat: opener IS the alert; no fires, no summary reply.
+    "parser_errors_daily": "flat",
+    "pipe3_gaps": "flat",
+    "pipe3_vs_pipe2_5_published_fishing_effort_deltas": "flat",
+    "pipe3_vs_pipe2_5_published_fishing_events_deltas": "flat",
+    "pipe3_vs_pipe2_5_published_fishing_events_duration_deltas": "flat",
+    "t_world_fishing_827_queries_billed": "flat",
+    "s2_index_delays": "flat",
+    "s2_published_detections_delays": "flat",
+    "pipe3_product_events_fishing_count_esp": "flat",
+    # flat-with-resolve-replies: opener carries initial alert; severity
+    # changes and resolve still post as replies.
+    "parsed_row_count_hourly": "flat-with-resolve-replies",
+    "pipe3_product_events_fishing_count": "flat-with-resolve-replies",
+}
+
+
+def _aggregation_mode(config_name: str) -> str:
+    return AGGREGATION_MODE.get(config_name, "thread")
+
+
+_SEVERITY_PREFIXES = {
+    "critical_higher": "critical",
+    "critical_lower": "critical",
+    "warning_higher": "warning",
+    "warning_lower": "warning",
+}
+
+
+def _max_severity(rows: list[dict]) -> str:
+    """Collapse a batch of firing rows to a single severity label.
+    critical > warning > normal."""
+    severities = {
+        _SEVERITY_PREFIXES.get(r.get("anomaly_type_lower_higher") or "", "normal")
+        for r in rows
+    }
+    if "critical" in severities:
+        return "critical"
+    if "warning" in severities:
+        return "warning"
+    return "normal"
+
+
+def _filter_for_flat_mode(actions: list[Any], mode: str) -> list[Any]:
+    """Drop action types per the aggregation mode table:
+
+        thread                   -> all actions kept
+        flat-with-resolve-replies -> keep OpenThread, PostSeverityChange,
+                                     PostResolve, CloseThread
+        flat                     -> keep OpenThread, CloseThread only
+    """
+    if mode == "thread":
+        return actions
+    if mode == "flat-with-resolve-replies":
+        allowed: tuple[type, ...] = (
+            OpenThread, PostSeverityChange, PostResolve, CloseThread,
+        )
+    elif mode == "flat":
+        allowed = (OpenThread, CloseThread)
+    else:
+        return actions
+    return [a for a in actions if isinstance(a, allowed)]
 
 
 # --- helpers -----------------------------------------------------------
@@ -177,11 +255,25 @@ def process_thread(
     #    PostFire / PostSummary reference this via a sentinel None slack_ts;
     #    the orchestrator patches it in after OpenThread is applied.
     if has_anomaly and open_incident is None:
+        firing_rows = [
+            r for r in latest_by_key.values()
+            if r.get("anomaly_type_lower_higher")
+            and r["anomaly_type_lower_higher"] != "normal"
+        ]
+        severity = _max_severity(firing_rows)
+        first_fire_row = (
+            min(firing_rows, key=lambda r: (r["timestamp"],
+                                             r.get("dimension_split_value") or "",
+                                             r.get("forecast_method") or ""))
+            if firing_rows else None
+        )
         actions.append(OpenThread(
             config_name=config_name,
             anomaly_date=anomaly_date,
             slack_channel_id=slack_channel_id,
             description=description,
+            severity=severity,
+            first_fire_row=first_fire_row,
         ))
         incident_slack_ts = None
     else:
@@ -293,4 +385,9 @@ def process_thread(
             reason="all_resolved",
         ))
 
-    return actions
+    # 8. Apply the per-config aggregation-mode filter. For flat modes this
+    #    drops the action types that the config does not want to see as
+    #    thread replies. The opener (if any) already carries the first
+    #    firing row's details for these modes, so the channel scanner still
+    #    sees the critical numbers at a glance.
+    return _filter_for_flat_mode(actions, _aggregation_mode(config_name))

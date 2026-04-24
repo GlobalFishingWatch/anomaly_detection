@@ -52,11 +52,19 @@ def apply_actions(
         if isinstance(action, state.OpenThread):
             counts = {"critical_higher": 0, "critical_lower": 0,
                       "warning_higher": 0, "warning_lower": 0}
+            # In flat mode the opener embeds a fire-card; point its
+            # dashboard link at the first firing (dim, method). Otherwise
+            # the header-only opener points at the config overview.
+            first_row = action.first_fire_row
             looker_url = slacklib.make_looker_studio_url(
-                report_id, page_id, action.config_name, "", "")
+                report_id, page_id, action.config_name,
+                (first_row or {}).get("forecast_method") or "",
+                (first_row or {}).get("dimension_split_value") or "")
             text = slacklib.render_thread_opener(
                 action.config_name, action.anomaly_date, environment,
-                action.description, looker_url)
+                action.description, looker_url,
+                severity=action.severity,
+                first_fire_row=action.first_fire_row)
             logging.info("[open_thread] %s / %s", action.config_name,
                          action.anomaly_date)
             if dry_run:
@@ -296,6 +304,35 @@ def run(
         channel = bq.get_channel_config(bq_client, config_name, environment)
         open_incident = bq.find_open_incident(
             bq_client, incidents_table, config_name, anomaly_date)
+
+        # Duplicate-thread guard: `find_open_incident` may return a
+        # recently-resolved incident (closed within the last 24h). Flip
+        # its row back to 'open' so subsequent replies append to the same
+        # Slack thread instead of opening a duplicate one.
+        has_fresh_anomaly = any(
+            r.get("anomaly_type_lower_higher") and
+            r["anomaly_type_lower_higher"] != "normal"
+            for r in rows
+        )
+        if (open_incident is not None
+                and open_incident.get("status") == "resolved"
+                and has_fresh_anomaly):
+            logging.info("[reopen] %s / %s within 24h",
+                         config_name, anomaly_date)
+            if not dry_run:
+                bq.update_incident(
+                    bq_client, incidents_table,
+                    slack_ts=open_incident["slack_ts"], now=now,
+                    status="open", clear_closed_at=True)
+            # Reflect the flip in the in-memory dict so the state machine
+            # treats it as open.
+            open_incident = {**open_incident, "status": "open",
+                             "closed_at": None}
+        elif (open_incident is not None
+                and open_incident.get("status") == "resolved"):
+            # Recently-resolved but nothing new to announce; leave it closed.
+            open_incident = None
+
         reply_events = (
             bq.find_reply_events(bq_client, replies_table,
                                  open_incident["slack_ts"])

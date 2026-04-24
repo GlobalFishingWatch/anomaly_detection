@@ -155,13 +155,28 @@ def query_deltas_with_open_incidents(
 def find_open_incident(client: bigquery.Client, incidents_table: str,
                        config_name: str,
                        anomaly_date: datetime.date) -> dict | None:
+    """Return the currently-open incident for (config, anomaly_date), or
+    -- as a duplicate-thread guard -- the most recent resolved incident
+    for that key if it was closed within the last 24 hours. In the
+    resolved-within-24h case the caller is expected to transition the row
+    back to `status='open'` and append new replies to the same Slack
+    thread. Past that window a fresh thread is acceptable."""
     query = f"""
     SELECT *
     FROM `{incidents_table}`
     WHERE config_name = @config_name
       AND anomaly_date = @anomaly_date
-      AND status = 'open'
-    ORDER BY opened_at DESC
+      AND (
+        status = 'open'
+        OR (
+          status = 'resolved'
+          AND closed_at IS NOT NULL
+          AND closed_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+        )
+      )
+    ORDER BY
+      CASE WHEN status = 'open' THEN 0 ELSE 1 END,
+      opened_at DESC
     LIMIT 1
     """
     job = client.query(query, job_config=bigquery.QueryJobConfig(
@@ -222,7 +237,8 @@ def update_incident(client: bigquery.Client, incidents_table: str, *,
                     slack_ts: str, now: datetime.datetime,
                     summary_counts_json: str | None = None,
                     status: str | None = None,
-                    closed_at: datetime.datetime | None = None) -> None:
+                    closed_at: datetime.datetime | None = None,
+                    clear_closed_at: bool = False) -> None:
     sets = []
     params = [
         bigquery.ScalarQueryParameter("slack_ts", "STRING", slack_ts),
@@ -235,7 +251,9 @@ def update_incident(client: bigquery.Client, incidents_table: str, *,
     if status is not None:
         sets.append("status = @status")
         params.append(bigquery.ScalarQueryParameter("status", "STRING", status))
-    if closed_at is not None:
+    if clear_closed_at:
+        sets.append("closed_at = NULL")
+    elif closed_at is not None:
         sets.append("closed_at = @closed_at")
         params.append(bigquery.ScalarQueryParameter("closed_at", "TIMESTAMP", closed_at))
     if not sets:

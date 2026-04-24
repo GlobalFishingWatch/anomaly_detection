@@ -21,6 +21,34 @@ _EMOJI = {
     "normal": ":large_green_circle:",
 }
 
+_SEVERITY_EMOJI = {
+    "critical": ":red_circle:",
+    "warning": ":large_yellow_circle:",
+    "normal": ":large_green_circle:",
+}
+
+
+def _render_fire_body(row: dict, looker_url: str) -> str:
+    """Body of a fire card (no leading heading line). Shared between
+    `render_fire` and the flat-mode opener so the format string isn't
+    duplicated. The caller prepends its own heading line (e.g. '*New*: ...'
+    or the opener heading)."""
+    dim = row.get("dimension_split_value") or ""
+    dim_line = f"*Dimension*: `{dim}`\n" if dim else ""
+    method = row.get("forecast_method")
+    query = row.get("source_sql") or ""
+    query_block = f"\n*Query*:\n```\nSELECT{query}\n```" if query else ""
+    return (
+        f"{dim_line}"
+        f"*Method*: {method}\n"
+        f"*Timestamp*: {row['timestamp']}\n"
+        f"*Forecast*: {row.get('forecast_value')}\n"
+        f"*Actual*: {row.get('actual_value')}\n"
+        f"*Relative delta*: {row.get('delta_rel')}\n"
+        f"*Dashboard*: <{looker_url}|drill in>"
+        f"{query_block}"
+    )
+
 
 def make_looker_studio_url(report_id: str, page_id: str, config_name: str,
                            forecast_method: str, dimension: str) -> str:
@@ -37,16 +65,33 @@ def make_looker_studio_url(report_id: str, page_id: str, config_name: str,
 def render_thread_opener(config_name: str, anomaly_date: datetime.date,
                          environment: str,
                          description: str | None,
-                         looker_url: str) -> str:
-    """Static parent message. Posted once; never edited."""
+                         looker_url: str,
+                         severity: str = "normal",
+                         first_fire_row: dict | None = None) -> str:
+    """Parent message. Posted once; never edited.
+
+    The leading emoji reflects the aggregate severity at open time:
+    critical -> red, warning -> yellow, else green. If `first_fire_row` is
+    provided (flat / flat-with-resolve-replies modes) the opener body
+    includes the initial fire card so the opener itself is the rich alert.
+    """
+    emoji = _SEVERITY_EMOJI.get(severity, ":large_green_circle:")
     env_line = f"\n*Environment*: {environment}" if environment != "prod" else ""
     desc = description or "No description available"
-    return (
-        f":rotating_light: *Incident*: `{config_name}`\n"
+    header = (
+        f"{emoji} *Incident*: `{config_name}`\n"
         f"*Data date*: `{anomaly_date.isoformat()}`\n"
         f"*Dashboard*: <{looker_url}|Anomaly Detection>"
         f"{env_line}\n"
         f"_{desc}_"
+    )
+    if first_fire_row is None:
+        return header
+    anomaly_type_lh = first_fire_row.get("anomaly_type_lower_higher") or "normal"
+    return (
+        f"{header}\n"
+        f"*Anomaly*: {anomaly_type_lh}\n"
+        f"{_render_fire_body(first_fire_row, looker_url)}"
     )
 
 
@@ -54,20 +99,9 @@ def render_fire(row: dict, looker_url: str) -> str:
     """Initial fire for a (dim, method)."""
     anomaly_type_lh = row["anomaly_type_lower_higher"]
     emoji = _EMOJI.get(anomaly_type_lh, ":grey_question:")
-    dim = row.get("dimension_split_value") or ""
-    dim_line = f"\n*Dimension*: `{dim}`" if dim else ""
-    method = row.get("forecast_method")
-    query = row.get("source_sql") or ""
-    query_block = f"\n*Query*:\n```\nSELECT{query}\n```" if query else ""
     return (
-        f"{emoji} *New*: {anomaly_type_lh}{dim_line}\n"
-        f"*Method*: {method}\n"
-        f"*Timestamp*: {row['timestamp']}\n"
-        f"*Forecast*: {row.get('forecast_value')}\n"
-        f"*Actual*: {row.get('actual_value')}\n"
-        f"*Relative delta*: {row.get('delta_rel')}\n"
-        f"*Dashboard*: <{looker_url}|drill in>"
-        f"{query_block}"
+        f"{emoji} *New*: {anomaly_type_lh}\n"
+        f"{_render_fire_body(row, looker_url)}"
     )
 
 
