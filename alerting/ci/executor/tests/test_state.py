@@ -476,17 +476,25 @@ def test_opener_severity_any_critical_is_critical():
 
 
 def test_opener_first_fire_row_only_in_flat_modes(monkeypatch):
-    # thread mode: opener gets severity but first_fire_row may also be
-    # populated; what matters is that the opener is rendered header-only
-    # by the caller (slack.render_thread_opener). The state machine
-    # populates first_fire_row regardless, since it's cheap; the renderer
-    # decides whether to use it. We just assert severity is set.
+    # In thread mode the opener must NOT carry a fire-card body, or the
+    # parent message ends up duplicating the first thread reply. The
+    # renderer has no mode signal, so the state machine gates this.
     actions = state.process_thread(
         config_name="c1", anomaly_date=DATE, slack_channel_id="C1",
         deltas_rows=[_row()], open_incident=None, reply_events=[], now=NOW,
     )
     opener = next(a for a in actions if isinstance(a, state.OpenThread))
     assert opener.severity == "critical"
+    assert opener.first_fire_row is None
+
+    # Flat mode: opener DOES carry the first firing row so the opener
+    # itself renders as a fire card.
+    monkeypatch.setitem(state.AGGREGATION_MODE, "c2", "flat")
+    actions = state.process_thread(
+        config_name="c2", anomaly_date=DATE, slack_channel_id="C1",
+        deltas_rows=[_row()], open_incident=None, reply_events=[], now=NOW,
+    )
+    opener = next(a for a in actions if isinstance(a, state.OpenThread))
     assert opener.first_fire_row is not None
 
 

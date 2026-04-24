@@ -261,11 +261,15 @@ def process_thread(
             and r["anomaly_type_lower_higher"] != "normal"
         ]
         severity = _max_severity(firing_rows)
+        # Only flat / flat-with-resolve-replies modes render a fire card
+        # inside the opener. Leaving first_fire_row unset for thread mode
+        # keeps the opener slim and avoids duplicating the first fire reply.
+        mode = _aggregation_mode(config_name)
         first_fire_row = (
             min(firing_rows, key=lambda r: (r["timestamp"],
                                              r.get("dimension_split_value") or "",
                                              r.get("forecast_method") or ""))
-            if firing_rows else None
+            if firing_rows and mode != "thread" else None
         )
         actions.append(OpenThread(
             config_name=config_name,
