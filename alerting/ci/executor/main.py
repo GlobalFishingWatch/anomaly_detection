@@ -285,7 +285,10 @@ def run(
         d = r.get("anomaly_date")
         if isinstance(d, str):
             d = datetime.date.fromisoformat(d)
-        key = (r["config_name"], d)
+        if not isinstance(d, datetime.date):
+            logging.warning("[skip] row missing anomaly_date: %s", r.get("config_name"))
+            continue
+        key: tuple[str, datetime.date] = (r["config_name"], d)
         by_thread.setdefault(key, []).append(r)
 
     # Also visit (config, date) tuples that have an open incident but no
