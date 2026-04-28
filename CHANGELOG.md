@@ -28,3 +28,9 @@ Notable changes to this repo. Entries are organised by component and listed newe
 ### Earlier v1 / v0 work
 
 Pre-v2 the alerter sent one Slack notification per anomaly row, keyed on a deduplication index. See `git log` before `56d2d25` for details.
+
+## Dataloader
+
+### Unreleased (on `dev`)
+
+- Fix logger crash that silently disabled the four `parsed_row_count_*_daily` configs since 2025-07-10 (`9258410`). The `log_info(list(current_anomaly_detection_config))` config dump in `forecast.R` was processed by `formatter_glue`, which tried to evaluate `{missing_timestamps_sql}`/`{existing_timestamps_sql}` placeholders embedded in `source_sql` before those variables were defined further down the file. The dump is now rendered with `str()` and brace-escaped before logging, which is robust against any future config that puts `{...}` in `source_sql`/`source_filter_sql`.

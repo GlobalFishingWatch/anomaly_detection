@@ -108,7 +108,11 @@ current_anomaly_detection_config[config_fields] = config_fields %>%
   imap(~ current_anomaly_detection_config[[.x]] %||% "")
 
 log_info("Current anomaly detection config:")
-log_info(list(current_anomaly_detection_config))
+# Escape braces so logger's glue formatter does not try to resolve
+# {placeholder} tokens embedded in source_sql before they are substituted
+# at line ~161 (e.g. {missing_timestamps_sql} is only defined below).
+cfg_text = paste(capture.output(str(current_anomaly_detection_config)), collapse = "\n")
+log_info(gsub("\\}", "}}", gsub("\\{", "{{", cfg_text)))
 
 if ("allowed_size" %in% names(current_anomaly_detection_config)) {
   allowed_size = as.numeric(current_anomaly_detection_config$allowed_size) * BQ_GB
