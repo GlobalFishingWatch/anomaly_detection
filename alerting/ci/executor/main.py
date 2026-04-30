@@ -70,7 +70,9 @@ def apply_actions(
                 action.description, looker_url,
                 severity=action.severity,
                 first_fire_row=action.first_fire_row,
-                counts=action.counts)
+                counts=action.counts,
+                dq_dashboard_url=action.dq_dashboard_url,
+                text_inject=action.text_inject)
             logging.info("[open_thread] %s / %s", action.config_name,
                          action.anomaly_date)
             if dry_run:
@@ -239,6 +241,19 @@ def apply_actions(
                                status="resolved", closed_at=now)
 
 
+def _count_firing_buckets(rows: list[dict]) -> dict:
+    """Counts of non-normal anomaly buckets across deltas rows. Used only for
+    forensics on bootstrap rows (so a future analyst can see what was
+    suppressed); no behavioural impact."""
+    out = {"critical_higher": 0, "critical_lower": 0,
+           "warning_higher": 0, "warning_lower": 0}
+    for r in rows:
+        t = r.get("anomaly_type_lower_higher")
+        if t in out:
+            out[t] += 1
+    return out
+
+
 def _resolve_parent_ts(
     action_ts: str | None,
     new_parent_ts: str | None,
@@ -281,11 +296,17 @@ def run(
                 r["timestamp"] = datetime.datetime.fromisoformat(r["timestamp"])
             if "anomaly_date" not in r and isinstance(r.get("timestamp"), datetime.datetime):
                 r["anomaly_date"] = r["timestamp"].date()
+        bootstrapped_pairs: set[tuple[str, datetime.date]] = set()
+        seen_configs: set[str] = set()
     else:
         deltas_all = bq.query_deltas_with_open_incidents(
             bq_client, environment, incidents_table)
+        # Bootstrap state from previous runs.
+        bootstrapped_pairs = bq.list_bootstrapped_pairs(bq_client, incidents_table)
+        seen_configs = bq.list_configs_with_any_incident(bq_client, incidents_table)
 
-    # Group deltas by (config_name, anomaly_date).
+    # Group deltas by (config_name, anomaly_date), dropping pairs that were
+    # bootstrapped on a previous run -- those are silenced for good.
     by_thread: dict[tuple[str, datetime.date], list[dict]] = {}
     for r in deltas_all:
         d = r.get("anomaly_date")
@@ -295,7 +316,38 @@ def run(
             logging.warning("[skip] row missing anomaly_date: %s", r.get("config_name"))
             continue
         key: tuple[str, datetime.date] = (r["config_name"], d)
+        if key in bootstrapped_pairs:
+            continue
         by_thread.setdefault(key, []).append(r)
+
+    # First-seen configs: every (config, anomaly_date) pair with anomaly_date
+    # before today is silently bootstrapped, so the wave of historical
+    # anomalies that lands when a new dataloader config first runs doesn't
+    # spam Slack. Today's anomalies still flow through normally so a
+    # genuinely new config can still alert on day one.
+    today = now.date()
+    fresh_configs = {cn for (cn, _) in by_thread} - seen_configs
+    if fresh_configs:
+        logging.info("[bootstrap] first-seen config(s): %s", sorted(fresh_configs))
+    bootstrapped_now: list[tuple[str, datetime.date]] = []
+    for key in list(by_thread.keys()):
+        cn, d = key
+        if cn not in fresh_configs or d >= today:
+            continue
+        bootstrapped_now.append(key)
+        if not dry_run and not replay_fixture:
+            counts = _count_firing_buckets(by_thread[key])
+            bq.insert_bootstrap_incident(
+                bq_client, incidents_table,
+                config_name=cn,
+                anomaly_date=d,
+                summary_counts_json=json.dumps(counts),
+                now=now,
+            )
+        del by_thread[key]
+    if bootstrapped_now:
+        logging.info("[bootstrap] suppressed %d historical (config, date) pair(s)",
+                     len(bootstrapped_now))
 
     # Also visit (config, date) tuples that have an open incident but no
     # fresh deltas -- so resolution detection runs.
@@ -308,7 +360,13 @@ def run(
 
     for (config_name, anomaly_date) in sorted(thread_keys, key=lambda x: (x[0], str(x[1]))):
         rows = by_thread.get((config_name, anomaly_date), [])
-        description = rows[0].get("description") if rows else None
+        # Per-config metadata, joined onto every deltas row from the
+        # config_descriptions_<env> seed. None when iterating an open incident
+        # with no fresh deltas (matches the existing `description` fallback).
+        first_row = rows[0] if rows else {}
+        description = first_row.get("description") or None
+        dq_dashboard_url = first_row.get("dq_dashboard_url") or None
+        text_inject = first_row.get("text_inject") or None
 
         channel = bq.get_channel_config(bq_client, config_name, environment)
         open_incident = bq.find_open_incident(
@@ -357,6 +415,8 @@ def run(
             reply_events=reply_events,
             now=now,
             description=description,
+            dq_dashboard_url=dq_dashboard_url,
+            text_inject=text_inject,
         )
 
         if actions:

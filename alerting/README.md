@@ -20,3 +20,32 @@ Per-config aggregation modes (see `state.AGGREGATION_MODE`):
 ## Entry point
 
 `alerting/ci/executor/main.py`. Orchestrates: query deltas + open incidents → group by `(config, anomaly_date)` → decide actions via the pure `state.process_thread` → apply via `bq.py` + `slack.py`.
+
+## First-seen-config bootstrap
+
+When a config is seen by the alerter for the first time (no rows in `t_alerting_incidents` for that `config_name`), every `(config, anomaly_date)` pair with `anomaly_date < today` is silently *bootstrapped*: a `status='resolved'` row is inserted with a synthetic `slack_ts` starting with `BOOTSTRAP-`, and no Slack message is posted. Today's anomalies still flow through the normal alerting path so a brand-new config can still alert on day one.
+
+This prevents the wave of historical notifications that would otherwise hit Slack when a previously-broken or newly-enabled config's dataloader backfills 30 days of anomalies at once.
+
+Bootstrap rows act as permanent "do not alert" markers: every subsequent run queries `STARTS_WITH(slack_ts, 'BOOTSTRAP-')` via `bq.list_bootstrapped_pairs` and drops matching deltas before grouping, so the state machine never sees them again.
+
+## Per-config metadata (DQ dashboard, mentions)
+
+Two optional columns on the `config_descriptions_<env>` dbt seed control extra rendering. Both ride the existing `LEFT JOIN ... USING(config_name)` in `dataloader/ci/executor/sql/t_deltas.sql`, so once the column is filled in the seed CSV and dbt + the dataloader rebuild downstream tables, the alerter picks the values up automatically — no schema changes elsewhere.
+
+- `dq_dashboard_url` (string). When set, the parent message renders an extra `*DQ dashboard*: <url|open>` line in its header and the status page renders a "DQ dashboard ↗" link in the per-config detail header. Use this for configs whose data has a dedicated DQ Looker Studio page that's better than the default anomaly-detection drill-in. Both links are kept — the new one does not replace the old.
+- `text_inject` (string). Free-form Slack mrkdwn appended as the final line of the parent message. Subscribers paste raw mention tokens here (e.g. `cc <!subteam^SXXX>` for a subteam, `<@U…>` for an individual). The text is passed through unchanged — engineers writing the seed are responsible for valid mrkdwn. Only the parent carries the inject, so subscribers ping exactly once per `(config, anomaly_date)` incident, not on every state-transition reply. Not surfaced on the status page (mention tokens render as raw `<@…>` / `<!subteam^…>` garbage in HTML).
+
+Both fields default to empty strings; configs that don't opt in render exactly as before. Update the seed CSV (one per env: `_dev`, `_staging`, `_prod`) and run `dbt seed` to ship a change. The renderer gates on a non-empty value after `.strip()`, so seed cleanup or a value-replacement is automatically reflected on the next alerter run.
+
+### Un-bootstrapping a config
+
+If you decide the bootstrapped anomalies are actually worth surfacing (e.g. they reveal a real long-running issue you want a thread for), delete the marker rows and the next alerter run will treat them as fresh:
+
+```sql
+DELETE FROM `world-fishing-827.tech_anomaly_detection.t_qa_gfw_anomaly_detection_alerting_dev_incidents`
+WHERE config_name = '<your_config>'
+  AND STARTS_WITH(slack_ts, 'BOOTSTRAP-');
+```
+
+Adjust the table name for `staging` / `prod` as needed. After deletion, `list_configs_with_any_incident` may still return the config (if other non-bootstrap rows exist for it), in which case the next run won't re-bootstrap — it'll just open real Slack threads for whatever historical anomalies are still in the deltas table's 30-day window.

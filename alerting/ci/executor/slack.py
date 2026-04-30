@@ -80,7 +80,9 @@ def render_thread_opener(config_name: str, anomaly_date: datetime.date,
                          looker_url: str,
                          severity: str = "normal",
                          first_fire_row: dict | None = None,
-                         counts: dict | None = None) -> str:
+                         counts: dict | None = None,
+                         dq_dashboard_url: str | None = None,
+                         text_inject: str | None = None) -> str:
     """Parent message. Posted once; never edited.
 
     The leading emoji reflects the aggregate severity at open time:
@@ -89,23 +91,36 @@ def render_thread_opener(config_name: str, anomaly_date: datetime.date,
     includes the initial fire card so the opener itself is the rich alert.
     In thread mode `counts` carries the frozen-at-open summary so channel
     scanning doesn't require thread expansion.
+
+    `dq_dashboard_url` (optional): added as an extra header line linking to a
+    config-specific Data Quality dashboard page. `text_inject` (optional):
+    free-form Slack mrkdwn appended as the final line so subscribers (e.g.
+    `<@U…>` or `<!subteam^S…>` mentions) ping exactly once per incident.
+    Both are gated on truthy-after-strip so configs that don't opt in render
+    unchanged.
     """
     emoji = _SEVERITY_EMOJI.get(severity, ":large_green_circle:")
     env_line = f"\n*Environment*: {environment}" if environment != "prod" else ""
     desc = description or "No description available"
+    dq = (dq_dashboard_url or "").strip()
+    dq_line = f"\n*DQ dashboard*: <{dq}|open>" if dq else ""
     header = (
         f"{emoji} *Incident*: `{config_name}`\n"
         f"*Data date*: `{anomaly_date.isoformat()}`\n"
         f"*Dashboard*: <{looker_url}|Anomaly Detection>"
+        f"{dq_line}"
         f"{env_line}\n"
         f"_{desc}_"
     )
+    inject = (text_inject or "").strip()
+    inject_suffix = f"\n\n{inject}" if inject else ""
     if first_fire_row is not None:
         anomaly_type_lh = first_fire_row.get("anomaly_type_lower_higher") or "normal"
         return (
             f"{header}\n"
             f"*Anomaly*: {anomaly_type_lh}\n"
             f"{_render_fire_body(first_fire_row, looker_url)}"
+            f"{inject_suffix}"
         )
     if counts is not None and any(counts.values()):
         total = sum(counts.values())
@@ -113,8 +128,9 @@ def render_thread_opener(config_name: str, anomaly_date: datetime.date,
             f"{header}\n"
             f"*State* ({total} active):\n"
             f"{_render_counts_table(counts)}"
+            f"{inject_suffix}"
         )
-    return header
+    return f"{header}{inject_suffix}"
 
 
 def render_fire(row: dict, looker_url: str) -> str:

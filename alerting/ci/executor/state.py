@@ -35,6 +35,12 @@ class OpenThread:
     # Subsequent count changes still post as in-thread summary replies;
     # the parent itself is never edited. None for flat modes.
     counts: dict | None = None
+    # Per-config metadata, both nullable. Populated from t_config_descriptions_<env>
+    # via the deltas LEFT JOIN. The opener renders the URL as a header link and
+    # appends the inject text as the last line. Replies (fire/severity/resolve)
+    # don't carry these — subscribers ping once per incident.
+    dq_dashboard_url: str | None = None
+    text_inject: str | None = None
 
 
 @dataclasses.dataclass
@@ -234,6 +240,8 @@ def process_thread(
     reply_events: list[dict],
     now: datetime.datetime,
     description: str | None = None,
+    dq_dashboard_url: str | None = None,
+    text_inject: str | None = None,
 ) -> list[Any]:
     """Decide the actions for one (config, anomaly_date) thread.
 
@@ -306,6 +314,8 @@ def process_thread(
             severity=severity,
             first_fire_row=first_fire_row,
             counts=initial_counts,
+            dq_dashboard_url=dq_dashboard_url,
+            text_inject=text_inject,
         ))
         incident_slack_ts = None
     else:

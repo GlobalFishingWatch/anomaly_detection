@@ -620,6 +620,9 @@ def test_main_reopen_flow(monkeypatch):
                              "description": "test"},
                         ])
     monkeypatch.setattr(main.bq, "list_open_incident_keys", lambda c, t: [])
+    monkeypatch.setattr(main.bq, "list_bootstrapped_pairs", lambda c, t: set())
+    monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
+                        lambda c, t: {"c1"})
     monkeypatch.setattr(main.bq, "get_channel_config",
                         lambda c, cn, e: {"slack_channel_id": "C1",
                                           "slack_channel_name": "#c1"})
@@ -701,6 +704,9 @@ def test_main_no_reopen_when_no_fresh_anomaly(monkeypatch):
                         lambda c, e, t: [])
     monkeypatch.setattr(main.bq, "list_open_incident_keys",
                         lambda c, t: [("c1", DATE)])
+    monkeypatch.setattr(main.bq, "list_bootstrapped_pairs", lambda c, t: set())
+    monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
+                        lambda c, t: {"c1"})
     monkeypatch.setattr(main.bq, "get_channel_config",
                         lambda c, cn, e: {"slack_channel_id": "C1",
                                           "slack_channel_name": "#c1"})
@@ -729,3 +735,178 @@ def test_main_no_reopen_when_no_fresh_anomaly(monkeypatch):
     assert not any(u["clear_closed_at"] for u in update_calls)
     # process_thread was called with open_incident=None.
     assert captured["open_incident"] is None
+
+
+def test_main_bootstrap_suppresses_first_seen_historical(monkeypatch):
+    """First time a config is seen (not in list_configs_with_any_incident),
+    main.run inserts a bootstrap row for every (config, date < today) and
+    skips the state machine for them. Today's anomalies still flow through."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import main  # noqa: E402
+
+    historical_date = DATE - datetime.timedelta(days=5)
+    today_date = NOW.date()
+
+    deltas = [
+        {"config_name": "new_cfg",
+         "timestamp": datetime.datetime.combine(historical_date,
+                                                datetime.time(12, 0),
+                                                datetime.timezone.utc),
+         "anomaly_date": historical_date,
+         "dimension_split_value": "", "forecast_method": "mstl",
+         "anomaly_type_lower_higher": "critical_higher",
+         "forecast_value": 1.0, "actual_value": 2.0, "delta_rel": 1.0},
+        {"config_name": "new_cfg",
+         "timestamp": datetime.datetime.combine(today_date,
+                                                datetime.time(12, 0),
+                                                datetime.timezone.utc),
+         "anomaly_date": today_date,
+         "dimension_split_value": "", "forecast_method": "mstl",
+         "anomaly_type_lower_higher": "critical_higher",
+         "forecast_value": 1.0, "actual_value": 2.0, "delta_rel": 1.0},
+    ]
+
+    bootstrap_calls = []
+    process_calls = []
+
+    def fake_bootstrap(client, table, *, config_name, anomaly_date,
+                       summary_counts_json, now):
+        bootstrap_calls.append((config_name, anomaly_date))
+
+    def fake_process_thread(**kwargs):
+        process_calls.append(kwargs.get("anomaly_date"))
+        return []
+
+    monkeypatch.setattr(main, "datetime", datetime)
+    # Pin "now" so today_date is deterministic regardless of when tests run.
+    class _FixedDT(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return NOW
+    monkeypatch.setattr(main.datetime, "datetime", _FixedDT)
+
+    monkeypatch.setattr(main.bq, "query_deltas_with_open_incidents",
+                        lambda c, e, t: deltas)
+    monkeypatch.setattr(main.bq, "list_open_incident_keys", lambda c, t: [])
+    monkeypatch.setattr(main.bq, "list_bootstrapped_pairs", lambda c, t: set())
+    monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
+                        lambda c, t: set())  # config is brand new
+    monkeypatch.setattr(main.bq, "insert_bootstrap_incident", fake_bootstrap)
+    monkeypatch.setattr(main.bq, "get_channel_config",
+                        lambda c, cn, e: {"slack_channel_id": "C1",
+                                          "slack_channel_name": "#c1"})
+    monkeypatch.setattr(main.bq, "find_open_incident",
+                        lambda c, t, cn, d: None)
+    monkeypatch.setattr(main.bq, "find_reply_events", lambda c, t, ts: [])
+    monkeypatch.setattr(main.state, "process_thread", fake_process_thread)
+
+    class _Dummy:
+        def __init__(self, *a, **kw):
+            pass
+
+    monkeypatch.setattr(main.bigquery, "Client", _Dummy)
+    monkeypatch.setattr(main, "WebClient", _Dummy)
+
+    main.run(
+        environment="dev",
+        incidents_table="p.d.incidents",
+        replies_table="p.d.replies",
+        report_id="r", page_id="p",
+        dry_run=False,
+    )
+
+    # Historical date got a bootstrap row, today did not.
+    assert bootstrap_calls == [("new_cfg", historical_date)]
+    # State machine was called only for today's anomaly.
+    assert process_calls == [today_date]
+
+
+def test_main_bootstrap_skipped_for_already_bootstrapped_pair(monkeypatch):
+    """A (config, date) pair already in list_bootstrapped_pairs is dropped
+    before grouping; the state machine never sees it."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import main  # noqa: E402
+
+    historical_date = DATE - datetime.timedelta(days=5)
+    deltas = [
+        {"config_name": "old_cfg",
+         "timestamp": datetime.datetime.combine(historical_date,
+                                                datetime.time(12, 0),
+                                                datetime.timezone.utc),
+         "anomaly_date": historical_date,
+         "dimension_split_value": "", "forecast_method": "mstl",
+         "anomaly_type_lower_higher": "critical_higher",
+         "forecast_value": 1.0, "actual_value": 2.0, "delta_rel": 1.0},
+    ]
+
+    process_calls = []
+    bootstrap_calls = []
+
+    def fake_process_thread(**kwargs):
+        process_calls.append(kwargs.get("anomaly_date"))
+        return []
+
+    def fake_bootstrap(*a, **kw):
+        bootstrap_calls.append((kw.get("config_name"), kw.get("anomaly_date")))
+
+    monkeypatch.setattr(main.bq, "query_deltas_with_open_incidents",
+                        lambda c, e, t: deltas)
+    monkeypatch.setattr(main.bq, "list_open_incident_keys", lambda c, t: [])
+    monkeypatch.setattr(main.bq, "list_bootstrapped_pairs",
+                        lambda c, t: {("old_cfg", historical_date)})
+    monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
+                        lambda c, t: {"old_cfg"})
+    monkeypatch.setattr(main.bq, "insert_bootstrap_incident", fake_bootstrap)
+    monkeypatch.setattr(main.bq, "get_channel_config",
+                        lambda c, cn, e: {"slack_channel_id": "C1",
+                                          "slack_channel_name": "#c1"})
+    monkeypatch.setattr(main.bq, "find_open_incident",
+                        lambda c, t, cn, d: None)
+    monkeypatch.setattr(main.bq, "find_reply_events", lambda c, t, ts: [])
+    monkeypatch.setattr(main.state, "process_thread", fake_process_thread)
+
+    class _Dummy:
+        def __init__(self, *a, **kw):
+            pass
+
+    monkeypatch.setattr(main.bigquery, "Client", _Dummy)
+    monkeypatch.setattr(main, "WebClient", _Dummy)
+
+    main.run(
+        environment="dev",
+        incidents_table="p.d.incidents",
+        replies_table="p.d.replies",
+        report_id="r", page_id="p",
+        dry_run=False,
+    )
+
+    assert process_calls == []
+    assert bootstrap_calls == []
+
+
+def test_open_thread_carries_dq_url_and_text_inject():
+    """OpenThread propagates the per-config metadata kwargs from process_thread."""
+    actions = state.process_thread(
+        config_name="c1", anomaly_date=DATE, slack_channel_id="C1",
+        deltas_rows=[_row()], open_incident=None, reply_events=[], now=NOW,
+        description="d",
+        dq_dashboard_url="https://dq.example/p",
+        text_inject="cc <!subteam^S1>",
+    )
+    opener = next(a for a in actions if isinstance(a, state.OpenThread))
+    assert opener.dq_dashboard_url == "https://dq.example/p"
+    assert opener.text_inject == "cc <!subteam^S1>"
+
+
+def test_open_thread_defaults_to_none_when_unset():
+    actions = state.process_thread(
+        config_name="c1", anomaly_date=DATE, slack_channel_id="C1",
+        deltas_rows=[_row()], open_incident=None, reply_events=[], now=NOW,
+    )
+    opener = next(a for a in actions if isinstance(a, state.OpenThread))
+    assert opener.dq_dashboard_url is None
+    assert opener.text_inject is None

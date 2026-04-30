@@ -205,6 +205,70 @@ def list_open_incident_keys(
     return [(r["config_name"], r["anomaly_date"]) for r in client.query(query).result()]
 
 
+# --- bootstrap (first-seen-config suppression) ------------------------
+
+# Marker prefix on slack_ts so bootstrap rows are distinguishable from real
+# Slack thread parents (which are decimal strings like "1777287766.596539").
+BOOTSTRAP_SLACK_TS_PREFIX = "BOOTSTRAP-"
+
+
+def list_configs_with_any_incident(
+    client: bigquery.Client, incidents_table: str,
+) -> set[str]:
+    """Distinct config_names with at least one row in the incidents table.
+    A config absent from this set is being seen for the first time — its
+    historical anomalies are silently bootstrapped instead of alerted on."""
+    query = (f"SELECT DISTINCT config_name FROM `{incidents_table}` "
+             "WHERE config_name IS NOT NULL")
+    return {r["config_name"] for r in client.query(query).result()}
+
+
+def list_bootstrapped_pairs(
+    client: bigquery.Client, incidents_table: str,
+) -> set[tuple[str, datetime.date]]:
+    """(config_name, anomaly_date) pairs already marked as bootstrapped on a
+    previous run. The orchestrator drops deltas matching these so they
+    never get re-processed."""
+    query = (f"SELECT DISTINCT config_name, anomaly_date "
+             f"FROM `{incidents_table}` "
+             f"WHERE STARTS_WITH(slack_ts, '{BOOTSTRAP_SLACK_TS_PREFIX}')")
+    return {(r["config_name"], r["anomaly_date"])
+            for r in client.query(query).result()}
+
+
+def insert_bootstrap_incident(
+    client: bigquery.Client, incidents_table: str, *,
+    config_name: str, anomaly_date: datetime.date,
+    summary_counts_json: str, now: datetime.datetime,
+) -> None:
+    """Insert a resolved 'bootstrap' marker for (config, anomaly_date). No
+    Slack message exists; slack_ts is a synthetic BOOTSTRAP-prefixed string
+    so subsequent runs can identify and skip the pair via
+    list_bootstrapped_pairs."""
+    slack_ts = (f"{BOOTSTRAP_SLACK_TS_PREFIX}{config_name}-"
+                f"{anomaly_date.isoformat()}-{new_client_msg_id()[:8]}")
+    query = f"""
+    INSERT INTO `{incidents_table}` (
+      config_name, anomaly_date, slack_channel_id, slack_ts, opened_at,
+      closed_at, status, client_msg_id, summary_counts_json
+    )
+    VALUES (
+      @config_name, @anomaly_date, '', @slack_ts, @now,
+      @now, 'resolved', @client_msg_id, @summary_counts_json
+    )
+    """
+    params = [
+        bigquery.ScalarQueryParameter("config_name", "STRING", config_name),
+        bigquery.ScalarQueryParameter("anomaly_date", "DATE", anomaly_date),
+        bigquery.ScalarQueryParameter("slack_ts", "STRING", slack_ts),
+        bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
+        bigquery.ScalarQueryParameter("client_msg_id", "STRING", new_client_msg_id()),
+        bigquery.ScalarQueryParameter("summary_counts_json", "STRING", summary_counts_json),
+    ]
+    client.query(query, job_config=bigquery.QueryJobConfig(
+        query_parameters=params)).result()
+
+
 def insert_incident(client: bigquery.Client, incidents_table: str, *,
                     config_name: str, anomaly_date: datetime.date,
                     slack_channel_id: str, slack_ts: str,

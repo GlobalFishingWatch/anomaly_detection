@@ -6,6 +6,8 @@ Notable changes to this repo. Entries are organised by component and listed newe
 
 ### Unreleased (v2.2 on `dev`)
 
+- Per-config `dq_dashboard_url` (optional). Direct deep-link to a config-specific page in the team's separate "DQ Dashboard" Looker Studio report. Surfaces as a header line in the parent message ("DQ dashboard | open") and as a link badge on the status page detail header. Source: new column on the `config_descriptions_<env>` dbt seed; configs that don't opt in render unchanged.
+- Per-config `text_inject` (optional). Free-form Slack mrkdwn snippet appended to the parent message. Designed for "subscribing" specific people/subteams to a config via raw mention tokens (`<@U…>`, `<!subteam^S…>`); the renderer pastes it through unchanged. Only attached to the parent — never repeated on per-fire / severity / resolve replies, so subscribers ping exactly once per `(config, anomaly_date)` incident. Slack-only; the status page does not surface this field (mention tokens render as raw garbage in HTML).
 - Thread-mode parent embeds a frozen-at-open counts table so channel scanning doesn't require opening the thread. Parent is still written once (no `chat.update`); count changes between runs continue to post as in-thread summary replies.
 - Redundant initial `PostSummary` reply suppressed — the parent itself is the opening snapshot.
 - Opener bugfix: thread-mode parents no longer duplicate the first fire card (was a v2.1 regression — `OpenThread.first_fire_row` was populated unconditionally).
