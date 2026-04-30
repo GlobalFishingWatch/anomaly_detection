@@ -24,7 +24,7 @@ Cloud Build picks up changes under `dbt/**` and runs `dbt seed` for the env that
 | `anomaly-detection-dbt-any-branch` | `main` | `staging` | `t_config_descriptions_staging`, `t_thresholds_staging` |
 | `anomaly-detection-dbt-tag` | any tag | `prod` | `t_config_descriptions_prod`, `t_thresholds_prod` |
 
-Steps run inside `ghcr.io/dbt-labs/dbt-bigquery:1.8.1` (matches the local `dbt-core==1.8.1` install). The trigger SA needs `roles/bigquery.dataEditor` on `tech_anomaly_detection`.
+Steps run inside `ghcr.io/dbt-labs/dbt-bigquery:1.8.1` (matches the local `dbt-core==1.8.1` install). The trigger runs as `terraform-deployer@world-fishing-827.iam.gserviceaccount.com`, which already holds `WRITER` on `tech_anomaly_detection` — no additional IAM grants required.
 
 To deploy or update the triggers themselves, run `terraform apply` from `dbt/cloudbuild/`.
 

@@ -16,9 +16,9 @@ config:
 #
 # Permissions: writing the seed tables requires `bigquery.tables.{create,
 # update,delete}` on `tech_anomaly_detection`. Local dev uses the user's
-# own gcloud identity; CI uses `terraform-deployer@world-fishing-827.iam.
-# gserviceaccount.com` which needs `roles/bigquery.dataEditor` granted on
-# the dataset.
+# own gcloud identity; CI runs as `terraform-deployer@world-fishing-827.
+# iam.gserviceaccount.com` which already holds dataset-level `WRITER`
+# (see `bq show world-fishing-827:tech_anomaly_detection`).
 
 anomaly_detection:
   target: default
