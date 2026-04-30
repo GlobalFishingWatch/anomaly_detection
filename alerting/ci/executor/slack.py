@@ -50,15 +50,47 @@ def _render_fire_body(row: dict, looker_url: str) -> str:
     )
 
 
+# Looker Studio data-source filter delimiter. Internally Looker uses U+E000
+# but the dashboard URLs we generate carry it as the URL-encoded literal text
+# `%EE%80%80` inside the JSON value -- the surrounding url-quote step then
+# turns each `%` into `%25`, giving the `%25EE%2580%2580` you see in the wild.
+_LS_FILTER_DELIM = "%EE%80%80"
+
+# Slot ids of the data-source filters on the anomaly-detection Looker Studio
+# report. Mirror PARAM_CONFIG_NAME and PARAM_DIMENSION respectively (the
+# parameters set the controls; the filters apply them to the data).
+_LS_FILTER_CONFIG = "df34"
+_LS_FILTER_DIMENSION = "df43"
+
+
 def make_looker_studio_url(report_id: str, page_id: str, config_name: str,
                            forecast_method: str, dimension: str) -> str:
-    params = {
+    """Return a Looker Studio deep-link with both the user-defined parameters
+    AND the data-source filters set, so the report opens with rows actually
+    filtered to the (config, dim) the alert is about.
+
+    The encoding mirrors what the dashboard UI emits: compact JSON (no spaces),
+    `:` and `,` left unencoded in the query string."""
+    params: dict[str, str] = {
         "PARAM_CONFIG_NAME": config_name,
         "PARAM_FC": forecast_method,
         "PARAM_DIMENSION": dimension,
     }
-    encoded = urllib.parse.quote(json.dumps(params))
-    return (f"https://lookerstudio.google.com/reporting/{report_id}"
+    if config_name:
+        params[_LS_FILTER_CONFIG] = (
+            f"include{_LS_FILTER_DELIM}0{_LS_FILTER_DELIM}IN"
+            f"{_LS_FILTER_DELIM}{config_name}"
+        )
+    if dimension:
+        params[_LS_FILTER_DIMENSION] = (
+            f"include{_LS_FILTER_DELIM}0{_LS_FILTER_DELIM}IN"
+            f"{_LS_FILTER_DELIM}{dimension}"
+        )
+    encoded = urllib.parse.quote(
+        json.dumps(params, separators=(",", ":")),
+        safe=":,",
+    )
+    return (f"https://datastudio.google.com/u/0/reporting/{report_id}"
             f"/page/{page_id}?params={encoded}")
 
 
