@@ -8,8 +8,35 @@ We use dbt to maintain several hard coded configurations in dbt seeds:
  We also include views that calculate whether anomaly thresholds are exceeded and aggregate data for alerting and the Looker dashboard:
   - v_deltas: this view combines forecasts with actuals, as well as thresholds and descriptions. It also applies debouncing, so anomaly alerts are only send out the first time an anomaly starts and not on subsequent periods
 
-## Workflow
-We maintain the lookup files for each environment independently. Run the following command to set the corresponding environment in DBT based on the current git branch:
-`source setenv.sh`
+`config_descriptions_*` also carries two optional columns used by the Slack alerter and the static status page:
+ - `dq_dashboard_url`: a deep-link to a config-specific page on the team's separate Looker Studio "DQ Dashboard". When set, surfaces as an extra header line in the parent message and as a "DQ dashboard ↗" badge on the status page detail header. See `alerting/README.md` for the rendering rules.
+ - `text_inject`: free-form Slack mrkdwn appended to the parent message. Designed for raw mention tokens (`<@U…>`, `<!subteam^S…>`) so subscribers ping exactly once per `(config, anomaly_date)` incident.
 
-Currently, there's no automation of DBT, so you need to run `dbt seed` from the command line.
+## Workflow
+
+### CI/CD (default)
+
+Cloud Build picks up changes under `dbt/**` and runs `dbt seed` for the env that matches the branch. Defined in `dbt/cloudbuild/main.tf`:
+
+| Trigger | Branch / tag | `DBT_ENVIRONMENT` | Reseeds |
+| --- | --- | --- | --- |
+| `anomaly-detection-dbt-any-branch` | `dev` | `dev` | `t_config_descriptions_dev`, `t_thresholds_dev` |
+| `anomaly-detection-dbt-any-branch` | `main` | `staging` | `t_config_descriptions_staging`, `t_thresholds_staging` |
+| `anomaly-detection-dbt-tag` | any tag | `prod` | `t_config_descriptions_prod`, `t_thresholds_prod` |
+
+Steps run inside `ghcr.io/dbt-labs/dbt-bigquery:1.8.1` (matches the local `dbt-core==1.8.1` install). The trigger SA needs `roles/bigquery.dataEditor` on `tech_anomaly_detection`.
+
+To deploy or update the triggers themselves, run `terraform apply` from `dbt/cloudbuild/`.
+
+### Manual override
+
+Useful when iterating locally or fixing up a seed outside of a normal commit cycle:
+
+```bash
+cd dbt
+cp profiles.yml.example profiles.yml          # one-time, gitignored
+source setenv.sh                               # sets DBT_ENVIRONMENT from branch
+dbt seed --profiles-dir . --select "config_descriptions_${DBT_ENVIRONMENT}"
+```
+
+For prod use `DBT_ENVIRONMENT=prod` explicitly — `setenv.sh` only maps `dev` and `main`. Local runs use the operator's gcloud identity (`gcloud auth application-default login` first); they need write access to `tech_anomaly_detection`.

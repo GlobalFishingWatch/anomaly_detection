@@ -32,6 +32,12 @@ Notable changes to this repo. Entries are organised by component and listed newe
 
 Pre-v2 the alerter sent one Slack notification per anomaly row, keyed on a deduplication index. See `git log` before `56d2d25` for details.
 
+## DBT
+
+### Unreleased (on `dev`)
+
+- Cloud Build automation for `dbt seed`. New triggers in `dbt/cloudbuild/main.tf` fire on changes under `dbt/**`: branch trigger maps `dev`/`main` to `DBT_ENVIRONMENT=dev`/`staging` (other branches no-op); tag trigger reseeds prod. Steps run inside `ghcr.io/dbt-labs/dbt-bigquery:1.8.1` (matches the local `dbt-core==1.8.1` install — no `pip install` step). The trigger SA needs `roles/bigquery.dataEditor` on `tech_anomaly_detection`. Local override path documented in `dbt/README.md` and templated by the new `dbt/profiles.yml.example`.
+
 ## Dataloader
 
 ### Unreleased (on `dev`)

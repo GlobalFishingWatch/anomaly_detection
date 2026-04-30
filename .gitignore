@@ -12,3 +12,6 @@ sa_api_key.json
 .terraform.lock.hcl
 
 .Rhistory
+
+# Project-local dbt profile. Per-developer / per-runtime; CI generates its own.
+dbt/profiles.yml

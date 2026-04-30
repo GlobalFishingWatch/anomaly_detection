@@ -1,0 +1,33 @@
+config:
+  send_anonymous_usage_stats: False
+
+# Project-local dbt profile. Copy this file to `profiles.yml` (gitignored)
+# and run dbt with `--profiles-dir .` from the dbt/ directory:
+#
+#   cd dbt
+#   cp profiles.yml.example profiles.yml
+#   source setenv.sh
+#   dbt seed --profiles-dir . --select config_descriptions_${DBT_ENVIRONMENT}
+#
+# CI generates an equivalent profile inline (see dbt/cloudbuild/main.tf).
+#
+# Auth: `method: oauth` reads gcloud Application Default Credentials. Run
+# `gcloud auth application-default login` once before using.
+#
+# Permissions: writing the seed tables requires `bigquery.tables.{create,
+# update,delete}` on `tech_anomaly_detection`. Local dev uses the user's
+# own gcloud identity; CI uses `terraform-deployer@world-fishing-827.iam.
+# gserviceaccount.com` which needs `roles/bigquery.dataEditor` granted on
+# the dataset.
+
+anomaly_detection:
+  target: default
+  outputs:
+    default:
+      type: bigquery
+      method: oauth
+      project: world-fishing-827
+      dataset: tech_anomaly_detection
+      location: US
+      threads: 12
+      maximum_bytes_billed: 207374182400
