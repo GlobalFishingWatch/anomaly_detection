@@ -621,6 +621,8 @@ def test_main_reopen_flow(monkeypatch):
                         ])
     monkeypatch.setattr(main.bq, "list_open_incident_keys", lambda c, t: [])
     monkeypatch.setattr(main.bq, "list_bootstrapped_pairs", lambda c, t: set())
+    monkeypatch.setattr(main.bq, "list_silenced_keys",
+                        lambda c, t, h: set())
     monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
                         lambda c, t: {"c1"})
     monkeypatch.setattr(main.bq, "get_channel_config",
@@ -705,6 +707,8 @@ def test_main_no_reopen_when_no_fresh_anomaly(monkeypatch):
     monkeypatch.setattr(main.bq, "list_open_incident_keys",
                         lambda c, t: [("c1", DATE)])
     monkeypatch.setattr(main.bq, "list_bootstrapped_pairs", lambda c, t: set())
+    monkeypatch.setattr(main.bq, "list_silenced_keys",
+                        lambda c, t, h: set())
     monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
                         lambda c, t: {"c1"})
     monkeypatch.setattr(main.bq, "get_channel_config",
@@ -791,6 +795,8 @@ def test_main_bootstrap_suppresses_first_seen_historical(monkeypatch):
                         lambda c, e, t: deltas)
     monkeypatch.setattr(main.bq, "list_open_incident_keys", lambda c, t: [])
     monkeypatch.setattr(main.bq, "list_bootstrapped_pairs", lambda c, t: set())
+    monkeypatch.setattr(main.bq, "list_silenced_keys",
+                        lambda c, t, h: set())
     monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
                         lambda c, t: set())  # config is brand new
     monkeypatch.setattr(main.bq, "insert_bootstrap_incident", fake_bootstrap)
@@ -858,6 +864,8 @@ def test_main_bootstrap_skipped_for_already_bootstrapped_pair(monkeypatch):
     monkeypatch.setattr(main.bq, "list_open_incident_keys", lambda c, t: [])
     monkeypatch.setattr(main.bq, "list_bootstrapped_pairs",
                         lambda c, t: {("old_cfg", historical_date)})
+    monkeypatch.setattr(main.bq, "list_silenced_keys",
+                        lambda c, t, h: set())
     monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
                         lambda c, t: {"old_cfg"})
     monkeypatch.setattr(main.bq, "insert_bootstrap_incident", fake_bootstrap)
@@ -886,6 +894,90 @@ def test_main_bootstrap_skipped_for_already_bootstrapped_pair(monkeypatch):
 
     assert process_calls == []
     assert bootstrap_calls == []
+
+
+def test_main_silenced_keys_skipped(monkeypatch):
+    """A (config, date) pair in list_silenced_keys is dropped before grouping;
+    the state machine never sees it, no flip/close/open happens. Mirrors the
+    bootstrap-skip behaviour but for hard-capped-past pairs."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import main  # noqa: E402
+
+    silenced_date = DATE - datetime.timedelta(days=10)
+    fresh_date = DATE
+
+    deltas = [
+        # Silenced (past hard_cap) -- must be skipped.
+        {"config_name": "stuck_cfg",
+         "timestamp": datetime.datetime.combine(silenced_date,
+                                                datetime.time(12, 0),
+                                                datetime.timezone.utc),
+         "anomaly_date": silenced_date,
+         "dimension_split_value": "", "forecast_method": "mstl",
+         "anomaly_type_lower_higher": "critical_higher",
+         "forecast_value": 1.0, "actual_value": 2.0, "delta_rel": 1.0},
+        # Fresh day for the same config -- must still flow through.
+        {"config_name": "stuck_cfg",
+         "timestamp": datetime.datetime.combine(fresh_date,
+                                                datetime.time(12, 0),
+                                                datetime.timezone.utc),
+         "anomaly_date": fresh_date,
+         "dimension_split_value": "", "forecast_method": "mstl",
+         "anomaly_type_lower_higher": "critical_higher",
+         "forecast_value": 1.0, "actual_value": 2.0, "delta_rel": 1.0},
+    ]
+
+    update_calls = []
+    process_calls = []
+
+    def fake_update_incident(*a, **kw):
+        update_calls.append(kw)
+
+    def fake_process_thread(**kwargs):
+        process_calls.append(kwargs.get("anomaly_date"))
+        return []
+
+    monkeypatch.setattr(main.bq, "query_deltas_with_open_incidents",
+                        lambda c, e, t: deltas)
+    # list_open_incident_keys also returns the silenced one -- ensures the
+    # union path filters it too.
+    monkeypatch.setattr(main.bq, "list_open_incident_keys",
+                        lambda c, t: [("stuck_cfg", silenced_date)])
+    monkeypatch.setattr(main.bq, "list_bootstrapped_pairs", lambda c, t: set())
+    monkeypatch.setattr(main.bq, "list_silenced_keys",
+                        lambda c, t, h: {("stuck_cfg", silenced_date)})
+    monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
+                        lambda c, t: {"stuck_cfg"})
+    monkeypatch.setattr(main.bq, "get_channel_config",
+                        lambda c, cn, e: {"slack_channel_id": "C1",
+                                          "slack_channel_name": "#c1"})
+    monkeypatch.setattr(main.bq, "find_open_incident",
+                        lambda c, t, cn, d: None)
+    monkeypatch.setattr(main.bq, "find_reply_events", lambda c, t, ts: [])
+    monkeypatch.setattr(main.bq, "update_incident", fake_update_incident)
+    monkeypatch.setattr(main.state, "process_thread", fake_process_thread)
+
+    class _Dummy:
+        def __init__(self, *a, **kw):
+            pass
+
+    monkeypatch.setattr(main.bigquery, "Client", _Dummy)
+    monkeypatch.setattr(main, "WebClient", _Dummy)
+
+    main.run(
+        environment="dev",
+        incidents_table="p.d.incidents",
+        replies_table="p.d.replies",
+        report_id="r", page_id="p",
+        dry_run=False,
+    )
+
+    # Only the fresh day was processed; silenced day was skipped end-to-end.
+    assert process_calls == [fresh_date]
+    # No reopen / close churn on the silenced incident.
+    assert update_calls == []
 
 
 def test_open_thread_carries_dq_url_and_text_inject():

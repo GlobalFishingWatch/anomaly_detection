@@ -236,6 +236,51 @@ def list_bootstrapped_pairs(
             for r in client.query(query).result()}
 
 
+def list_silenced_keys(
+    client: bigquery.Client, incidents_table: str,
+    hard_cap_hours: int,
+) -> set[tuple[str, datetime.date]]:
+    """(config_name, anomaly_date) pairs whose latest non-bootstrap incident
+    is `resolved` and was `opened_at` more than `hard_cap_hours` ago.
+
+    Such pairs have already exhausted their thread lifecycle: the data is
+    likely still firing in deltas, but the original Slack thread was closed
+    (typically by the hard-cap rule in `state.process_thread`). Without
+    this filter, the orchestrator either churns through a [reopen] ->
+    CloseThread(hard_cap) pair every run (while `closed_at` is within 24h)
+    or spawns a brand-new thread for the same old anomaly_date once
+    `closed_at` falls past the 24h `find_open_incident` window. The caller
+    drops these pairs at the top of the run so neither happens.
+    """
+    query = f"""
+    WITH latest AS (
+      SELECT
+        config_name,
+        anomaly_date,
+        status,
+        opened_at,
+        ROW_NUMBER() OVER (
+          PARTITION BY config_name, anomaly_date
+          ORDER BY opened_at DESC
+        ) AS rn
+      FROM `{incidents_table}`
+      WHERE NOT STARTS_WITH(IFNULL(slack_ts, ''), '{BOOTSTRAP_SLACK_TS_PREFIX}')
+    )
+    SELECT config_name, anomaly_date
+    FROM latest
+    WHERE rn = 1
+      AND status = 'resolved'
+      AND opened_at <= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),
+                                     INTERVAL @hours HOUR)
+    """
+    job = client.query(query, job_config=bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("hours", "INT64", hard_cap_hours),
+        ],
+    ))
+    return {(r["config_name"], r["anomaly_date"]) for r in job.result()}
+
+
 def insert_bootstrap_incident(
     client: bigquery.Client, incidents_table: str, *,
     config_name: str, anomaly_date: datetime.date,

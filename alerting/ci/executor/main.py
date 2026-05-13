@@ -297,16 +297,27 @@ def run(
             if "anomaly_date" not in r and isinstance(r.get("timestamp"), datetime.datetime):
                 r["anomaly_date"] = r["timestamp"].date()
         bootstrapped_pairs: set[tuple[str, datetime.date]] = set()
+        silenced_keys: set[tuple[str, datetime.date]] = set()
         seen_configs: set[str] = set()
     else:
         deltas_all = bq.query_deltas_with_open_incidents(
             bq_client, environment, incidents_table)
         # Bootstrap state from previous runs.
         bootstrapped_pairs = bq.list_bootstrapped_pairs(bq_client, incidents_table)
+        # (config, anomaly_date) pairs whose latest incident is resolved and
+        # opened past the hard-cap window. Treated like bootstrap: dropped
+        # from `by_thread` and the open-incident union below so the
+        # orchestrator does no work for them. Without this filter, a
+        # long-firing old anomaly_date burns ~3s per run on a [reopen] +
+        # CloseThread(hard_cap) churn cycle (or spawns a duplicate thread
+        # once `closed_at` falls past the 24h reopen window).
+        silenced_keys = bq.list_silenced_keys(
+            bq_client, incidents_table, state.HARD_CAP_HOURS)
         seen_configs = bq.list_configs_with_any_incident(bq_client, incidents_table)
 
     # Group deltas by (config_name, anomaly_date), dropping pairs that were
-    # bootstrapped on a previous run -- those are silenced for good.
+    # bootstrapped on a previous run -- those are silenced for good. Also
+    # drop pairs whose previous thread already exhausted the hard cap.
     by_thread: dict[tuple[str, datetime.date], list[dict]] = {}
     for r in deltas_all:
         d = r.get("anomaly_date")
@@ -316,9 +327,12 @@ def run(
             logging.warning("[skip] row missing anomaly_date: %s", r.get("config_name"))
             continue
         key: tuple[str, datetime.date] = (r["config_name"], d)
-        if key in bootstrapped_pairs:
+        if key in bootstrapped_pairs or key in silenced_keys:
             continue
         by_thread.setdefault(key, []).append(r)
+    if silenced_keys:
+        logging.info("[silenced] %d (config, date) pair(s) past hard_cap; skipping",
+                     len(silenced_keys))
 
     # First-seen configs: every (config, anomaly_date) pair with anomaly_date
     # before today is silently bootstrapped, so the wave of historical
@@ -350,11 +364,17 @@ def run(
                      len(bootstrapped_now))
 
     # Also visit (config, date) tuples that have an open incident but no
-    # fresh deltas -- so resolution detection runs.
+    # fresh deltas -- so resolution detection runs. Silenced keys are still
+    # skipped here: an open incident whose opened_at is past hard_cap will
+    # be the rare case (state.process_thread normally closes it on the
+    # first run after the cap), but if one exists we don't want a second
+    # CloseThread reply for it.
     thread_keys = set(by_thread.keys())
     if not replay_fixture:
         try:
-            thread_keys.update(bq.list_open_incident_keys(bq_client, incidents_table))
+            for k in bq.list_open_incident_keys(bq_client, incidents_table):
+                if k not in silenced_keys:
+                    thread_keys.add(k)
         except Exception as e:
             logging.warning("list_open_incident_keys failed: %s", e)
 

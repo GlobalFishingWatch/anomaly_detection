@@ -110,7 +110,13 @@ resource "google_cloud_run_v2_job" "job" {
     parallelism = 1
     template {
       service_account = local.sa
-      timeout         = "600s" # 10m
+      timeout         = "1800s" # 30m -- defence-in-depth so a slow run can't
+                                #         orphan a parent message (Slack
+                                #         parent posts but a SIGKILL mid-batch
+                                #         skips the per-dim fire replies).
+                                #         Steady-state runtime is well under
+                                #         10m; bumping the cap is cheap
+                                #         insurance.
       max_retries     = 3
 
       containers {
