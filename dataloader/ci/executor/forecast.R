@@ -195,15 +195,26 @@ if (length(missing_timestamps)) {
 
 dt_train = get_anomaly_detection_actuals(
   con,
-  db_anomaly_detection_actuals, 
+  db_anomaly_detection_actuals,
   current_anomaly_detection_config,
   maximum_valid_to = "9999-12-31 23:59:59 UTC",
   allowed_size = allowed_size,
   columns = c("timestamp", "value", "dimension_split_value")
-) %>% 
-  .[, .(timestamp, y = value, dimension_split_value)] %>% 
-  .[dimension_split_value %>% is.na, dimension_split_value := "NA"] %>% 
+) %>%
+  .[, .(timestamp, y = value, dimension_split_value)] %>%
+  .[dimension_split_value %>% is.na, dimension_split_value := "NA"] %>%
   .[order(timestamp, dimension_split_value)]
+
+deprecated_dims = current_anomaly_detection_config$deprecated_dims %||% character()
+if (length(deprecated_dims) > 0) {
+  excluded_n = dt_train[dimension_split_value %in% deprecated_dims, .N]
+  dt_train = dt_train[!dimension_split_value %in% deprecated_dims]
+  log_info(glue(
+    "Excluding {length(deprecated_dims)} deprecated dim(s) from forecast ",
+    "training: {paste(deprecated_dims, collapse=', ')} ",
+    "({excluded_n} actuals row(s) dropped from training set)"
+  ))
+}
 
 if (!dt_train[, .N]) {
   log_error("No training data available, nothing to forecast", fill = T)

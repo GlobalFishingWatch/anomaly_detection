@@ -31,6 +31,8 @@ anomalies:
       period_length: "day"
       dimension_split: source
       source_filter_sql: "source != 'marinetraffic'"
+      deprecated_dims:
+        - ais-listener
       algorithms:
           mstl: 
               parameters: 
@@ -54,7 +56,7 @@ anomalies:
       period_length: "day"
       history_start: "2022-08-23"
       source_sql: '
-      SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value 
+      SUM(count) AS value, TIMESTAMP(date) AS timestamp, value AS dimension_split_value
       FROM `world-fishing-827.tech_dq_monitoring.t_facts_pipe_nmea_parsed_stats_daily`
       WHERE variable = "source"
       AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
@@ -63,6 +65,9 @@ anomalies:
       GROUP BY timestamp, dimension_split_value
       ORDER BY timestamp, dimension_split_value
       '
+      deprecated_dims:
+        - marinetraffic
+        - ais-listener
       algorithms:
           mstl: 
               parameters: 
