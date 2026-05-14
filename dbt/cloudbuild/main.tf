@@ -93,6 +93,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
           echo '${local.profile_yaml_b64}' | base64 -d > ./dbt/.dbt/profiles.yml
 
           cd dbt
+          DBT_ENVIRONMENT=$$ENV dbt deps --profiles-dir ./.dbt
           DBT_ENVIRONMENT=$$ENV dbt seed --profiles-dir ./.dbt \
             --select "config_descriptions_$$ENV" "thresholds_$$ENV"
         EOF
@@ -155,6 +156,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
           echo '${local.profile_yaml_b64}' | base64 -d > ./dbt/.dbt/profiles.yml
 
           cd dbt
+          DBT_ENVIRONMENT=$$ENV dbt deps --profiles-dir ./.dbt
           DBT_ENVIRONMENT=$$ENV dbt seed --profiles-dir ./.dbt \
             --select "config_descriptions_$$ENV" "thresholds_$$ENV"
         EOF
