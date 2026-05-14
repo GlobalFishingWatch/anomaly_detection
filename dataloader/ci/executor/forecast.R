@@ -166,7 +166,7 @@ if (current_anomaly_detection_config$source_sql != "") {
   log_info(select_timestamp_value_sql)
 } else {
   select_timestamp_value_sql = glue(.null = "", "
-    TIMESTAMP_TRUNC({current_anomaly_detection_config$source_timestamp_column_sql}, {current_anomaly_detection_config$period_length}) timestamp,
+    TIMESTAMP_TRUNC({current_anomaly_detection_config$source_timestamp_column_sql}, {current_anomaly_detection_config$period_length}) timestamp, 
       {current_anomaly_detection_config$source_forecast_column_sql} value, {dimension_split_select} dimension_split_value
     FROM `{current_anomaly_detection_config$source_project}.{current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}`
     WHERE {current_anomaly_detection_config$source_timestamp_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
@@ -176,55 +176,7 @@ if (current_anomaly_detection_config$source_sql != "") {
     {source_filter_sql}
     GROUP BY timestamp, dimension_split_value
     ORDER BY timestamp, dimension_split_value"
-  )
-}
-
-# Gap-fill the actuals MERGE with value=0 for every (missing_timestamp, dim)
-# pair that the source query does not return a row for. Without this, a feed
-# that stops publishing (e.g. marinetraffic on 2026-01-01, ais-listener on
-# 2026-05-04) leaves the actuals table with a hole, the forecast model never
-# trains on the post-death zeros, and the alert keeps firing forever
-# (forecast stuck at the pre-death level, actual coalesced to 0 in t_deltas).
-# We restrict the gap-fill grid to dims with at least one actuals row in the
-# last 180 days so truly-retired dims aren't resurrected.
-KNOWN_DIMS_LOOKBACK_DAYS = 180
-known_dims = get_known_dims_recent(
-  con,
-  db_anomaly_detection_actuals,
-  current_anomaly_detection_config,
-  lookback_days = KNOWN_DIMS_LOOKBACK_DAYS,
-  allowed_size = allowed_size
-)
-
-if (length(missing_timestamps) > 0 && length(known_dims) > 0) {
-  missing_ts_sql = paste0(
-    "TIMESTAMP '",
-    format(missing_timestamps, "%Y-%m-%d %H:%M:%S"),
-    "'", collapse = ", "
-  )
-  # BigQuery SQL-quote: single-quote literals with doubled single quotes for
-  # any embedded apostrophes (e.g. dim values like "o'reilly").
-  known_dims_sql = paste0(
-    "'", gsub("'", "''", known_dims, fixed = TRUE), "'", collapse = ", "
-  )
-  select_timestamp_value_sql = glue(.null = "", "
-    expected.timestamp timestamp,
-    IFNULL(raw.value, 0) value,
-    expected.dimension_split_value dimension_split_value
-  FROM (
-    SELECT ts AS timestamp, dim AS dimension_split_value
-    FROM UNNEST([{missing_ts_sql}]) ts
-    CROSS JOIN UNNEST([{known_dims_sql}]) dim
-  ) expected
-  LEFT JOIN (
-    SELECT {select_timestamp_value_sql}
-  ) raw USING(timestamp, dimension_split_value)
-  ")
-  log_info(glue(
-    "gap-filling actuals: {length(known_dims)} known dims x ",
-    "{length(missing_timestamps)} missing timestamps ",
-    "(lookback={KNOWN_DIMS_LOOKBACK_DAYS}d)"
-  ))
+  )  
 }
 
 if (length(missing_timestamps)) {
