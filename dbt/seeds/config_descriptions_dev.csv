@@ -1,6 +1,6 @@
 config_name,description,dq_dashboard_url,text_inject
 parser_errors_daily,The pipe nmea parser can fail parsing a message for various reasons which are logged. This is a simple count of parsing errors per day.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_sbfihwcggd,
-parsed_row_count_daily,The is a simple count of parsed messages per day which also includes errors and duplicates that get removed during normalization.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_d67a3fxmhd,
+parsed_row_count_daily,This is a simple count of parsed messages per day which also includes errors and duplicates that get removed during normalization.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_d67a3fxmhd,
 fishing_effort_pipe2_5_flag_daily,Published fishing effort based on pipe2.5 split by flag.,,
 parsed_row_count_source_daily,Parsed message count per day and split by provider.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_d67a3fxmhd,
 parsed_row_count_hourly,Parsed message count per hour.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_d67a3fxmhd,
