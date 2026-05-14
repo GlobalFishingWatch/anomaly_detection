@@ -47,6 +47,41 @@ get_anomaly_detection_actuals = function(
     safe_query(con = con, allowed_size = allowed_size, verbose = T)
 }
 
+#' Get dimension_split_value values active in actuals within a lookback window.
+#'
+#' Used by `forecast.R` to build the gap-fill grid for the actuals MERGE:
+#' only dims that have produced at least one actuals row in the last
+#' `lookback_days` are eligible to be zero-filled when the source query
+#' returns no rows for an expected timestamp. The window stops truly-retired
+#' dims from being resurrected forever.
+#'
+#' @param con dbi connection
+#' @param db_anomaly_detection_actuals tbl connection to the actuals table
+#' @param anomaly_detection_config the per-run config list (uses `name` and
+#'   `dimension_split` to scope the query)
+#' @param lookback_days how many days back to consider a dim "recently active"
+#' @param allowed_size optional BQ allowed_size cap, forwarded to safe_query
+#' @return character vector of distinct dimension_split_value strings
+get_known_dims_recent = function(
+    con,
+    db_anomaly_detection_actuals,
+    anomaly_detection_config,
+    lookback_days = 180,
+    allowed_size = NULL
+) {
+  cutoff = (Sys.time() - lubridate::days(lookback_days)) %>%
+    with_tz("UTC")
+  res = db_anomaly_detection_actuals %>%
+    filter(is_latest == TRUE) %>%
+    filter(config_name == !!anomaly_detection_config$name) %>%
+    filter(dimension_split == !!anomaly_detection_config$dimension_split) %>%
+    filter(timestamp >= !!cutoff) %>%
+    distinct(dimension_split_value) %>%
+    safe_query(con = con, allowed_size = allowed_size, verbose = T)
+  if (!nrow(res)) return(character())
+  res[, dimension_split_value]
+}
+
 create_scd_statement = function(
     select_timestamp_value_sql,
     current_anomaly_detection_config,
