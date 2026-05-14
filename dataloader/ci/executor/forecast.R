@@ -207,6 +207,13 @@ if (length(missing_timestamps) > 0 && length(known_dims) > 0) {
   known_dims_sql = paste0(
     "'", gsub("'", "''", known_dims, fixed = TRUE), "'", collapse = ", "
   )
+  # The actuals SCD2 stores `dimension_split_value` as STRING (see the CAST
+  # in `create_scd_statement`), so our gap grid produces STRING values. But
+  # source views may type the dim column as BOOL or NUMERIC (e.g.
+  # `v_world_fishing_827_queries_billed_by_sa_non_sa` whose dim is a BOOL
+  # `service_account`). USING(dimension_split_value) on a STRING-vs-BOOL
+  # pair errors with "incompatible types"; we cast the raw side to STRING
+  # to mirror the SCD2 storage type.
   select_timestamp_value_sql = glue(.null = "", "
     expected.timestamp timestamp,
     IFNULL(raw.value, 0) value,
@@ -217,7 +224,11 @@ if (length(missing_timestamps) > 0 && length(known_dims) > 0) {
     CROSS JOIN UNNEST([{known_dims_sql}]) dim
   ) expected
   LEFT JOIN (
-    SELECT {select_timestamp_value_sql}
+    SELECT
+      timestamp,
+      value,
+      CAST(dimension_split_value AS STRING) AS dimension_split_value
+    FROM ( SELECT {select_timestamp_value_sql} )
   ) raw USING(timestamp, dimension_split_value)
   ")
   log_info(glue(
