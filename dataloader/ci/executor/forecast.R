@@ -179,35 +179,14 @@ if (current_anomaly_detection_config$source_sql != "") {
   )
 }
 
-if (length(missing_timestamps)) {
-  create_scd_statement(
-    select_timestamp_value_sql,
-    current_anomaly_detection_config,
-    target_table_actuals
-  ) %>%
-    safe_query(con = con, allowed_size = allowed_size, verbose = T)
-} else {
-  log_info("No actual data missing", fill = T)
-}
-
-# Zero-fill pass: insert `value=0` for any (timestamp, dim) cell in the
-# last 180 days that the actuals table is still missing after the
-# source-driven MERGE above. The first phase's `missing_timestamps` is
-# computed at the CONFIG level (not per-(config, dim)), so a feed that
-# stops publishing while sibling dims keep flowing - e.g. marinetraffic
-# stopped on 2026-01-01 but exactearth/spire/kpler kept producing daily
-# rows - leaves the actuals table with a per-dim hole the first phase
-# never sees: those dates are not in `missing_timestamps`, the source
-# query is never re-run for them, and no row is inserted. Without
-# zero-fill the forecast model never trains on the post-death zeros and
-# the alert stays critical_lower forever (forecast frozen at the
-# pre-death level, actual coalesced to 0 in t_deltas).
-#
-# The grid is restricted to dims with at least one actuals row in the
-# last `KNOWN_DIMS_LOOKBACK_DAYS` so truly-retired dims aren't
-# resurrected. The LEFT JOIN to existing actuals filters out cells the
-# source-driven MERGE already populated, so this pass only INSERTs
-# brand-new rows (no SCD2 value-change churn against real data).
+# Gap-fill the actuals MERGE with value=0 for every (missing_timestamp, dim)
+# pair that the source query does not return a row for. Without this, a feed
+# that stops publishing (e.g. marinetraffic on 2026-01-01, ais-listener on
+# 2026-05-04) leaves the actuals table with a hole, the forecast model never
+# trains on the post-death zeros, and the alert keeps firing forever
+# (forecast stuck at the pre-death level, actual coalesced to 0 in t_deltas).
+# We restrict the gap-fill grid to dims with at least one actuals row in the
+# last 180 days so truly-retired dims aren't resurrected.
 KNOWN_DIMS_LOOKBACK_DAYS = 180
 known_dims = get_known_dims_recent(
   con,
@@ -217,57 +196,57 @@ known_dims = get_known_dims_recent(
   allowed_size = allowed_size
 )
 
-if (length(known_dims) > 0) {
-  gap_horizon_start = (Sys.time() - lubridate::days(KNOWN_DIMS_LOOKBACK_DAYS)) %>%
-    with_tz("UTC") %>%
-    floor_date(current_anomaly_detection_config$period_length)
-  gap_expected_ts = seq(
-    gap_horizon_start,
-    now(tz = "UTC"),
-    period_length_mapping[toupper(current_anomaly_detection_config$period_length)]
-  )
-  gap_ts_sql = paste0(
+if (length(missing_timestamps) > 0 && length(known_dims) > 0) {
+  missing_ts_sql = paste0(
     "TIMESTAMP '",
-    format(gap_expected_ts, "%Y-%m-%d %H:%M:%S"),
+    format(missing_timestamps, "%Y-%m-%d %H:%M:%S"),
     "'", collapse = ", "
   )
   # BigQuery SQL-quote: single-quote literals with doubled single quotes for
   # any embedded apostrophes (e.g. dim values like "o'reilly").
-  gap_dims_sql = paste0(
+  known_dims_sql = paste0(
     "'", gsub("'", "''", known_dims, fixed = TRUE), "'", collapse = ", "
   )
   # The actuals SCD2 stores `dimension_split_value` as STRING (see the CAST
-  # in `create_scd_statement`), so the gap grid is STRING. The existing-row
-  # filter compares against the STRING column directly.
-  zero_fill_fragment = glue(.null = "", "
+  # in `create_scd_statement`), so our gap grid produces STRING values. But
+  # source views may type the dim column as BOOL or NUMERIC (e.g.
+  # `v_world_fishing_827_queries_billed_by_sa_non_sa` whose dim is a BOOL
+  # `service_account`). USING(dimension_split_value) on a STRING-vs-BOOL
+  # pair errors with "incompatible types"; we cast the raw side to STRING
+  # to mirror the SCD2 storage type.
+  select_timestamp_value_sql = glue(.null = "", "
     expected.timestamp timestamp,
-    CAST(0 AS FLOAT64) value,
+    IFNULL(raw.value, 0) value,
     expected.dimension_split_value dimension_split_value
   FROM (
     SELECT ts AS timestamp, dim AS dimension_split_value
-    FROM UNNEST([{gap_ts_sql}]) ts
-    CROSS JOIN UNNEST([{gap_dims_sql}]) dim
+    FROM UNNEST([{missing_ts_sql}]) ts
+    CROSS JOIN UNNEST([{known_dims_sql}]) dim
   ) expected
   LEFT JOIN (
-    SELECT timestamp, dimension_split_value
-    FROM `{target_table_actuals}`
-    WHERE config_name = '{current_anomaly_detection_config$name}'
-      AND dimension_split = '{current_anomaly_detection_config$dimension_split}'
-      AND is_latest IS TRUE
-  ) existing USING(timestamp, dimension_split_value)
-  WHERE existing.timestamp IS NULL
+    SELECT
+      timestamp,
+      value,
+      CAST(dimension_split_value AS STRING) AS dimension_split_value
+    FROM ( SELECT {select_timestamp_value_sql} )
+  ) raw USING(timestamp, dimension_split_value)
   ")
   log_info(glue(
-    "zero-fill pass: {length(known_dims)} known dims x ",
-    "{length(gap_expected_ts)} expected timestamps ",
+    "gap-filling actuals: {length(known_dims)} known dims x ",
+    "{length(missing_timestamps)} missing timestamps ",
     "(lookback={KNOWN_DIMS_LOOKBACK_DAYS}d)"
   ))
+}
+
+if (length(missing_timestamps)) {
   create_scd_statement(
-    zero_fill_fragment,
-    current_anomaly_detection_config,
+    select_timestamp_value_sql, 
+    current_anomaly_detection_config, 
     target_table_actuals
-  ) %>%
-    safe_query(con = con, allowed_size = allowed_size, verbose = T)
+  ) %>% 
+    safe_query(con = con, allowed_size = allowed_size, verbose = T) 
+} else {
+  log_info("No actual data missing", fill = T)
 }
 
 
