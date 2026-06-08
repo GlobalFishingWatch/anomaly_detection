@@ -137,7 +137,44 @@ all_historic_timestamps = seq(
   period_length_mapping[toupper(current_anomaly_detection_config$period_length)]
 )
 
-missing_timestamps = all_historic_timestamps %>% setdiff(existing_timestamps) %>% as.POSIXct(origin="1970-01-01", tz = "UTC") 
+missing_timestamps = all_historic_timestamps %>% setdiff(existing_timestamps) %>% as.POSIXct(origin="1970-01-01", tz = "UTC")
+
+# For configs whose source metric evolves with wall-clock time (e.g.
+# gfw_api_delays' `timestamp_delay_now_hypothetical_vs_expected_delay_hour`
+# depends on CURRENT_TIMESTAMP() inside the source view), a (dim, date)
+# can cross the alert threshold AFTER its timestamp is already in actuals
+# (from sibling dims that arrived earlier). Without refetch, the source
+# query's `timestamp IN (missing_timestamps)` filter excludes the
+# already-existing date, so the now-anomalous dim is never picked up.
+#
+# `refetch_recent_days` (optional, per-config) forces the last N days
+# back into the refetch set: they get added to missing_timestamps and
+# removed from existing_timestamps. The SCD2 MERGE in
+# `create_scd_statement` then upserts -- unchanged values are no-ops,
+# value changes get a new is_latest=TRUE row. Configs without this
+# field behave exactly as before.
+refetch_recent_days = as.integer(
+  current_anomaly_detection_config$refetch_recent_days %||% 0
+)
+if (refetch_recent_days > 0 && length(existing_timestamps) > 0) {
+  refetch_cutoff = (Sys.time() - lubridate::days(refetch_recent_days)) %>%
+    with_tz("UTC") %>%
+    floor_date(current_anomaly_detection_config$period_length)
+  refetch_window = all_historic_timestamps[
+    all_historic_timestamps >= refetch_cutoff
+  ]
+  if (length(refetch_window) > 0) {
+    missing_timestamps = union(missing_timestamps, refetch_window) %>%
+      as.POSIXct(origin = "1970-01-01", tz = "UTC")
+    existing_timestamps = setdiff(existing_timestamps, refetch_window) %>%
+      as.POSIXct(origin = "1970-01-01", tz = "UTC")
+    log_info(glue(
+      "refetch_recent_days={refetch_recent_days}: forcing ",
+      "{length(refetch_window)} recent timestamp(s) back into the ",
+      "refetch set (>= {refetch_cutoff})"
+    ))
+  }
+}
 
 # set date sql filters so they always evaluate to true by default
 existing_timestamps_sql = "'1979-01-01 00:00:00'" # timestamp is never in this dummy value

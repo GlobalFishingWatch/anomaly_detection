@@ -362,6 +362,7 @@ anomalies:
       period_length: day
       dimension_split: dataset
       history_start: '2025-01-31'
+      refetch_recent_days: 14
       source_filter_sql: "
       date_interval = 'DAY'
       AND environment = 'prod'

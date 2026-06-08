@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **anomaly_detection** (77636 symbols, 100748 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **anomaly_detection** (77771 symbols, 100885 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -55,3 +55,7 @@ Common cases that have already been deprecated:
 
 - `parsed_row_count_source_daily / marinetraffic` (source dead since 2026-01-01).
 - `parsed_row_count_source_daily / ais-listener` and `parser_errors_daily_by_source / ais-listener` (source dead since 2026-05-04).
+
+## Time-evolving source metrics (`refetch_recent_days`)
+
+For configs whose source metric grows with wall-clock time — currently only `gfw_api_delays`, whose `timestamp_delay_now_hypothetical_vs_expected_delay_hour` depends on `CURRENT_TIMESTAMP()` inside `v_scraped_api_values` — the default missing-timestamps filter silently skips dims that cross the alert threshold *after* their date is already in actuals (from sibling dims). Set `refetch_recent_days: <N>` in the config YAML to force the last N days back into the refetch set; SCD2 handles the value evolution. Full details in `dataloader/README.md`. **Do not** set this on configs with stable per-day values — it's pure overhead there.

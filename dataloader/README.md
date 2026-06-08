@@ -50,6 +50,26 @@ Behaviour timeline after adding a dim:
 
 `source_filter_sql` is a related but different mechanism: it filters the *source query*, so no new actuals are inserted at all. Use it when you want to permanently stop collecting data for a dim or when the source query would otherwise return rows you actively don't want recorded. For pure forecast/alert deprecation, `deprecated_dims` is enough.
 
+## Refetching recent days (time-evolving metrics)
+
+The default delta-load logic only fetches *missing* timestamps — once a `(config, date)` row exists for any dim, that date is skipped on subsequent runs. That's correct for configs whose value is stable once the day ends (row counts, error counts) but **breaks** for configs whose source metric evolves with wall-clock time.
+
+Concrete example: `gfw_api_delays`'s `timestamp_delay_now_hypothetical_vs_expected_delay_hour` is computed against `CURRENT_TIMESTAMP()` inside `v_scraped_api_values`. A `(dim, date)` row's value grows every hour the data remains unpublished. If sibling dims arrive on time, the date is recorded in actuals at low value; later, when this dim's metric crosses the alert threshold, the date is no longer "missing" so the source query never refetches it — the alert silently never fires.
+
+To opt a config into refetching, add `refetch_recent_days: <N>` to its YAML block:
+
+```yaml
+gfw_api_delays:
+  ...
+  refetch_recent_days: 14
+```
+
+`forecast.R` then forces the last N days back into the refetch set every run: the source query returns them, and the SCD2 MERGE in `create_scd_statement` upserts — unchanged values are no-ops, value changes get a new `is_latest=TRUE` row (the old value is versioned out). The alerter sees the latest value on the next deltas refresh.
+
+Pick N to cover the expected window of the metric. For `gfw_api_delays` the relevant `expected_delay_hour` values in `t_expected_publication_lags` top out at ~80 hours (~3.3 days); `N=14` covers that plus ~10 days of post-expected drift before we accept the value as final.
+
+Configs without this field behave exactly as before (no extra source-query cost).
+
 ### Deprecating a whole config
 
 Three or four steps:
