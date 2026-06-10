@@ -2,36 +2,14 @@ provider "google" {
   project = "world-fishing-827"
 }
 
-# OPEN QUESTION (2026-05-15) — which service account should run these
-# triggers, and what IAM grants does it need? Today both triggers run as
-# `terraform-deployer@world-fishing-827.iam.gserviceaccount.com`
-# (consistent with the alerter / dataloader triggers). That SA has
-# dataset-level `bigquery.dataEditor` on `tech_anomaly_detection` but
-# lacks project-level `bigquery.jobUser`, so `dbt seed` fails with:
-#
-#   403 ... User does not have bigquery.jobs.create permission in
-#   project world-fishing-827.
-#
-# `bigquery.jobs.create` can only be granted at project scope (BQ IAM
-# constraint). Two options under discussion:
-#
-#   A. Grant terraform-deployer `roles/bigquery.jobUser` at project
-#      level in the central gfw-terraform-gcp repo. Smallest change,
-#      but widens the SA's effective BQ reach to every dataset it has
-#      dataEditor on (currently tech_anomaly_detection and
-#      dq-monitoring; potentially more later).
-#
-#   B. Stand up a dedicated SA in this terraform (`anomaly-detection-
-#      dbt-runner`) with project-level jobUser + dataset-level dataEditor
-#      on tech_anomaly_detection only, and switch the triggers to run
-#      as it. Effective scope is just our dataset; terraform-deployer
-#      is untouched. ~5 resources to add. See conversation history for
-#      a draft.
-#
-# Cloud Build runs themselves (i.e. `terraform apply` from this dir to
-# create/update the triggers) continue to run as terraform-deployer
-# regardless of which option we pick -- only the *trigger execution
-# identity* changes.
+# Trigger execution identity: `automated-testing@world-fishing-827.
+# iam.gserviceaccount.com` (the shared automated-testing SA, granted the
+# project-level `bigquery.jobUser` + dataset access needed for `dbt seed`
+# by the IAM team). This replaces an earlier attempt to run as
+# `terraform-deployer`, which lacked project-level `bigquery.jobs.create`
+# and failed the seed step with a 403. `terraform apply` from this dir to
+# create/update the triggers still runs as the operator's own identity;
+# only the trigger *execution* identity is `automated-testing`.
 #
 # Cloud Build triggers that run `dbt seed` whenever files under `dbt/`
 # change. Two triggers mirror the dataloader/alerter pattern:
@@ -87,7 +65,7 @@ resource "google_cloudbuild_trigger" "trigger_branch" {
     }
   }
 
-  service_account = "projects/world-fishing-827/serviceAccounts/terraform-deployer@world-fishing-827.iam.gserviceaccount.com"
+  service_account = "projects/world-fishing-827/serviceAccounts/automated-testing@world-fishing-827.iam.gserviceaccount.com"
 
   build {
     timeout = "600s"
@@ -154,7 +132,7 @@ resource "google_cloudbuild_trigger" "trigger_tag" {
     }
   }
 
-  service_account = "projects/world-fishing-827/serviceAccounts/terraform-deployer@world-fishing-827.iam.gserviceaccount.com"
+  service_account = "projects/world-fishing-827/serviceAccounts/automated-testing@world-fishing-827.iam.gserviceaccount.com"
 
   build {
     timeout = "600s"

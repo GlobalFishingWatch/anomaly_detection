@@ -24,7 +24,7 @@ Cloud Build picks up changes under `dbt/**` and runs `dbt seed` for the env that
 | `anomaly-detection-dbt-any-branch` | `main` | `staging` | `t_config_descriptions_staging`, `t_thresholds_staging` |
 | `anomaly-detection-dbt-tag` | any tag | `prod` | `t_config_descriptions_prod`, `t_thresholds_prod` |
 
-Steps run inside `ghcr.io/dbt-labs/dbt-bigquery:1.8.1` (matches the local `dbt-core==1.8.1` install). The trigger runs as `terraform-deployer@world-fishing-827.iam.gserviceaccount.com`, which already holds `WRITER` on `tech_anomaly_detection` — no additional IAM grants required.
+Steps run inside `ghcr.io/dbt-labs/dbt-bigquery:1.8.1` (matches the local `dbt-core==1.8.1` install). `dbt deps` runs before `dbt seed` in the same step so `calogica/dbt_date` is available. The trigger runs as `automated-testing@world-fishing-827.iam.gserviceaccount.com` — the shared automated-testing SA already holds project-level `bigquery.jobUser`, and dataset-level `bigquery.dataEditor` on `tech_anomaly_detection` (and `tech_dq_monitoring`) was added in gfw-terraform-gcp [#562](https://github.com/GlobalFishingWatch/gfw-terraform-gcp/pull/562). `bigquery.jobs.create` can only be granted at project scope (BQ IAM constraint), so we use the shared SA that already has it rather than broadening `terraform-deployer`'s reach.
 
 To deploy or update the triggers themselves, run `terraform apply` from `dbt/cloudbuild/`.
 
