@@ -10,7 +10,7 @@ Per-config aggregation modes (see `state.AGGREGATION_MODE`):
 
 - `thread` (default): opener + per-dim fires + summary replies. Used for configs with a `dimension_split` or multiple anomalies per day.
 - `flat-with-resolve-replies`: opener carries the initial fire card; severity changes and resolves still post as replies. Used for hourly configs without a `dimension_split`.
-- `flat`: opener IS the alert; no replies. Used for daily single-dim configs.
+- `flat`: opener IS the alert; no fire/severity/summary replies — only the final close message still posts as a thread reply. Used for daily single-dim configs.
 
 ## Storage
 

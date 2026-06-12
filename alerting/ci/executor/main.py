@@ -293,12 +293,20 @@ def run(
             deltas_all = json.load(fh)
         for r in deltas_all:
             if isinstance(r.get("timestamp"), str):
-                r["timestamp"] = datetime.datetime.fromisoformat(r["timestamp"])
+                # bq --format=json emits RFC3339 'Z' suffixes, which
+                # fromisoformat() rejects on Python < 3.11.
+                r["timestamp"] = datetime.datetime.fromisoformat(
+                    r["timestamp"].replace("Z", "+00:00"))
             if "anomaly_date" not in r and isinstance(r.get("timestamp"), datetime.datetime):
                 r["anomaly_date"] = r["timestamp"].date()
         bootstrapped_pairs: set[tuple[str, datetime.date]] = set()
         silenced_keys: set[tuple[str, datetime.date]] = set()
-        seen_configs: set[str] = set()
+        # Every fixture config counts as already seen: replay exercises the
+        # state machine on historical rows, which bootstrap suppression
+        # would otherwise drop wholesale.
+        seen_configs: set[str] = {
+            r["config_name"] for r in deltas_all if r.get("config_name")
+        }
     else:
         deltas_all = bq.query_deltas_with_open_incidents(
             bq_client, environment, incidents_table)

@@ -65,8 +65,9 @@ Release:
       alerter moved to v0.0.4. Run missing triggers manually:
       `gcloud builds triggers run <name> --tag=<tag>`.
 - [ ] Same bootstrap suppression protects prod's first alerter run; confirm bootstrap markers
-      before trusting the channel. Prod `parser_errors_daily` routes to `C08PGM43PDK` (real
-      audience).
+      before trusting the channel. Prod `gfw_api_delays` routes to `#gfw-dq-alerts-public`
+      (`C09RTAR5PFZ`) — a real audience, so verify the bootstrap markers and bot membership
+      before the first alert lands.
 
 ## 3. Later / open decisions
 

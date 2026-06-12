@@ -1004,6 +1004,65 @@ def test_open_thread_defaults_to_none_when_unset():
     assert opener.text_inject is None
 
 
+def test_main_replay_parses_z_timestamps_and_skips_bootstrap(
+        monkeypatch, tmp_path):
+    """Replay fixtures use bq's RFC3339 'Z' timestamps (which
+    fromisoformat() rejects on the container's Python 3.10) and contain
+    historical rows -- replay must parse them and must NOT bootstrap-drop
+    them, since exercising historical state is the point of replay."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import main  # noqa: E402
+
+    fixture = tmp_path / "deltas.json"
+    fixture.write_text(json.dumps([
+        {"config_name": "c1",
+         "timestamp": "2026-04-22T00:00:00Z",
+         "dimension_split_value": "",
+         "forecast_method": "mstl",
+         "anomaly_type_lower_higher": "critical_higher",
+         "forecast_value": 1.0, "actual_value": 2.0,
+         "delta_rel": 1.0,
+         "description": "test"},
+    ]))
+
+    monkeypatch.setattr(main.bq, "get_channel_config",
+                        lambda c, cn, e: {"slack_channel_id": "C1",
+                                          "slack_channel_name": "#c1"})
+    monkeypatch.setattr(main.bq, "find_open_incident",
+                        lambda c, t, cn, d: None)
+    monkeypatch.setattr(main.bq, "find_reply_events", lambda c, t, ts: [])
+
+    seen_threads = []
+
+    def fake_process_thread(**kwargs):
+        seen_threads.append((kwargs["config_name"], kwargs["anomaly_date"]))
+        return []
+
+    monkeypatch.setattr(main.state, "process_thread", fake_process_thread)
+
+    # Avoid real BQ/Slack client construction.
+    class _Dummy:
+        def __init__(self, *a, **kw):
+            pass
+
+    monkeypatch.setattr(main.bigquery, "Client", _Dummy)
+    monkeypatch.setattr(main, "WebClient", _Dummy)
+
+    main.run(
+        environment="dev",
+        incidents_table="p.d.incidents",
+        replies_table="p.d.replies",
+        report_id="r", page_id="p",
+        dry_run=True,
+        replay_fixture=str(fixture),
+    )
+
+    # The historical row survived bootstrap and its timestamp parsed.
+    assert seen_threads == [("c1", DATE)]
+
+
 def test_main_skips_thread_when_channel_unmapped(monkeypatch):
     """An unmapped (config, env) must neither crash the run nor post
     anywhere: its thread is skipped, remaining configs still process."""
