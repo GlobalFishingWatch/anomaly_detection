@@ -1,2 +1,2 @@
 config_name,forecast_method,critical_lower,critical_higher,warning_lower,warning_higher
-parser_errors_daily,median,-0.75,0.75,-0.5,0.5
+gfw_api_delays,constant_value,,1,,

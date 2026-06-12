@@ -38,20 +38,24 @@ Verification after merge day:
 
 ## 2. Promote gfw_api_delays to prod
 
-Scope decision (2026-06-12): prod starts with `gfw_api_delays` only.
+Scope decisions (2026-06-12): prod runs `gfw_api_delays` only; `parser_errors_daily` is dropped
+from prod (its YAML block removal auto-destroys its prod scheduler on the next tag apply; prod
+has no v2 incidents tables yet, so nothing to close or tombstone). Prod alerts route to
+`#gfw-dq-alerts-public` (`C09RTAR5PFZ`).
 
-Prep (on `dev`, flows to `main` before tagging):
+Prep (on `dev`, flows to `main` before tagging) — done 2026-06-12:
 
-- [ ] Add `gfw_api_delays` block to `config_prod.yaml` (copy from staging incl.
-      `refetch_recent_days: 14`).
-- [ ] Add `gfw_api_delays` rows to `thresholds_prod.csv` + `config_descriptions_prod.csv`.
-- [ ] Add a prod Slack mapping row for `gfw_api_delays` to the shared mapping seed — **prod has
-      no fallback row**. Since the 2026-06-12 routing fix an unmapped prod config is skipped with
-      a `[channel-routing]` error in the job logs (it previously misrouted to an arbitrary
-      channel); either way its alerts go nowhere until the row exists.
-- [ ] Manually run `dbt seed --select slack_channels_environments_config_mapping` — the shared
-      mapping seed is NOT in the CI `--select` list; forgetting it silently keeps old routing.
-- [ ] Decide: keep or drop `parser_errors_daily` in prod (currently its only config).
+- [x] `config_prod.yaml`: replaced `parser_errors_daily` with the `gfw_api_delays` block
+      (copied from staging incl. `refetch_recent_days: 14`).
+- [x] `thresholds_prod.csv`: swapped to `gfw_api_delays,constant_value,,1,,` (same threshold as
+      dev/staging). `config_descriptions_prod.csv` already had the `gfw_api_delays` row.
+- [x] Shared Slack mapping seed: replaced the `parser_errors_daily/prod` row with
+      `gfw_api_delays,prod,C09RTAR5PFZ,gfw-dq-alerts-public`. **Prod has no fallback row** —
+      since the 2026-06-12 routing fix an unmapped prod config is skipped with a
+      `[channel-routing]` error; either way its alerts go nowhere until the row exists.
+- [x] Manual `dbt seed --select slack_channels_environments_config_mapping` (NOT CI-seeded).
+- [ ] Verify the QA Slack bot is a member of `#gfw-dq-alerts-public` before the first prod
+      alerter run — `chat.postMessage` fails with `not_in_channel` otherwise.
 
 Release:
 
