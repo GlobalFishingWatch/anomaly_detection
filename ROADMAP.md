@@ -46,8 +46,9 @@ Prep (on `dev`, flows to `main` before tagging):
       `refetch_recent_days: 14`).
 - [ ] Add `gfw_api_delays` rows to `thresholds_prod.csv` + `config_descriptions_prod.csv`.
 - [ ] Add a prod Slack mapping row for `gfw_api_delays` to the shared mapping seed — **prod has
-      no fallback row**, and `get_channel_config`'s last fallback tier is "first row of the whole
-      table", so an unmapped prod config silently posts to an arbitrary channel (possibly dev's).
+      no fallback row**. Since the 2026-06-12 routing fix an unmapped prod config is skipped with
+      a `[channel-routing]` error in the job logs (it previously misrouted to an arbitrary
+      channel); either way its alerts go nowhere until the row exists.
 - [ ] Manually run `dbt seed --select slack_channels_environments_config_mapping` — the shared
       mapping seed is NOT in the CI `--select` list; forgetting it silently keeps old routing.
 - [ ] Decide: keep or drop `parser_errors_daily` in prod (currently its only config).
@@ -81,8 +82,8 @@ Release:
 - Tag triggers only rebuild components whose files changed (`included_files`) — always verify
   all expected tag builds ran.
 - Prod Slack routing has no fallback row — every prod config needs an explicit mapping row.
-  An unmapped prod config does NOT error: `get_channel_config`'s third lookup tier returns an
-  arbitrary row from the shared mapping table, silently misrouting alerts.
+  Since the 2026-06-12 fix, an unmapped config's thread is skipped with a `[channel-routing]`
+  error log; its alerts are dropped (not misrouted) until the mapping row lands.
 - The shared Slack mapping seed needs a manual `dbt seed` run; CI does not seed it.
 - `t_<env>_deltas` is not terraform-managed — it appears only after the first successful
   dataloader run in that env.

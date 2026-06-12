@@ -57,19 +57,21 @@ def canonical_environment(env: str) -> str:
 # --- channel routing ---------------------------------------------------
 
 def get_channel_config(client: bigquery.Client, config_name: str, environment: str) -> dict:
-    """Look up slack_channel_id for a (config, env) using the three-tier
-    fallback: exact match > env-only match > first row. Raises if nothing
-    matches."""
+    """Look up slack_channel_id for a (config, env) using the two-tier
+    fallback: exact (config, env) match > env-only fallback row
+    (config_name IS NULL). Raises ValueError when neither exists -- an
+    unmapped config must never be routed to an arbitrary channel."""
     query = f"""
     SELECT
       CASE
         WHEN config_name = @config_name AND environment = @environment THEN 1
         WHEN config_name IS NULL AND environment = @environment THEN 2
-        ELSE 3
       END AS priority,
       slack_channel_id,
       slack_channel_name
     FROM `{CHANNEL_MAPPING_TABLE}`
+    WHERE (config_name = @config_name AND environment = @environment)
+       OR (config_name IS NULL AND environment = @environment)
     ORDER BY priority
     LIMIT 1
     """
@@ -81,7 +83,10 @@ def get_channel_config(client: bigquery.Client, config_name: str, environment: s
     ))
     rows = list(job.result())
     if not rows:
-        raise ValueError(f"No Slack channel mapping found for {config_name}/{environment}")
+        raise ValueError(
+            f"No Slack channel mapping for {config_name}/{environment} -- "
+            f"add an exact row or an env-level fallback (config_name=NULL) "
+            f"to {CHANNEL_MAPPING_TABLE}")
     r = rows[0]
     return {
         "slack_channel_id": r["slack_channel_id"],

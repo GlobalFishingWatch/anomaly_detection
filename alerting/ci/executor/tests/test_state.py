@@ -1002,3 +1002,68 @@ def test_open_thread_defaults_to_none_when_unset():
     opener = next(a for a in actions if isinstance(a, state.OpenThread))
     assert opener.dq_dashboard_url is None
     assert opener.text_inject is None
+
+
+def test_main_skips_thread_when_channel_unmapped(monkeypatch):
+    """An unmapped (config, env) must neither crash the run nor post
+    anywhere: its thread is skipped, remaining configs still process."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import main  # noqa: E402
+
+    def _delta(config):
+        return {"config_name": config,
+                "timestamp": NOW - datetime.timedelta(minutes=30),
+                "anomaly_date": DATE,
+                "dimension_split_value": "",
+                "forecast_method": "mstl",
+                "anomaly_type_lower_higher": "critical_higher",
+                "forecast_value": 1.0, "actual_value": 2.0,
+                "delta_rel": 1.0,
+                "description": "test"}
+
+    monkeypatch.setattr(main.bq, "query_deltas_with_open_incidents",
+                        lambda c, e, t: [_delta("c1"), _delta("c2")])
+    monkeypatch.setattr(main.bq, "list_open_incident_keys", lambda c, t: [])
+    monkeypatch.setattr(main.bq, "list_bootstrapped_pairs", lambda c, t: set())
+    monkeypatch.setattr(main.bq, "list_silenced_keys",
+                        lambda c, t, h: set())
+    monkeypatch.setattr(main.bq, "list_configs_with_any_incident",
+                        lambda c, t: {"c1", "c2"})
+
+    def fake_channel(c, config_name, e):
+        if config_name == "c1":
+            raise ValueError("No Slack channel mapping for c1/dev")
+        return {"slack_channel_id": "C2", "slack_channel_name": "#c2"}
+
+    monkeypatch.setattr(main.bq, "get_channel_config", fake_channel)
+    monkeypatch.setattr(main.bq, "find_open_incident",
+                        lambda c, t, cn, d: None)
+    monkeypatch.setattr(main.bq, "find_reply_events", lambda c, t, ts: [])
+
+    seen_configs = []
+
+    def fake_process_thread(**kwargs):
+        seen_configs.append(kwargs["config_name"])
+        return []  # no actions, so no apply_actions path
+
+    monkeypatch.setattr(main.state, "process_thread", fake_process_thread)
+
+    # Avoid real BQ/Slack client construction.
+    class _Dummy:
+        def __init__(self, *a, **kw):
+            pass
+
+    monkeypatch.setattr(main.bigquery, "Client", _Dummy)
+    monkeypatch.setattr(main, "WebClient", _Dummy)
+
+    main.run(
+        environment="dev",
+        incidents_table="p.d.incidents",
+        replies_table="p.d.replies",
+        report_id="r", page_id="p",
+        dry_run=False,
+    )
+
+    assert seen_configs == ["c2"]

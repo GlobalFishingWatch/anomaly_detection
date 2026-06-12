@@ -388,7 +388,14 @@ def run(
         dq_dashboard_url = first_row.get("dq_dashboard_url") or None
         text_inject = first_row.get("text_inject") or None
 
-        channel = bq.get_channel_config(bq_client, config_name, environment)
+        # An unmapped (config, env) must neither crash the run nor guess a
+        # channel -- skip this thread and keep alerting for the rest.
+        try:
+            channel = bq.get_channel_config(bq_client, config_name, environment)
+        except ValueError as e:
+            logging.error("[channel-routing] skipping %s / %s: %s",
+                          config_name, anomaly_date, e)
+            continue
         open_incident = bq.find_open_incident(
             bq_client, incidents_table, config_name, anomaly_date)
 

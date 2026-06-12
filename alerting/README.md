@@ -21,6 +21,12 @@ Per-config aggregation modes (see `state.AGGREGATION_MODE`):
 
 `alerting/ci/executor/main.py`. Orchestrates: query deltas + open incidents → group by `(config, anomaly_date)` → decide actions via the pure `state.process_thread` → apply via `bq.py` + `slack.py`.
 
+## Channel routing
+
+Each thread's channel comes from the `slack_channels_environments_config_mapping` dbt seed — a single table shared by all environments, and **not** re-seeded by CI: after editing the CSV, run `dbt seed --select slack_channels_environments_config_mapping` manually.
+
+`bq.get_channel_config` resolves in two tiers: an exact `(config_name, environment)` row wins, else the environment's fallback row (`config_name` empty). When neither exists the lookup raises; `main.run` catches it, logs a `[channel-routing] skipping ...` error, and continues with the remaining threads — an unmapped config never blocks the rest of the run and is never routed to a guessed channel, but its alerts are dropped until a mapping row lands. dev and staging have fallback rows; prod intentionally has none, so **every prod config needs an explicit mapping row before promotion**.
+
 ## First-seen-config bootstrap
 
 When a config is seen by the alerter for the first time (no rows in `t_alerting_incidents` for that `config_name`), every `(config, anomaly_date)` pair with `anomaly_date < today` is silently *bootstrapped*: a `status='resolved'` row is inserted with a synthetic `slack_ts` starting with `BOOTSTRAP-`, and no Slack message is posted. Today's anomalies still flow through the normal alerting path so a brand-new config can still alert on day one.
