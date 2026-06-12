@@ -3,7 +3,7 @@
 Status as of 2026-06-12. Live-state audit notes in the 2026-06-10 verification (see CHANGELOG and
 `CLAUDE.md`); staging and prod jobs have been failing on missing v2 BQ tables since April 2025.
 
-## 1. Unblock staging (next up)
+## 1. Unblock staging — DONE 2026-06-12 (PR #25, merge `2ed0c1d`)
 
 Mechanically: PR `dev` → `main`, merge. The Cloud Build triggers do the heavy lifting.
 
@@ -11,10 +11,10 @@ Pre-merge checklist (all on `dev`):
 
 - [x] Port `deprecated_dims` to `config_staging.yaml` (`parsed_row_count_source_daily`,
       `parser_errors_daily_by_source`) and `refetch_recent_days: 14` to its `gfw_api_delays`.
-- [ ] Review `terraform plan` output in the merge-day build logs: `t_staging_actuals` /
-      `t_staging_forecasts` are tracked in tfstate but were deleted from BQ out-of-band, so the
-      apply recreates them empty. Surprises here mean someone else touched state.
-- [ ] No changes needed to the shared Slack mapping seed for staging (fallback row
+- [x] Terraform applied cleanly on merge: `t_staging_actuals` / `t_staging_forecasts` recreated
+      (they were tfstate-tracked but deleted from BQ out-of-band), incidents/replies tables
+      created, schedulers reconciled (11 dataloader + hourly alerter).
+- [x] No changes needed to the shared Slack mapping seed for staging (fallback row
       `C08PNGD7W84` already live).
 
 Expected automatic effects of the merge:
@@ -30,11 +30,16 @@ Expected automatic effects of the merge:
 
 Verification after merge day:
 
-- [ ] All staging dataloader executions green (watch heavier full-history configs against the
-      1200s job timeout — all 11 schedulers fire at 10:20 UTC simultaneously).
-- [ ] `bq ls tech_anomaly_detection` shows all six staging tables.
-- [ ] Bootstrap marker rows present in the staging incidents table; no marinetraffic /
-      ais-listener / spire / exactearth / kpler fires.
+- [ ] All staging dataloader executions green on the first full fleet run, 10:20 UTC 2026-06-13
+      (watch heavier full-history configs against the 1200s job timeout — all 11 schedulers fire
+      simultaneously). `gfw_api_delays` already verified green via a manual scheduler force-run
+      on merge day: 437 delta rows / 16 dims through 2026-06-09.
+- [x] `bq ls tech_anomaly_detection` shows all six staging tables (deltas materialised after the
+      manual `gfw_api_delays` run; both jobs on image `2ed0c1d`, alerter timeout 1800s).
+- [x] Bootstrap suppression verified on the first green alerter run (first since April 2025):
+      5 historical `gfw_api_delays` dates marked `BOOTSTRAP-`, 0 real threads, 0 Slack posts.
+- [ ] After the 2026-06-13 fleet run: no marinetraffic / ais-listener / spire / exactearth /
+      kpler fires from the source-split configs.
 
 ## 2. Promote gfw_api_delays to prod
 
