@@ -31,6 +31,11 @@ anomalies:
       period_length: "day"
       dimension_split: source
       source_filter_sql: "source != 'marinetraffic'"
+      deprecated_dims:
+        - ais-listener
+        - spire
+        - exactearth
+        - kpler
       algorithms:
           mstl: 
               parameters: 
@@ -63,10 +68,16 @@ anomalies:
       GROUP BY timestamp, dimension_split_value
       ORDER BY timestamp, dimension_split_value
       '
+      deprecated_dims:
+        - marinetraffic
+        - ais-listener
+        - spire
+        - exactearth
+        - kpler
       algorithms:
-          mstl: 
-              parameters: 
-                season_length: 
+          mstl:
+              parameters:
+                season_length:
                   - 365.25
                   - 7
           mean:
@@ -291,6 +302,7 @@ anomalies:
       period_length: day
       dimension_split: dataset
       history_start: '2025-01-31'
+      refetch_recent_days: 14
       source_filter_sql: "
       date_interval = 'DAY'
       AND environment = 'prod'

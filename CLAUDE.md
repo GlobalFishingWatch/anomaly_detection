@@ -51,11 +51,17 @@ The dataloader supports two kinds of deprecation. Full details in `dataloader/RE
 
 Do **not** use `deprecated_dims` for time-bounded silencing — it's permanent (until manually un-deprecated). For the rare temporary case, talk to the alerting team rather than abusing this field.
 
-Common cases that have already been deprecated:
+Common cases that have already been deprecated (in both `parsed_row_count_source_daily` and `parser_errors_daily_by_source` unless noted):
 
-- `parsed_row_count_source_daily / marinetraffic` (source dead since 2026-01-01).
-- `parsed_row_count_source_daily / ais-listener` and `parser_errors_daily_by_source / ais-listener` (source dead since 2026-05-04).
+- `marinetraffic` (dead since 2026-01-01; only in `parsed_row_count_source_daily` — excluded from `parser_errors_daily_by_source` via `source_filter_sql`).
+- `ais-listener` (dead since 2026-05-04).
+- `kpler` (dead since 2026-05-08 — replaced by the live `kpler-satellite` / `kpler-terrestrial` / `kpler-roaming` split dims, which ran in parallel from early March).
+- `spire` and `exactearth` (ingestion stopped 2026-06-03).
 
 ## Time-evolving source metrics (`refetch_recent_days`)
 
-For configs whose source metric grows with wall-clock time — currently only `gfw_api_delays`, whose `timestamp_delay_now_hypothetical_vs_expected_delay_hour` depends on `CURRENT_TIMESTAMP()` inside `v_scraped_api_values` — the default missing-timestamps filter silently skips dims that cross the alert threshold *after* their date is already in actuals (from sibling dims). Set `refetch_recent_days: <N>` in the config YAML to force the last N days back into the refetch set; SCD2 handles the value evolution. Full details in `dataloader/README.md`. **Do not** set this on configs with stable per-day values — it's pure overhead there.
+For configs whose source metric grows with wall-clock time — the "now_hypothetical" delay metrics, which depend on `CURRENT_TIMESTAMP()` inside their source views — the default missing-timestamps filter freezes a date's value at first fetch: once the date is in actuals (from sibling dims, or from the day it first crossed `> 0` on single-dim configs), it is never refetched even though the real delay keeps growing. Set `refetch_recent_days: <N>` in the config YAML to force the last N days back into the refetch set; SCD2 handles the value evolution. Currently set (N=14) on `gfw_api_delays` and `s2_index_delays`. Full details in `dataloader/README.md`. **Do not** set this on configs with stable per-day values — it's pure overhead there.
+
+## Promotion roadmap
+
+`ROADMAP.md` at the repo root tracks the dev → staging → prod promotion plan, including the standing gotchas (tag triggers' `included_files` filters, the any-branch trigger planning all three envs, prod Slack routing having no fallback row, the shared Slack mapping seed not being CI-seeded). Read it before any promotion or release-tag work.

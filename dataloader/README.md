@@ -26,8 +26,13 @@ parsed_row_count_source_daily:
   deprecated_dims:
     - marinetraffic
     - ais-listener
+    - spire
+    - exactearth
+    - kpler
   ...
 ```
+
+Currently deprecated (dev and staging, in both `parsed_row_count_source_daily` and `parser_errors_daily_by_source` unless noted): `marinetraffic` (dead since 2026-01-01; `parsed_row_count_source_daily` only — excluded from `parser_errors_daily_by_source` via `source_filter_sql`), `ais-listener` (2026-05-04), `kpler` (2026-05-08 — superseded by the live `kpler-satellite` / `kpler-terrestrial` / `kpler-roaming` split dims), `spire` and `exactearth` (ingestion stopped 2026-06-03).
 
 `forecast.R` reads this list right after building `dt_train` and drops matching rows before the forecast loop runs. Net effect: no new forecasts are generated for the listed dims, so deltas stops gaining new rows, so the alerter stops firing on them.
 
@@ -67,6 +72,10 @@ gfw_api_delays:
 `forecast.R` then forces the last N days back into the refetch set every run: the source query returns them, and the SCD2 MERGE in `create_scd_statement` upserts — unchanged values are no-ops, value changes get a new `is_latest=TRUE` row (the old value is versioned out). The alerter sees the latest value on the next deltas refresh.
 
 Pick N to cover the expected window of the metric. For `gfw_api_delays` the relevant `expected_delay_hour` values in `t_expected_publication_lags` top out at ~80 hours (~3.3 days); `N=14` covers that plus ~10 days of post-expected drift before we accept the value as final.
+
+The sibling-dim masking above isn't the only failure mode. `s2_index_delays` has no `dimension_split`, yet needs refetching too: its `source_filter_sql` only returns rows while `timestamp_lag_minute_now_hypothetical > 0`, so a date enters actuals the first run after it turns late and freezes at that first-observed value. Because the cron fetches at 10:20 UTC, first-observed values quantize to ~627 minutes (turned late before the same-day fetch) or ~2062 minutes (turned late after it, picked up next day) — a date could never exceed ~2062 no matter how stale the index actually got, which made any threshold above that unreachable. With `refetch_recent_days: 14` the recorded delay keeps growing daily until the data publishes, so the `s2_index_delays` thresholds (warning > ~35h, critical > ~48h, set 2026-06-12 from the 2026 baseline) work as intended.
+
+Currently set: `gfw_api_delays` (N=14), `s2_index_delays` (N=14).
 
 Configs without this field behave exactly as before (no extra source-query cost).
 

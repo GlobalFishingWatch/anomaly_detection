@@ -33,6 +33,9 @@ anomalies:
       source_filter_sql: "source != 'marinetraffic'"
       deprecated_dims:
         - ais-listener
+        - spire
+        - exactearth
+        - kpler
       algorithms:
           mstl: 
               parameters: 
@@ -68,6 +71,9 @@ anomalies:
       deprecated_dims:
         - marinetraffic
         - ais-listener
+        - spire
+        - exactearth
+        - kpler
       algorithms:
           mstl: 
               parameters: 
@@ -382,6 +388,7 @@ anomalies:
       source_forecast_column_sql: MIN(timestamp_delay_minute_now_hypothetical)
       period_length: day
       history_start: '2025-05-29'
+      refetch_recent_days: 14
       source_filter_sql: "
       timestamp_lag_minute_now_hypothetical > 0
       AND date >= '2025-05-29'
