@@ -35,6 +35,72 @@ EOF
 
 }
 
+# Parent messages: one per (config_name, anomaly_date). Posted once at
+# thread open and never edited. Updated in BQ only for status flip on
+# close and for the debounce key (summary_counts_json).
+resource "google_bigquery_table" "alerting_incidents" {
+  dataset_id = "tech_anomaly_detection"
+  table_id   = "t_${local.project_name_underscored}_incidents"
+  project    = var.project
+
+  time_partitioning {
+    type  = "MONTH"
+    field = "opened_at"
+  }
+
+  clustering = ["config_name", "anomaly_date"]
+
+  schema = <<EOF
+[
+    {"name": "config_name", "type": "STRING"},
+    {"name": "anomaly_date", "type": "DATE"},
+    {"name": "slack_channel_id", "type": "STRING"},
+    {"name": "slack_ts", "type": "STRING"},
+    {"name": "opened_at", "type": "TIMESTAMP"},
+    {"name": "closed_at", "type": "TIMESTAMP"},
+    {"name": "status", "type": "STRING"},
+    {"name": "client_msg_id", "type": "STRING"},
+    {"name": "summary_counts_json", "type": "STRING"}
+  ]
+EOF
+
+}
+
+# Append-only event log of thread replies. One row per Slack reply posted.
+# Each row captures the state announced by that reply; we never update
+# rows. "Current state of dim X in thread Y" = ORDER BY posted_at DESC
+# LIMIT 1 filtered by kind != 'summary'.
+resource "google_bigquery_table" "alerting_incident_replies" {
+  dataset_id = "tech_anomaly_detection"
+  table_id   = "t_${local.project_name_underscored}_incident_replies"
+  project    = var.project
+
+  time_partitioning {
+    type  = "MONTH"
+    field = "posted_at"
+  }
+
+  clustering = ["incident_slack_ts", "dimension_split_value", "forecast_method"]
+
+  schema = <<EOF
+[
+    {"name": "incident_slack_ts", "type": "STRING"},
+    {"name": "config_name", "type": "STRING"},
+    {"name": "dimension_split_value", "type": "STRING"},
+    {"name": "forecast_method", "type": "STRING"},
+    {"name": "slack_ts", "type": "STRING"},
+    {"name": "slack_channel_id", "type": "STRING"},
+    {"name": "kind", "type": "STRING"},
+    {"name": "anomaly_type_lower_higher", "type": "STRING"},
+    {"name": "previous_anomaly_type_lower_higher", "type": "STRING"},
+    {"name": "anomaly_timestamp", "type": "TIMESTAMP"},
+    {"name": "posted_at", "type": "TIMESTAMP"},
+    {"name": "client_msg_id", "type": "STRING"}
+  ]
+EOF
+
+}
+
 resource "google_cloud_run_v2_job" "job" {
   name     = local.project_name_dashed
   location = local.region
@@ -44,7 +110,13 @@ resource "google_cloud_run_v2_job" "job" {
     parallelism = 1
     template {
       service_account = local.sa
-      timeout         = "600s" # 10m
+      timeout         = "1800s" # 30m -- defence-in-depth so a slow run can't
+                                #         orphan a parent message (Slack
+                                #         parent posts but a SIGKILL mid-batch
+                                #         skips the per-dim fire replies).
+                                #         Steady-state runtime is well under
+                                #         10m; bumping the cap is cheap
+                                #         insurance.
       max_retries     = 3
 
       containers {
@@ -138,6 +210,8 @@ resource "google_cloud_scheduler_job" "job" {
           args = [
             "--environment=${var.environment}",
             "--deduplication-index=${google_bigquery_table.deduplication_index.project}.${google_bigquery_table.deduplication_index.dataset_id}.${google_bigquery_table.deduplication_index.table_id}",
+            "--incidents-table=${google_bigquery_table.alerting_incidents.project}.${google_bigquery_table.alerting_incidents.dataset_id}.${google_bigquery_table.alerting_incidents.table_id}",
+            "--replies-table=${google_bigquery_table.alerting_incident_replies.project}.${google_bigquery_table.alerting_incident_replies.dataset_id}.${google_bigquery_table.alerting_incident_replies.table_id}",
           ]
         }]
       }

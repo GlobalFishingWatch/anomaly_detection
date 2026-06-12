@@ -7,7 +7,10 @@ suppressMessages({
   library(glue)
   library(lubridate)
   library(optparse)
+  library(logger)
 })
+
+log_threshold(INFO)
 
 source("bq_utils.R")
 source("helpers.R")
@@ -29,7 +32,7 @@ option_list = list(
               help = "Delta load"),
   make_option(c("-s", "--allowed_size"), type = "character", default = "60",
               help = "Allowed size"),
-  make_option(c("-t", "--forecast_timestamp_from"), type = "character", default = "90 days",
+  make_option(c("-t", "--forecast_timestamp_from"), type = "character", default = "",
               help = "Forecast timestamp from"),
   make_option(c("-u", "--forecast_timestamp_to"), type = "character", default = "",
               help = "Forecast timestamp to")
@@ -38,7 +41,8 @@ option_list = list(
 parser = OptionParser(option_list = option_list)
 args = parse_args(parser)
 
-print(args)
+log_info("Parsed arguments:")
+log_info(list(args))
 
 anomaly_detection_config_name = args$anomaly_detection_config_name
 allowed_size = as.numeric(args$allowed_size) * BQ_GB
@@ -54,7 +58,7 @@ forecast_timestamp_to = args$forecast_timestamp_to
 no_cores = future::availableCores() - 2
 future::plan(future::multicore(), workers = no_cores)
 map_fun = partial(furrr::future_imap_dfr, .options = furrr::furrr_options(seed = T))
-cat(glue("Using {no_cores} cores"))
+log_info(glue("Using {no_cores} cores"))
 
 map_fun = map_fun %>% compose(progressr::with_progress, .dir = "forward")
 
@@ -75,8 +79,19 @@ history_start = current_anomaly_detection_config$history_start %||% "2012-01-01"
   parse_date_or_period()
 current_anomaly_detection_config$period_length = current_anomaly_detection_config$period_length %||% "day"
 
+# create mapping between "full" sql period lengths and R's unconventional short lengths
+r_period_lengths = c("sec", "min", "hour", "day", "DSTday", "week", "month", "quarter", "year")
+sql_period_lengths = c("SECOND", "MINUTE", "HOUR", "DAY", "DAY", "WEEK", "MONTH", "QUARTER", "YEAR")
+period_length_mapping = r_period_lengths %>% 
+  set_names(sql_period_lengths)
+
+if (!tolower(current_anomaly_detection_config$period_length) %in% tolower(sql_period_lengths)) {
+  stop(glue("period_length {current_anomaly_detection_config$period_length} is not supported"))
+}
+
 config_fields = c(
   "dimension_split",
+  "source_project",
   "source_dataset",
   "source_table",
   "source_timestamp_column",
@@ -92,7 +107,12 @@ current_anomaly_detection_config[config_fields] = config_fields %>%
   set_names() %>% 
   imap(~ current_anomaly_detection_config[[.x]] %||% "")
 
-print(current_anomaly_detection_config)
+log_info("Current anomaly detection config:")
+# Escape braces so logger's glue formatter does not try to resolve
+# {placeholder} tokens embedded in source_sql before they are substituted
+# at line ~161 (e.g. {missing_timestamps_sql} is only defined below).
+cfg_text = paste(capture.output(str(current_anomaly_detection_config)), collapse = "\n")
+log_info(gsub("\\}", "}}", gsub("\\{", "{{", cfg_text)))
 
 if ("allowed_size" %in% names(current_anomaly_detection_config)) {
   allowed_size = as.numeric(current_anomaly_detection_config$allowed_size) * BQ_GB
@@ -114,10 +134,47 @@ existing_timestamps = get_anomaly_detection_actuals(
 all_historic_timestamps = seq(
   history_start %>% as.Date() %>% as.POSIXct() %>% with_tz("UTC"), 
   now(tz = "UTC"), 
-  current_anomaly_detection_config$period_length
+  period_length_mapping[toupper(current_anomaly_detection_config$period_length)]
 )
 
-missing_timestamps = all_historic_timestamps %>% setdiff(existing_timestamps) %>% as.POSIXct(origin="1970-01-01", tz = "UTC") 
+missing_timestamps = all_historic_timestamps %>% setdiff(existing_timestamps) %>% as.POSIXct(origin="1970-01-01", tz = "UTC")
+
+# For configs whose source metric evolves with wall-clock time (e.g.
+# gfw_api_delays' `timestamp_delay_now_hypothetical_vs_expected_delay_hour`
+# depends on CURRENT_TIMESTAMP() inside the source view), a (dim, date)
+# can cross the alert threshold AFTER its timestamp is already in actuals
+# (from sibling dims that arrived earlier). Without refetch, the source
+# query's `timestamp IN (missing_timestamps)` filter excludes the
+# already-existing date, so the now-anomalous dim is never picked up.
+#
+# `refetch_recent_days` (optional, per-config) forces the last N days
+# back into the refetch set: they get added to missing_timestamps and
+# removed from existing_timestamps. The SCD2 MERGE in
+# `create_scd_statement` then upserts -- unchanged values are no-ops,
+# value changes get a new is_latest=TRUE row. Configs without this
+# field behave exactly as before.
+refetch_recent_days = as.integer(
+  current_anomaly_detection_config$refetch_recent_days %||% 0
+)
+if (refetch_recent_days > 0 && length(existing_timestamps) > 0) {
+  refetch_cutoff = (Sys.time() - lubridate::days(refetch_recent_days)) %>%
+    with_tz("UTC") %>%
+    floor_date(current_anomaly_detection_config$period_length)
+  refetch_window = all_historic_timestamps[
+    all_historic_timestamps >= refetch_cutoff
+  ]
+  if (length(refetch_window) > 0) {
+    missing_timestamps = union(missing_timestamps, refetch_window) %>%
+      as.POSIXct(origin = "1970-01-01", tz = "UTC")
+    existing_timestamps = setdiff(existing_timestamps, refetch_window) %>%
+      as.POSIXct(origin = "1970-01-01", tz = "UTC")
+    log_info(glue(
+      "refetch_recent_days={refetch_recent_days}: forcing ",
+      "{length(refetch_window)} recent timestamp(s) back into the ",
+      "refetch set (>= {refetch_cutoff})"
+    ))
+  }
+}
 
 # set date sql filters so they always evaluate to true by default
 existing_timestamps_sql = "'1979-01-01 00:00:00'" # timestamp is never in this dummy value
@@ -143,12 +200,12 @@ source_filter_sql = if(current_anomaly_detection_config$source_filter_sql == "")
 
 if (current_anomaly_detection_config$source_sql != "") {
   select_timestamp_value_sql = glue(current_anomaly_detection_config$source_sql)
-  print(select_timestamp_value_sql)
+  log_info(select_timestamp_value_sql)
 } else {
   select_timestamp_value_sql = glue(.null = "", "
     TIMESTAMP_TRUNC({current_anomaly_detection_config$source_timestamp_column_sql}, {current_anomaly_detection_config$period_length}) timestamp, 
       {current_anomaly_detection_config$source_forecast_column_sql} value, {dimension_split_select} dimension_split_value
-    FROM `{current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}`
+    FROM `{current_anomaly_detection_config$source_project}.{current_anomaly_detection_config$source_dataset}.{current_anomaly_detection_config$source_table}`
     WHERE {current_anomaly_detection_config$source_timestamp_column_sql} BETWEEN '2012-01-01' AND '2099-12-31'
     AND {current_anomaly_detection_config$source_timestamp_column_sql} IN ({missing_timestamps_sql})
     AND {current_anomaly_detection_config$source_timestamp_column_sql} NOT IN ({existing_timestamps_sql})
@@ -167,7 +224,7 @@ if (length(missing_timestamps)) {
   ) %>% 
     safe_query(con = con, allowed_size = allowed_size, verbose = T) 
 } else {
-  cat("No actual data missing", fill = T)
+  log_info("No actual data missing", fill = T)
 }
 
 
@@ -175,26 +232,46 @@ if (length(missing_timestamps)) {
 
 dt_train = get_anomaly_detection_actuals(
   con,
-  db_anomaly_detection_actuals, 
+  db_anomaly_detection_actuals,
   current_anomaly_detection_config,
   maximum_valid_to = "9999-12-31 23:59:59 UTC",
   allowed_size = allowed_size,
   columns = c("timestamp", "value", "dimension_split_value")
-) %>% 
-  .[, .(timestamp, y = value, dimension_split_value)] %>% 
-  .[dimension_split_value %>% is.na, dimension_split_value := "NA"] %>% 
+) %>%
+  .[, .(timestamp, y = value, dimension_split_value)] %>%
+  .[dimension_split_value %>% is.na, dimension_split_value := "NA"] %>%
   .[order(timestamp, dimension_split_value)]
 
-# By default forecast the last 90 days, unless this is provided by the config or environment
+deprecated_dims = current_anomaly_detection_config$deprecated_dims %||% character()
+if (length(deprecated_dims) > 0) {
+  excluded_n = dt_train[dimension_split_value %in% deprecated_dims, .N]
+  dt_train = dt_train[!dimension_split_value %in% deprecated_dims]
+  log_info(glue(
+    "Excluding {length(deprecated_dims)} deprecated dim(s) from forecast ",
+    "training: {paste(deprecated_dims, collapse=', ')} ",
+    "({excluded_n} actuals row(s) dropped from training set)"
+  ))
+}
+
+if (!dt_train[, .N]) {
+  log_error("No training data available, nothing to forecast", fill = T)
+  quit(status = 0)
+}
+
+
+# By default forecast the last 90 periods, unless this is provided by the config or environment
 if (forecast_timestamp_from == "") {
-  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% "90 days"
+  forecast_timestamp_from = current_anomaly_detection_config$forecast_start %||% 
+  glue("90 {current_anomaly_detection_config$period_length}s")
 }
 
 forecast_timestamp_from %<>% 
     parse_date_or_period()  %>% 
+    max(as.POSIXct(history_start)) %>%
     with_tz("UTC") %>% 
     floor_date(current_anomaly_detection_config$period_length)
 
+log_info(glue("Forecasting from {forecast_timestamp_from}"), fill = T)
 
 forecast_timestamp_to = as.POSIXct(forecast_timestamp_to, format = "%Y-%m-%d %H:%M:%S") %>% 
   with_tz("UTC")
@@ -213,7 +290,7 @@ generate_forecasts = function(periods_to_forecast, current_dimension_split_value
   p = progressr::progressor(steps = length(periods_to_forecast))
   
   dt_current_dimension_split = dt_train[dimension_split_value == current_dimension_split_value]
-  cat(glue("forecasting {dt_current_dimension_split[1, dimension_split_value]}"), fill = T)
+  log_info(glue("forecasting {dt_current_dimension_split[1, dimension_split_value]}"), fill = T)
   
   dt_current_forecasts = periods_to_forecast %>% 
     furrr::future_imap_dfr(\(current_fc_period, index) {

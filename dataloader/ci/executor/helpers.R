@@ -69,6 +69,7 @@ USING (
     SELECT 
       '{current_anomaly_detection_config$name}' config_name,
       '{current_anomaly_detection_config$dimension_split}' dimension_split,
+        '{current_anomaly_detection_config$source_project}' source_project, 
         '{current_anomaly_detection_config$source_dataset}' source_dataset, 
         '{current_anomaly_detection_config$source_table}' source_table,
         '{current_anomaly_detection_config$source_timestamp_column}' source_timestamp_column,
@@ -105,6 +106,7 @@ is_latest = FALSE
 WHEN NOT MATCHED THEN
   INSERT VALUES (
     key,
+    source_project,
     source_dataset,
     source_table,
     source_timestamp_column,
@@ -127,11 +129,35 @@ WHEN NOT MATCHED THEN
 ")
 }
 
-refresh_deltas_table = function(con, project, dataset, environment) {
+refresh_deltas_table = function(con, project, dataset, environment,
+                                max_attempts = 5) {
   # read and interpolate "sql/t_deltas.sql" file
-  sql = readr::read_file("sql/t_deltas.sql") %>% 
+  sql = readr::read_file("sql/t_deltas.sql") %>%
     glue(PROJECT = project, DATASET = dataset, ENVIRONMENT = environment)
 
-  sql %>%
-    safe_query(con = con, verbose = T, allowed_size = 10 * BQ_GB) 
+  # `t_deltas.sql` is a CREATE OR REPLACE TABLE. Every dataloader container
+  # ends with this refresh, so when several jobs finish in the same window
+  # BigQuery rejects all but one with "another truncation operation in
+  # progress". The losers retry with a jittered linear backoff -- each
+  # attempt waits long enough to outlast a typical refresh (~10-30s in
+  # dev) and the jitter prevents two losers from re-colliding on the next
+  # round. Other errors (auth, syntax, allowed_size) bubble up unchanged.
+  for (attempt in seq_len(max_attempts)) {
+    res = tryCatch(
+      sql %>% safe_query(con = con, verbose = T, allowed_size = 10 * BQ_GB),
+      error = function(e) e
+    )
+    if (!inherits(res, "error")) return(res)
+    is_truncation_race = grepl(
+      "truncation operation in progress",
+      conditionMessage(res), fixed = TRUE
+    )
+    if (!is_truncation_race || attempt == max_attempts) stop(res)
+    sleep_s = attempt * 10 + runif(1, 0, 10)
+    log_warn(glue(
+      "deltas refresh raced (attempt {attempt}/{max_attempts}); ",
+      "sleeping {round(sleep_s, 1)}s before retry"
+    ))
+    Sys.sleep(sleep_s)
+  }
 }

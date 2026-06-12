@@ -1,11 +1,11 @@
-config_name,description
-parser_errors_daily,"The pipe nmea parser can fail parsing a message for various reasons which are logged. This is a simple count of parsing errors per day."
-parsed_row_count_source_daily,"Parsed message count per day and split by provider."
-parsed_row_count_hourly,"Parsed message count per hour."
-pipe3_gaps,"Gaps initially had an orchestration issue in pipe3 which is why we monitor it while it's in prototype stage."
-parser_errors_daily_by_source,"The pipe nmea parser can fail parsing a message for various reasons which are logged. In the past, patterns in parser errors have pointed to ingestion issues with some of the providers. This is a simple count of parsing errors per day and split by provider."
-parsed_row_count_type_daily,"Parsed message count per day and split by AIS type (e.g. AIS.1 for position messages)."
-parsed_row_count_receiver_type_daily,"Parsed message count per day and split by receiver type."
-t_world_fishing_827_queries_billed,"We receive total bytes billed for all our queries in world_fishing_827. We compare the amount of TB billed per day against a constant value to ensure we are not accidentally causing unexpected costs."
-v_world_fishing_827_queries_billed_by_sa_non_sa,"We receive total bytes billed for all our queries in world_fishing_827. We compare the amount of TB billed per day against the maximum amount over a sliding window to ensure we are not accidentally causing unexpected costs. This is broken down by service account users (dimension=true) vs non-service account users (dimension=false)."
-gfw_api_delays,"A GFW API scraper downloads data from our API in regular intervals. By looking at the latest available timestamps in each API endpoint we can check whether any data is delayed. The delay is calculated as the time since the expected publication and only exists when data was not available at the expected publication time."
+config_name,description,dq_dashboard_url,text_inject
+parser_errors_daily,The pipe nmea parser can fail parsing a message for various reasons which are logged. This is a simple count of parsing errors per day.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_sbfihwcggd,
+parsed_row_count_source_daily,Parsed message count per day and split by provider.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_d67a3fxmhd,
+parsed_row_count_hourly,Parsed message count per hour.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_d67a3fxmhd,
+pipe3_gaps,Gaps initially had an orchestration issue in pipe3 which is why we monitor it while it's in prototype stage.,,
+parser_errors_daily_by_source,"The pipe nmea parser can fail parsing a message for various reasons which are logged. In the past, patterns in parser errors have pointed to ingestion issues with some of the providers. This is a simple count of parsing errors per day and split by provider.",https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_sbfihwcggd,
+parsed_row_count_type_daily,Parsed message count per day and split by AIS type (e.g. AIS.1 for position messages).,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_d67a3fxmhd,
+parsed_row_count_receiver_type_daily,Parsed message count per day and split by receiver type.,https://datastudio.google.com/u/0/reporting/d6647704-1053-46ac-9559-a6ae3478da1c/page/p_d67a3fxmhd,
+t_world_fishing_827_queries_billed,We receive total bytes billed for all our queries in world_fishing_827. We compare the amount of TB billed per day against a constant value to ensure we are not accidentally causing unexpected costs.,,
+v_world_fishing_827_queries_billed_by_sa_non_sa,We receive total bytes billed for all our queries in world_fishing_827. We compare the amount of TB billed per day against the maximum amount over a sliding window to ensure we are not accidentally causing unexpected costs. This is broken down by service account users (dimension=true) vs non-service account users (dimension=false).,,
+gfw_api_delays,A GFW API scraper downloads data from our API in regular intervals. By looking at the latest available timestamps in each API endpoint we can check whether any data is delayed. The delay is calculated as the time since the expected publication and only exists when data was not available at the expected publication time.,,

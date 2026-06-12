@@ -8,3 +8,7 @@ services:
     volumes:
       - '~/.config/gcloud:/root/.config/gcloud'
       - './main.py:/code/main.py'
+      - './bq.py:/code/bq.py'
+      - './slack.py:/code/slack.py'
+      - './state.py:/code/state.py'
+      - './tests:/code/tests'
