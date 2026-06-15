@@ -107,6 +107,14 @@ gcloud run jobs execute qa-gfw-anomaly-detection-dataloader-dev \
   --args=--environment=dev,--anomaly_detection_config_name=<config>,--forecast_timestamp_from='7 days'
 ```
 
+> **Gotcha:** the Cloud Run jobs carry **no baked-in args** — the per-run args (environment,
+> config name, table names) come entirely from the Cloud Scheduler `containerOverrides`. So
+> `gcloud run jobs execute <job>` *without* `--args` runs with the binaries' own defaults
+> (`--environment=dev` for the alerter, which then reads the **dev** tables) regardless of which
+> env's job you invoked. To exercise a specific environment manually, either pass the full
+> `--args` yourself or — simpler and less error-prone — trigger that env's **scheduler**
+> (`gcloud scheduler jobs run <...>_scheduler`), which replays the exact override.
+
 ## Cold-start backfill when deploying a config to a new environment
 
 The scheduled (automated) runs query only *missing* timestamps and are capped at the

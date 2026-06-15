@@ -34,15 +34,25 @@ Verification after merge day:
       `parsed_row_count_*_daily` configs fail on cold start with `Query exceeds allowed_size`
       (full-history scan of `t_facts_pipe_nmea_parsed_stats_daily` ~190 GB estimate vs the 60 GB
       scheduled cap). Resolved by the manual cold-start backfill policy (see below + README).
-- [ ] Run the manual cold-start backfill for the 4 `parsed_row_count_*_daily` configs with a
-      raised `--allowed_size` (one-off, per the new-env-deployment policy in `dataloader/README.md`
-      and `CLAUDE.md`). After they load, daily incremental scheduled runs stay under 60 GB.
-- [x] `bq ls tech_anomaly_detection` shows all six staging tables (deltas materialised after the
-      manual `gfw_api_delays` run; both jobs on image `2ed0c1d`, alerter timeout 1800s).
-- [x] Bootstrap suppression verified on the first green alerter run (first since April 2025):
-      5 historical `gfw_api_delays` dates marked `BOOTSTRAP-`, 0 real threads, 0 Slack posts.
-- [ ] After the 2026-06-13 fleet run: no marinetraffic / ais-listener / spire / exactearth /
-      kpler fires from the source-split configs.
+- [x] Manual cold-start backfill for the 4 `parsed_row_count_*_daily` configs done 2026-06-15
+      with `--allowed_size=200` (dry-run estimate ~190 GB; runtime cluster-pruned bills far less).
+      All 11 configs now in `t_staging_deltas` with full history back to 2022-08-24. Daily
+      incremental scheduled runs stay under the 60 GB cap.
+- [x] `bq ls tech_anomaly_detection` shows all six staging tables (both jobs on image
+      `2ed0c1d`, alerter timeout 1800s).
+- [x] Bootstrap suppression verified across the cold start: the 4 backfilled configs were
+      first-seen on the 2026-06-15 alerter run → 19 historical pairs suppressed, no spam.
+- [x] No marinetraffic / ais-listener / spire / exactearth / kpler fires: all stop at their
+      death dates with 0 recent forecasts and 0 recent anomalies in both source-split configs.
+- [x] Staging Slack channel fix verified 2026-06-15: after the app was added to
+      `#gfw-dq-alerts-staging`, a scheduler-triggered alerter run posted real threads
+      (gfw_api_delays, parser_errors_daily_by_source, t_world_fishing_827_queries_billed) with
+      no `channel_not_found`. **Gotcha:** `gcloud run jobs execute` with no `--args` runs the
+      alerter as `--environment=dev` (the argparse default) reading dev tables — to test a
+      specific env manually, trigger its **scheduler** (which supplies the env containerOverride),
+      not the job directly.
+
+**Staging is fully healthy as of 2026-06-15.** Soak, then proceed to prod.
 
 ## 2. Promote gfw_api_delays to prod
 
