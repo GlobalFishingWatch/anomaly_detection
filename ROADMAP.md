@@ -30,10 +30,13 @@ Expected automatic effects of the merge:
 
 Verification after merge day:
 
-- [ ] All staging dataloader executions green on the first full fleet run, 10:20 UTC 2026-06-13
-      (watch heavier full-history configs against the 1200s job timeout — all 11 schedulers fire
-      simultaneously). `gfw_api_delays` already verified green via a manual scheduler force-run
-      on merge day: 437 delta rows / 16 dims through 2026-06-09.
+- [x] First full fleet run (10:20 UTC 2026-06-13/14/15): 7 of 11 configs green. The 4
+      `parsed_row_count_*_daily` configs fail on cold start with `Query exceeds allowed_size`
+      (full-history scan of `t_facts_pipe_nmea_parsed_stats_daily` ~190 GB estimate vs the 60 GB
+      scheduled cap). Resolved by the manual cold-start backfill policy (see below + README).
+- [ ] Run the manual cold-start backfill for the 4 `parsed_row_count_*_daily` configs with a
+      raised `--allowed_size` (one-off, per the new-env-deployment policy in `dataloader/README.md`
+      and `CLAUDE.md`). After they load, daily incremental scheduled runs stay under 60 GB.
 - [x] `bq ls tech_anomaly_detection` shows all six staging tables (deltas materialised after the
       manual `gfw_api_delays` run; both jobs on image `2ed0c1d`, alerter timeout 1800s).
 - [x] Bootstrap suppression verified on the first green alerter run (first since April 2025):

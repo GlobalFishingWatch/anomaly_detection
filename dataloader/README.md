@@ -106,3 +106,43 @@ gcloud run jobs execute qa-gfw-anomaly-detection-dataloader-dev \
   --region us-central1 \
   --args=--environment=dev,--anomaly_detection_config_name=<config>,--forecast_timestamp_from='7 days'
 ```
+
+## Cold-start backfill when deploying a config to a new environment
+
+The scheduled (automated) runs query only *missing* timestamps and are capped at the
+default `allowed_size` of **60 GB** (`--allowed_size` in `forecast.R`, enforced by
+`validate_query_size` in `bq_utils.R`). That cap is deliberately tight so a routine daily
+run can never silently bill a large scan.
+
+The **first** run of a config in an environment is different: the actuals table is empty, so
+the source query scans the config's entire history in one shot. For configs that read a large
+source table this easily exceeds 60 GB and the run fails with `Query exceeds allowed_size`.
+This is expected, not a bug — the daily incremental runs that follow are cheap and stay well
+under the cap.
+
+**Policy:** when you deploy a config to a new environment (dev → staging → prod), the person
+doing the promotion is responsible for running the initial backfill **manually**, before the
+scheduler's first automated run does. Because it is a manual, supervised, one-off run, the
+operator **is allowed to raise `--allowed_size`** for it (this is the one sanctioned exception
+to "don't raise cost thresholds without checking" — it applies only to the manual cold-start
+backfill, never to the committed config or the scheduled job).
+
+Size the override from a dry run rather than guessing. The query is partition- and
+cluster-pruned at runtime, so `validate_query_size`'s estimate (a dry-run upper bound that
+cannot see clustering) is usually much larger than the bytes actually billed — set
+`--allowed_size` just above that estimate:
+
+```bash
+# 1. estimate: dry-run the config's full-history source scan and read the upper bound
+bq query --project_id=world-fishing-827 --use_legacy_sql=false --dry_run '<full-history source query>'
+
+# 2. backfill: replicate the scheduler's args, add --allowed_size above the estimate.
+#    Use a custom (^@^) delimiter so the space in "7 days" stays inside one arg.
+gcloud run jobs execute qa-gfw-anomaly-detection-dataloader-staging \
+  --project=world-fishing-827 --region=us-central1 --wait \
+  --args="^@^--environment=staging@--anomaly_detection_config_name=<config>@--forecast_timestamp_from=7 days@--allowed_size=<GB above estimate>"
+```
+
+Do **not** bake the raised value into `config_<env>.yaml` (the per-config `allowed_size` field)
+or into the scheduled job — that would lift the guardrail for every future run. The override
+lives only on the manual execution.

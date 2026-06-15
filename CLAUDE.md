@@ -65,3 +65,7 @@ For configs whose source metric grows with wall-clock time — the "now_hypothet
 ## Promotion roadmap
 
 `ROADMAP.md` at the repo root tracks the dev → staging → prod promotion plan, including the standing gotchas (tag triggers' `included_files` filters, the any-branch trigger planning all three envs, prod Slack routing having no fallback row, the shared Slack mapping seed not being CI-seeded). Read it before any promotion or release-tag work.
+
+## Cold-start backfill on new-env deployment
+
+When a config is deployed to a new environment, its first run scans the full history at once and can exceed the scheduled jobs' 60 GB `allowed_size` cap (the routine daily runs are cheap and stay under it). **Policy:** the person promoting runs the initial backfill manually before the scheduler does, and — only for that supervised one-off run — is allowed to raise `--allowed_size` (the single sanctioned exception to "don't raise cost thresholds without checking"). Never bake the raised value into `config_<env>.yaml` or the scheduled job. Size it from a dry-run estimate; the runtime scan is cluster-pruned so it usually bills far less than the estimate. Full details in `dataloader/README.md`.
