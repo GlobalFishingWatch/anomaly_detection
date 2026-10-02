@@ -55,6 +55,12 @@ Pre-v2 the alerter sent one Slack notification per anomaly row, keyed on a dedup
 - Retry `refresh_deltas_table` on the BigQuery "another truncation operation in progress" error. Each dataloader container ends with `CREATE OR REPLACE TABLE t_{env}_deltas` via `t_deltas.sql`, so when several Cloud Run executions finish in the same window BQ rejects all but one with that exact error; the losers were previously crashing the container. The refresh is now wrapped in a 5-attempt loop with jittered linear backoff (10–60s waits) targeting only that error string. Other failures (auth, syntax, allowed_size) still propagate immediately. Was firing 1–6× per day on the dev cron.
 - Fix logger crash that silently disabled the four `parsed_row_count_*_daily` configs since 2025-07-10 (`9258410`). The `log_info(list(current_anomaly_detection_config))` config dump in `forecast.R` was processed by `formatter_glue`, which tried to evaluate `{missing_timestamps_sql}`/`{existing_timestamps_sql}` placeholders embedded in `source_sql` before those variables were defined further down the file. The dump is now rendered with `str()` and brace-escaped before logging, which is robust against any future config that puts `{...}` in `source_sql`/`source_filter_sql`.
 
+## Docs
+
+### Unreleased (on `dev`)
+
+- New `docs/` directory for design notes and evaluations (index in `docs/README.md`). Added: the October 2026 off-the-shelf tooling evaluation (Datadog routes and pricing incl. the GCP host-billing trap and the open source programme terms, Sentry Crons, Elementary OSS, GCP-native; decision: no vendor for anomaly alerting), the architecture mix-and-match scenarios built around the deltas table as the integration contract, and the BigQuery ML experiment (pricing facts, measured ~$0.03 per ARIMA_PLUS training, `ML.DETECT_ANOMALIES` behaviour on the September 2026 satellite drop: stale-model false-alarm streaks, one-step over-confidence, step-change auto-resolution). The experiment also surfaced that thresholds join per `(config_name, forecast_method)`, so configs with a single `mean` seed row compute MSTL/median forecasts that can never fire; tracked in `ROADMAP.md`.
+
 ## Analysis
 
 ### Unreleased (on `dev`)

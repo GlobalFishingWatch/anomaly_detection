@@ -97,6 +97,18 @@ Release:
 - Periodic stale-source cleanup job (detect dims that stopped publishing and propose
   `deprecated_dims` entries semi-automatically) — kpler/spire/exactearth each took manual
   discovery.
+- **Thresholds are per `(config_name, forecast_method)`** (`t_deltas.sql` joins on both), so a
+  config whose seed only has a `mean` row computes MSTL/median forecasts that can never fire.
+  `parsed_row_count_receiver_type_daily` is the concrete case (2026-10-02): its MSTL forecast
+  sits at ~2x actual since the satellite series halved and would fire daily if it could. Decide:
+  seed a row per method each config runs, or stop computing forecasts that cannot alert.
+  Details in `docs/bqml-anomaly-detection-experiment.md`.
+- Tooling decision 2026-10 (`docs/2026-10-tooling-evaluation.md`): no vendor for anomaly
+  alerting (Datadog and Sentry price per config/series, the axis we scale on; Elementary not
+  adopted). Job health to be added GCP-natively, Sentry Crons only for critical schedules.
+  Candidate evolution of the in-house stack in `docs/architecture-scenarios.md`; BigQuery ML
+  as modelling engine evaluated positively with caveats (retrain daily, keep our thresholds
+  layer, decide regime-change semantics).
 
 ## Standing gotchas (apply to every promotion)
 
